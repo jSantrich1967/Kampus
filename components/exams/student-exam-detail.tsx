@@ -47,6 +47,7 @@ export function StudentExamDetail({ examId }: { examId: string }) {
   }
 
   function submit() {
+    if (!exam || exam.status !== "open") return;
     const next = createAttempt({ examId: exam.id, studentLabel, answers });
     setSubmittedId(next.id);
     // Demo: “calificamos” de inmediato para que el alumno vea feedback.
