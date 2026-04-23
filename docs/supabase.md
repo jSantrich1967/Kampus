@@ -67,6 +67,8 @@ Si existen URL y anon key, el **middleware** puede exigir sesión en rutas priva
 
 En producción real conviene **no** usar eso y dejar la protección activa. Más detalle en `lib/supabase/env.ts` y `.env.example`.
 
+Con protección activa, solo son públicas **`/login`**, **`/register`** y **`/auth/*`** (el resto, incluido `/` y `/onboarding`, exige sesión).
+
 ## Referencia en código
 
 | Pieza | Archivo |
