@@ -6,8 +6,8 @@ type KampusLogoProps = {
 };
 
 /**
- * Official Kampus mark. Use a true RGBA PNG (no black matte) at `/branding/kampus-logo.png`.
- * Plain <img> avoids any Next/Image wrapper so transparency matches the page background.
+ * Official Kampus mark at `/branding/kampus-logo.png`.
+ * `mix-blend-lighten` makes pure black pixels show the page behind (workaround if the PNG has a black matte instead of alpha).
  */
 export function KampusLogo({ variant = "sidebar", className }: KampusLogoProps) {
   const isHeader = variant === "header";
@@ -21,8 +21,8 @@ export function KampusLogo({ variant = "sidebar", className }: KampusLogoProps) 
       decoding="async"
       fetchPriority={isHeader ? "auto" : "high"}
       className={cn(
-        "block h-auto max-w-full bg-transparent object-contain object-left",
-        isHeader ? "h-14 w-auto max-w-[280px]" : "h-[124px] w-auto max-w-[440px]",
+        "block max-w-full bg-transparent object-contain object-left mix-blend-lighten",
+        isHeader ? "h-16 w-auto max-w-[min(100%,320px)] sm:h-[4.5rem]" : "h-36 w-auto max-w-[min(100%,480px)] sm:h-44 md:h-52",
         className,
       )}
     />
@@ -43,7 +43,7 @@ export function KampusMark({ sizeClassName = "h-10 w-10", className }: KampusMar
         src="/branding/kampus-logo.png"
         alt="Kampus"
         decoding="async"
-        className="h-full w-full bg-transparent object-cover object-[50%_30%]"
+        className="h-full w-full bg-transparent object-cover object-[50%_30%] mix-blend-lighten"
       />
     </span>
   );

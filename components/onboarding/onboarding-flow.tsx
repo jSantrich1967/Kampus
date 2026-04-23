@@ -118,14 +118,17 @@ export function OnboardingFlow() {
   }
 
   return (
-    <div className="relative min-h-dvh overflow-hidden px-4 pb-10 pt-10 text-slate-100 sm:px-6">
+    <div className="relative min-h-dvh overflow-hidden px-4 pb-10 pt-4 text-slate-100 sm:px-6 sm:pt-6">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(700px_400px_at_20%_0%,rgba(99,102,241,0.22),transparent)]" />
 
-      <div className="absolute left-4 top-6 z-10 sm:left-6 sm:top-8 md:left-8 md:top-10">
-        <KampusLogo variant="sidebar" className="h-24 w-auto max-w-[min(92vw,520px)] sm:h-32 md:h-40" />
+      <div className="absolute left-2 top-2 z-10 sm:left-4 sm:top-4 md:left-5 md:top-5">
+        <KampusLogo
+          variant="sidebar"
+          className="h-44 w-auto max-w-[min(96vw,680px)] sm:h-52 md:h-60"
+        />
       </div>
 
-      <div className="relative mx-auto flex max-w-3xl flex-col gap-6 pt-[7.25rem] sm:pt-[9.5rem] md:pt-[11rem]">
+      <div className="relative mx-auto flex max-w-3xl flex-col gap-6 pt-[12.5rem] sm:pt-[15rem] md:pt-[17rem]">
         <div className="text-sm text-slate-400">{t.progress(step + 1, TOTAL_STEPS)}</div>
 
         <Progress value={progressValue} />
