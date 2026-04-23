@@ -122,11 +122,7 @@ export function OnboardingFlow() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(700px_400px_at_20%_0%,rgba(99,102,241,0.22),transparent)]" />
 
       <div className="absolute left-4 top-6 z-10 sm:left-6 sm:top-8 md:left-8 md:top-10">
-        <KampusLogo
-          variant="sidebar"
-          ambient
-          className="h-24 w-auto max-w-[min(92vw,520px)] sm:h-32 md:h-40"
-        />
+        <KampusLogo variant="sidebar" className="h-24 w-auto max-w-[min(92vw,520px)] sm:h-32 md:h-40" />
       </div>
 
       <div className="relative mx-auto flex max-w-3xl flex-col gap-6 pt-[7.25rem] sm:pt-[9.5rem] md:pt-[11rem]">

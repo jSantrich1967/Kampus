@@ -20,7 +20,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="md:pl-64">
         <header className="sticky top-0 z-30 flex items-center justify-between border-b border-white/10 bg-slate-950/90 px-4 py-3 backdrop-blur md:hidden">
-          <KampusLogo variant="header" ambient />
+          <KampusLogo variant="header" />
           <Button
             type="button"
             variant="ghost"

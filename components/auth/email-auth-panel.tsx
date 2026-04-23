@@ -104,7 +104,7 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
     <div className="flex min-h-dvh flex-col items-center justify-center px-4 py-16">
       <div className="mb-8 text-center">
         <Link href="/" className="inline-flex flex-col items-center gap-2">
-          <KampusLogo variant="sidebar" ambient />
+          <KampusLogo variant="sidebar" />
           <span className="text-xs text-slate-500">{t.backHome}</span>
         </Link>
       </div>
