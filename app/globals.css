@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+/* Kampus design tokens — premium academic OS */
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --color-kampus-bg: #030712;
+  --color-kampus-surface: #0b1220;
+  --color-kampus-elevated: #111b2e;
+  --color-kampus-border: color-mix(in oklab, white 10%, transparent);
+  --color-kampus-accent: #818cf8;
+  --color-kampus-accent-strong: #6366f1;
+  --color-kampus-teal: #2dd4bf;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: radial-gradient(1200px 600px at 10% -10%, rgba(99, 102, 241, 0.18), transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, rgba(45, 212, 191, 0.12), transparent 50%),
+    var(--color-kampus-bg);
+  min-height: 100dvh;
+}
+
+/* Smooth focus for keyboard users */
+:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--color-kampus-accent) 70%, white);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-kampus-accent) 40%, transparent);
+  color: #f8fafc;
+}
