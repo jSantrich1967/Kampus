@@ -5,11 +5,14 @@ type KampusLogoProps = {
   className?: string;
 };
 
-/** Official Kampus mark (RGBA PNG) at `/branding/kampus-logo.png`. */
+/**
+ * `/branding/kampus-logo.png` — if the export includes a fake “transparency” grid or white
+ * margins, `clip-path` trims the edges so only the mark shows on the page background.
+ */
 export function KampusLogo({ variant = "sidebar", className }: KampusLogoProps) {
   const isHeader = variant === "header";
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- intentional: preserve PNG alpha without optimizer wrappers
+    // eslint-disable-next-line @next/next/no-img-element -- preserve PNG alpha; avoid Image optimizer
     <img
       src="/branding/kampus-logo.png"
       alt="Kampus"
@@ -18,7 +21,7 @@ export function KampusLogo({ variant = "sidebar", className }: KampusLogoProps) 
       decoding="async"
       fetchPriority={isHeader ? "auto" : "high"}
       className={cn(
-        "block max-w-full bg-transparent object-contain object-left",
+        "block max-w-full bg-transparent object-contain object-left [clip-path:inset(7%_6%_5%_6%)] drop-shadow-[0_8px_32px_rgba(15,23,42,0.55)]",
         isHeader ? "h-16 w-auto max-w-[min(100%,320px)] sm:h-[4.5rem]" : "h-36 w-auto max-w-[min(100%,480px)] sm:h-44 md:h-52",
         className,
       )}
@@ -40,7 +43,7 @@ export function KampusMark({ sizeClassName = "h-10 w-10", className }: KampusMar
         src="/branding/kampus-logo.png"
         alt="Kampus"
         decoding="async"
-        className="h-full w-full bg-transparent object-cover object-[50%_30%]"
+        className="h-full w-full bg-transparent object-cover object-[50%_28%] [clip-path:inset(6%_6%_38%_6%)]"
       />
     </span>
   );
