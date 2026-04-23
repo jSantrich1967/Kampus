@@ -27,7 +27,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     <div className="flex h-full flex-col">
       <div className="px-5 pb-6 pt-8">
         <Link href="/today" className="flex flex-col gap-2" onClick={onNavigate}>
-          <KampusLogo variant="sidebar" />
+          <KampusLogo variant="sidebar" ambient />
           <div className="text-[11px] text-slate-400">Sistema operativo académico</div>
         </Link>
         <div className="mt-4 flex items-center gap-2">
