@@ -47,3 +47,5 @@ npm run build  # build de producción (usa `.next`; en dev se puede usar `.next-
 6. **Después del primer deploy**: en GitHub, el workflow **CI** debe seguir en verde; en el navegador prueba login y callback.
 
 Documentación oficial: [Next.js en Vercel](https://vercel.com/docs/frameworks/nextjs).
+
+**Supabase** (proyecto, env, URLs y SQL de `profiles`): ver [`docs/supabase.md`](./docs/supabase.md).
