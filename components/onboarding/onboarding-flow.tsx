@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+import { KampusLogo } from "@/components/brand/kampus-logo";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -121,9 +122,9 @@ export function OnboardingFlow() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(700px_400px_at_20%_0%,rgba(99,102,241,0.22),transparent)]" />
 
       <div className="relative mx-auto flex max-w-3xl flex-col gap-6">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-200/80">{t.brand}</div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-2">
+            <KampusLogo variant="header" className="h-11 w-auto max-w-[min(100%,260px)] sm:h-12" />
             <div className="text-sm text-slate-400">{t.progress(step + 1, TOTAL_STEPS)}</div>
           </div>
         </div>
