@@ -31,6 +31,8 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** After sign-up without immediate session (email confirmation flow). */
+  const [pendingEmailVerification, setPendingEmailVerification] = useState(false);
 
   const urlError = searchParams.get("error");
   const nextPath = getSafeInternalRedirect(searchParams.get("next"));
@@ -57,6 +59,7 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
     }
 
     setBusy(true);
+    setPendingEmailVerification(false);
     try {
       const supabase = createSupabaseBrowserClient();
       if (mode === "login") {
@@ -80,16 +83,46 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
         },
       });
       if (signUpErr) {
-        setError(t.errorGeneric);
+        setError(signUpErr.message || t.errorGeneric);
         return;
       }
       if (data.session) {
         setMessage(t.registerSuccess);
+        setPendingEmailVerification(false);
         router.replace(nextPath);
         router.refresh();
         return;
       }
+      setPendingEmailVerification(true);
       setMessage(`${t.registerSuccess} ${t.checkEmail}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resendConfirmationEmail() {
+    setError(null);
+    if (!email.trim()) {
+      setError(t.errorGeneric);
+      return;
+    }
+    setBusy(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const callbackNext = encodeURIComponent(nextPath);
+      const { error: resendErr } = await supabase.auth.resend({
+        type: "signup",
+        email: email.trim(),
+        options: origin
+          ? { emailRedirectTo: `${origin}/auth/callback?next=${callbackNext}` }
+          : undefined,
+      });
+      if (resendErr) {
+        setError(resendErr.message || t.errorGeneric);
+        return;
+      }
+      setMessage(t.resendSent);
     } finally {
       setBusy(false);
     }
@@ -147,6 +180,21 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
 
             {error ? <p className="text-sm text-rose-300">{error}</p> : null}
             {message ? <p className="text-sm text-teal-200/90">{message}</p> : null}
+
+            {pendingEmailVerification && mode === "register" ? (
+              <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-slate-950/40 px-3 py-3">
+                <p className="text-xs leading-relaxed text-slate-400">{t.emailDeliveryHint}</p>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full"
+                  disabled={busy}
+                  onClick={() => void resendConfirmationEmail()}
+                >
+                  {busy ? "…" : t.resendConfirmation}
+                </Button>
+              </div>
+            ) : null}
 
             <Button type="submit" className="w-full" disabled={busy}>
               {busy ? "…" : mode === "login" ? t.submitLogin : t.submitRegister}

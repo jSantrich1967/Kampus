@@ -18,6 +18,10 @@ export const authCopy = {
     errorGeneric: "No pudimos completar la acción. Revisa correo y contraseña.",
     checkEmail: "Si tu proyecto requiere confirmación, revisa tu correo para activar la cuenta.",
     registerSuccess: "Cuenta creada. Si pide confirmación por correo, ábrelo antes de entrar.",
+    resendConfirmation: "Reenviar correo de confirmación",
+    resendSent: "Hemos pedido otro correo. Espera unos minutos y revisa spam y «Promociones».",
+    emailDeliveryHint:
+      "Si no llega nada: los correos integrados de Supabase pueden tardar o ir a spam. En Supabase → Authentication → puedes configurar SMTP (Resend, SendGrid…). Para pruebas, en Providers → Email puedes desactivar «Confirm email» e iniciar sesión al instante.",
     loggedInHint: "Sesión iniciada. Tu perfil se sincroniza con Supabase cuando corresponde.",
     account: "Cuenta",
     sessionActive: "Sesión activa",
