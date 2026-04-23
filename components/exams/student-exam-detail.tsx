@@ -46,15 +46,16 @@ export function StudentExamDetail({ examId }: { examId: string }) {
     );
   }
 
-  function submit() {
-    if (!exam || exam.status !== "open") return;
-    const next = createAttempt({ examId: exam.id, studentLabel, answers });
+  const submit = () => {
+    const current = exam;
+    if (!current || current.status !== "open") return;
+    const next = createAttempt({ examId: current.id, studentLabel, answers });
     setSubmittedId(next.id);
     // Demo: “calificamos” de inmediato para que el alumno vea feedback.
     gradeAttempt(next.id, buildDemoFeedback());
     setAnswers({});
     setRefresh((v) => v + 1);
-  }
+  };
 
   const canSubmit = exam.questions.every((q) => (answers[q.id] ?? "").trim().length > 3);
 
