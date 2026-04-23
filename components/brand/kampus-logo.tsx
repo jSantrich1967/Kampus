@@ -6,8 +6,8 @@ type KampusLogoProps = {
 };
 
 /**
- * `/branding/kampus-logo.png` — if the export includes a fake “transparency” grid or white
- * margins, `clip-path` trims the edges so only the mark shows on the page background.
+ * `/branding/kampus-logo.png`. `mix-blend-lighten` blends away pure black (#000) so a matte
+ * export still sits on the dark page; remove the blend when you ship a true RGBA asset.
  */
 export function KampusLogo({ variant = "sidebar", className }: KampusLogoProps) {
   const isHeader = variant === "header";
@@ -21,7 +21,7 @@ export function KampusLogo({ variant = "sidebar", className }: KampusLogoProps) 
       decoding="async"
       fetchPriority={isHeader ? "auto" : "high"}
       className={cn(
-        "block max-w-full bg-transparent object-contain object-left [clip-path:inset(7%_6%_5%_6%)] drop-shadow-[0_8px_32px_rgba(15,23,42,0.55)]",
+        "block max-w-full bg-transparent object-contain object-left mix-blend-lighten drop-shadow-[0_6px_28px_rgba(15,23,42,0.45)]",
         isHeader ? "h-16 w-auto max-w-[min(100%,320px)] sm:h-[4.5rem]" : "h-36 w-auto max-w-[min(100%,480px)] sm:h-44 md:h-52",
         className,
       )}
@@ -43,7 +43,7 @@ export function KampusMark({ sizeClassName = "h-10 w-10", className }: KampusMar
         src="/branding/kampus-logo.png"
         alt="Kampus"
         decoding="async"
-        className="h-full w-full bg-transparent object-cover object-[50%_28%] [clip-path:inset(6%_6%_38%_6%)]"
+        className="h-full w-full bg-transparent object-cover object-[50%_28%] mix-blend-lighten"
       />
     </span>
   );
