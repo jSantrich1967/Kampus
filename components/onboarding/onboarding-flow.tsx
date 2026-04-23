@@ -121,9 +121,9 @@ export function OnboardingFlow() {
     <div className="relative min-h-dvh overflow-hidden px-4 pb-10 pt-4 text-slate-100 sm:px-6 sm:pt-6">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(700px_400px_at_20%_0%,rgba(99,102,241,0.22),transparent)]" />
 
-      {/* Solid #000: full height, wide left band so logo black matches (no visible seam). */}
+      {/* Solid #000: narrow column behind the logo only (avoid blocking main content). */}
       <div
-        className="pointer-events-none absolute inset-y-0 left-0 z-[1] w-[min(92vw,720px)] bg-black md:w-1/2"
+        className="pointer-events-none absolute inset-y-0 left-0 z-[1] w-[min(50vw,260px)] bg-black sm:w-[min(280px,42vw)] md:w-[300px]"
         aria-hidden
       />
 
