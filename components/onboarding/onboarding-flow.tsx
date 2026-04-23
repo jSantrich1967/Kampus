@@ -121,20 +121,23 @@ export function OnboardingFlow() {
     <div className="relative min-h-dvh overflow-hidden px-4 pb-10 pt-4 text-slate-100 sm:px-6 sm:pt-6">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(700px_400px_at_20%_0%,rgba(99,102,241,0.22),transparent)]" />
 
-      {/* Solid #000: narrow column behind the logo only (avoid blocking main content). */}
+      {/* Solid #000: narrow column — width must match logo rail below. */}
       <div
         className="pointer-events-none absolute inset-y-0 left-0 z-[1] w-[min(50vw,260px)] bg-black sm:w-[min(280px,42vw)] md:w-[300px]"
         aria-hidden
       />
 
-      <div className="absolute left-2 top-2 z-10 sm:left-4 sm:top-4 md:left-5 md:top-5">
+      {/* Logo sized to fit inside the black strip (same widths as the bar). */}
+      <div
+        className="absolute left-0 top-2 z-10 box-border w-[min(50vw,260px)] overflow-hidden px-2 pt-0.5 sm:w-[min(280px,42vw)] sm:px-3 sm:pt-1 md:w-[300px] md:px-3 md:pt-1"
+      >
         <KampusLogo
           variant="sidebar"
-          className="h-44 w-auto max-w-[min(96vw,680px)] sm:h-52 md:h-60"
+          className="h-auto max-h-28 w-full max-w-full object-contain object-left sm:max-h-32 md:max-h-36"
         />
       </div>
 
-      <div className="relative mx-auto flex max-w-3xl flex-col gap-6 pt-[12.5rem] sm:pt-[15rem] md:pt-[17rem]">
+      <div className="relative mx-auto flex max-w-3xl flex-col gap-6 pt-[11rem] sm:pt-[12.5rem] md:pt-[13.5rem]">
         <div className="text-sm text-slate-400">{t.progress(step + 1, TOTAL_STEPS)}</div>
 
         <Progress value={progressValue} />
