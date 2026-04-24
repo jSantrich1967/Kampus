@@ -3,7 +3,7 @@
 import { FileAudio, FileImage, FileText, Link2, Loader2, Sparkles, Wand2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ShareLinkButton } from "@/components/growth/share-link-button";
 import { PageHeader } from "@/components/layout/page-header";
@@ -44,7 +44,6 @@ export function ClassRescueWorkspace() {
   const router = useRouter();
   const { profile, authUserId } = useKampus();
   const searchParams = useSearchParams();
-  const filterListId = useId().replace(/:/g, "");
 
   const [subjectHint, setSubjectHint] = useState(profile.subjects[0] ?? "");
   const [link, setLink] = useState("");
@@ -73,12 +72,49 @@ export function ClassRescueWorkspace() {
   const [notebookTagRows, setNotebookTagRows] = useState<NotebookTagRow[]>([]);
   const [notebookTagsLoading, setNotebookTagsLoading] = useState(false);
 
+  /** Keeps latest subject for handlers without nesting setState updaters. */
+  const subjectHintRef = useRef(subjectHint);
+  subjectHintRef.current = subjectHint;
+
   const premium = profile.plan === "premium";
 
   const notebookTagOptions = useMemo(
     () => buildNotebookTagOptions(notebookTagRows, profile.subjects, subjectHint),
     [notebookTagRows, profile.subjects, subjectHint],
   );
+
+  const subjectSelectOptions = useMemo(() => {
+    const set = new Set(notebookTagOptions.subjects);
+    const cur = subjectHint.trim();
+    if (cur) set.add(cur);
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "es"));
+  }, [notebookTagOptions.subjects, subjectHint]);
+
+  const topicSelectOptions = useMemo(() => {
+    const set = new Set(notebookTagOptions.topics);
+    const cur = kitTopic.trim();
+    if (cur) set.add(cur);
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "es"));
+  }, [notebookTagOptions.topics, kitTopic]);
+
+  const puntoSelectOptions = useMemo(() => {
+    const set = new Set(notebookTagOptions.lessonPoints);
+    const cur = kitLessonPoint.trim();
+    if (cur) set.add(cur);
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "es"));
+  }, [notebookTagOptions.lessonPoints, kitLessonPoint]);
+
+  const ejerciciosSelectOptions = useMemo(() => {
+    const set = new Set(notebookTagOptions.practiceExercises);
+    const cur = kitPracticeExercises.trim();
+    if (cur) set.add(cur);
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "es"));
+  }, [notebookTagOptions.practiceExercises, kitPracticeExercises]);
+
+  const selectFieldClass =
+    "w-full cursor-pointer rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring";
+  const selectFieldClassWide =
+    "w-full cursor-pointer rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-slate-200 outline-none ring-indigo-400/40 focus:ring";
 
   useEffect(() => {
     if (!authUserId || !isSupabaseConfigured()) {
@@ -106,6 +142,28 @@ export function ClassRescueWorkspace() {
       cancelled = true;
     };
   }, [authUserId]);
+
+  /**
+   * If nothing is selected but we already know materias, pick the first so filtros always scope to a cuaderno.
+   * Skip when `?subject=` is present so the URL effect can set the cuaderno without being overwritten.
+   */
+  useEffect(() => {
+    const q = searchParams.get("subject");
+    if (q != null && q.trim() !== "") return;
+    if (subjectHint.trim()) return;
+    if (subjectSelectOptions.length === 0) return;
+    setSubjectHint(subjectSelectOptions[0]!);
+  }, [searchParams, subjectHint, subjectSelectOptions]);
+
+  function handleNotebookFocusChange(next: string) {
+    const prev = subjectHintRef.current;
+    if (prev.trim() !== next.trim()) {
+      setKitTopic("");
+      setKitLessonPoint("");
+      setKitPracticeExercises("");
+    }
+    setSubjectHint(next);
+  }
 
   const hasSaveableRescueSource = useMemo(
     () => Boolean(buildRescueSourceDocumentBody(extractedText, notes, link).trim()),
@@ -272,12 +330,19 @@ export function ClassRescueWorkspace() {
 
   useEffect(() => {
     const raw = searchParams.get("subject");
-    if (!raw) return;
+    if (!raw?.trim()) return;
+    let next = raw;
     try {
-      setSubjectHint(decodeURIComponent(raw));
+      next = decodeURIComponent(raw);
     } catch {
-      setSubjectHint(raw);
+      next = raw;
     }
+    const prev = subjectHintRef.current;
+    if (prev.trim() === next.trim()) return;
+    setKitTopic("");
+    setKitLessonPoint("");
+    setKitPracticeExercises("");
+    setSubjectHint(next);
   }, [searchParams]);
 
   async function runRescue() {
@@ -403,9 +468,10 @@ export function ClassRescueWorkspace() {
         <CardHeader>
           <CardTitle>Material y filtros del cuaderno</CardTitle>
           <CardDescription>
-            Indica <strong>Materia foco</strong> y las mismas <strong>etiquetas</strong> que en Mis cuadernos (Tema, Punto,
-            Ejercicios). Con sesión y Supabase, las listas desplegables se rellenan con lo que ya guardaste en tus hojas
-            (puedes seguir escribiendo a mano). Si pulsas «Guardar material de entrada», en el cuaderno solo se guarda lo
+            Indica <strong>Materia foco</strong> (cuaderno) y las <strong>etiquetas</strong> que ya usas en Mis cuadernos
+            (Tema, Punto, Ejercicios): con sesión y Supabase verás <strong>listas desplegables</strong> con tus materias y
+            el contenido etiquetado de tus hojas. Al <strong>cambiar de cuaderno</strong> aquí, Tema / Punto / Ejercicios se
+            vacían para no mezclar etiquetas de otra materia. Si pulsas «Guardar material de entrada», en el cuaderno solo se guarda lo
             que <strong>entraste</strong> (texto extraído, apuntes, enlace), no el kit generado por la IA. También puedes
             subir archivos locales, elegir un archivo abajo, o abrir{" "}
             <code className="rounded bg-white/10 px-1 py-0.5 text-[11px]">/study/library/rescue?notebook=econometria</code>{" "}
@@ -415,21 +481,31 @@ export function ClassRescueWorkspace() {
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-2 text-sm">
-            <span className="text-slate-300">Materia foco (cuaderno)</span>
-            <input
-              className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 outline-none ring-indigo-400/40 focus:ring"
-              list={`${filterListId}-subject`}
-              value={subjectHint}
-              onChange={(e) => setSubjectHint(e.target.value)}
-              placeholder="Escribe o elige de tus cuadernos…"
-            />
-            <datalist id={`${filterListId}-subject`}>
-              {notebookTagOptions.subjects.map((s) => (
-                <option key={s} value={s} />
-              ))}
-            </datalist>
+            <span className="text-slate-300">Cuaderno (materia foco)</span>
+            {subjectSelectOptions.length > 0 ? (
+              <select
+                className={selectFieldClassWide}
+                value={subjectHint.trim()}
+                onChange={(e) => handleNotebookFocusChange(e.target.value)}
+                aria-label="Elegir cuaderno por materia"
+              >
+                <option value="">— Selecciona un cuaderno —</option>
+                {subjectSelectOptions.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                className={selectFieldClassWide}
+                value={subjectHint}
+                onChange={(e) => handleNotebookFocusChange(e.target.value)}
+                placeholder="Ej. Econometría (sin datos en la nube aún)"
+              />
+            )}
             <p className="text-[11px] leading-snug text-slate-500">
-              Define qué cuaderno usas; las sugerencias de Tema / Punto / Ejercicios se acotan a las hojas de esta materia.
+              Elige la materia del cuaderno; las tres listas de abajo muestran solo etiquetas de las hojas de esa materia.
             </p>
           </label>
 
@@ -473,62 +549,71 @@ export function ClassRescueWorkspace() {
                   Leyendo tus hojas…
                 </span>
               ) : authUserId && isSupabaseConfigured() ? (
-                <span className="text-[11px] text-slate-600">Sugerencias desde Mis cuadernos</span>
+                <span className="text-[11px] text-slate-600">Listas desde Mis cuadernos</span>
               ) : null}
             </div>
             <p className="mb-3 text-[11px] text-slate-500">
               La <strong className="text-slate-400">Materia foco</strong> define en qué cuaderno aparecerá si pulsas
               «Guardar material en el cuaderno». <strong className="text-slate-400">Tema</strong>, <strong className="text-slate-400">Punto</strong> y{" "}
-              <strong className="text-slate-400">Ejercicios prácticos</strong> coinciden con las etiquetas de tus archivos:
-              elige de la lista o escribe texto libre.
+              <strong className="text-slate-400">Ejercicios prácticos</strong> salen de las etiquetas reales de tus
+              archivos en ese cuaderno.
             </p>
             <div className="grid gap-3 md:grid-cols-3">
               <label className="space-y-1 text-xs">
                 <span className="text-slate-500">Tema</span>
-                <input
-                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
-                  list={`${filterListId}-topic`}
+                <select
+                  className={selectFieldClass}
                   value={kitTopic}
                   onChange={(e) => setKitTopic(e.target.value)}
-                  placeholder="Escribe o elige…"
-                />
-                <datalist id={`${filterListId}-topic`}>
-                  {notebookTagOptions.topics.map((t) => (
-                    <option key={t} value={t} />
+                  aria-label="Filtrar por tema del cuaderno"
+                >
+                  <option value="">— Sin filtro / vacío —</option>
+                  {topicSelectOptions.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
                   ))}
-                </datalist>
+                </select>
               </label>
               <label className="space-y-1 text-xs">
                 <span className="text-slate-500">Punto</span>
-                <input
-                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
-                  list={`${filterListId}-punto`}
+                <select
+                  className={selectFieldClass}
                   value={kitLessonPoint}
                   onChange={(e) => setKitLessonPoint(e.target.value)}
-                  placeholder="Escribe o elige…"
-                />
-                <datalist id={`${filterListId}-punto`}>
-                  {notebookTagOptions.lessonPoints.map((t) => (
-                    <option key={t} value={t} />
+                  aria-label="Filtrar por punto del programa"
+                >
+                  <option value="">— Sin filtro / vacío —</option>
+                  {puntoSelectOptions.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
                   ))}
-                </datalist>
+                </select>
               </label>
               <label className="space-y-1 text-xs">
                 <span className="text-slate-500">Ejercicios prácticos</span>
-                <input
-                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
-                  list={`${filterListId}-ej`}
+                <select
+                  className={selectFieldClass}
                   value={kitPracticeExercises}
                   onChange={(e) => setKitPracticeExercises(e.target.value)}
-                  placeholder="Escribe o elige…"
-                />
-                <datalist id={`${filterListId}-ej`}>
-                  {notebookTagOptions.practiceExercises.map((t) => (
-                    <option key={t} value={t} />
+                  aria-label="Filtrar por ejercicios prácticos"
+                >
+                  <option value="">— Sin filtro / vacío —</option>
+                  {ejerciciosSelectOptions.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
                   ))}
-                </datalist>
+                </select>
               </label>
             </div>
+            {!notebookTagsLoading && authUserId && isSupabaseConfigured() && subjectHint.trim() ? (
+              <p className="mt-2 text-[11px] text-slate-600">
+                Si no ves tu etiqueta, asígnala primero en <strong className="text-slate-500">Mis cuadernos</strong> al
+                subir o editar la hoja.
+              </p>
+            ) : null}
           </div>
 
           <div className="md:col-span-2">
