@@ -328,7 +328,14 @@ export function NotebookLibraryPanel() {
                           </h4>
                           <p className="mt-1 text-xs font-medium text-white/75">
                             {pageCount === 1 ? "1 hoja" : `${pageCount} hojas`}
-                            {lastTouch ? ` · última ${new Date(lastTouch).toLocaleDateString("es")}` : ""}
+                            {lastTouch ? (
+                              <>
+                                {" · última "}
+                                <span suppressHydrationWarning>
+                                  {new Date(lastTouch).toLocaleDateString("es")}
+                                </span>
+                              </>
+                            ) : null}
                           </p>
                         </div>
                         <ChevronDown
@@ -356,7 +363,10 @@ export function NotebookLibraryPanel() {
                               <div className="min-w-0 flex-1">
                                 <div className="truncate text-sm font-medium text-slate-100">{doc.filename}</div>
                                 <div className="mt-0.5 text-[11px] text-slate-500">
-                                  {(doc.size_bytes / 1024 / 1024).toFixed(2)} MB · {new Date(doc.created_at).toLocaleString("es")}
+                                  {(doc.size_bytes / 1024 / 1024).toFixed(2)} MB ·{" "}
+                                  <span suppressHydrationWarning>
+                                    {new Date(doc.created_at).toLocaleString("es")}
+                                  </span>
                                 </div>
                                 {doc.extracted_text ? (
                                   <details className="mt-2 text-xs text-slate-400">

@@ -5,7 +5,8 @@
 export function subjectToPathSegment(subject: string): string {
   const s = subject
     .normalize("NFD")
-    .replace(/\p{M}/gu, "")
+    // Combining marks (Latin accents); avoids `\p{M}` for older JS runtimes.
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, "_")
