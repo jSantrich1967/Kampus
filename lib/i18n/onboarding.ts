@@ -40,7 +40,7 @@ export const onboardingCopy: Record<
       institution: "Institución",
     },
     fields: {
-      university: "Universidad",
+      university: "Institución (opcional)",
       major: "Carrera / programa",
       semester: "Semestre",
       subjects: "Materias actuales",

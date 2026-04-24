@@ -47,7 +47,7 @@ export function OnboardingFlow() {
 
   const canContinue = useMemo(() => {
     if (step === 0) return true;
-    if (step === 1) return university.trim().length > 1 && major.trim().length > 1 && semester.trim().length > 0;
+    if (step === 1) return major.trim().length > 1 && semester.trim().length > 0;
     if (step === 2) return subjects.length > 0;
     if (step === 3) {
       return exams.every((e) => (e.subject.trim() === "" && e.date === "") || (e.subject.trim() && e.date));
@@ -59,7 +59,6 @@ export function OnboardingFlow() {
     return false;
   }, [
     step,
-    university,
     major,
     semester,
     subjects.length,
@@ -197,6 +196,7 @@ export function OnboardingFlow() {
                     className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 outline-none ring-indigo-400/40 focus:ring"
                     value={university}
                     onChange={(e) => setUniversity(e.target.value)}
+                    placeholder="Ej.: SENA, Platzi, Coursera, Universidad Nacional…"
                   />
                 </label>
                 <label className="space-y-2 text-sm">
