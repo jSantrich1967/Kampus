@@ -53,9 +53,9 @@ async function ocrImageWithOpenAI(file: File): Promise<string> {
             {
               type: "input_text",
               text:
-                "Extrae el texto de esta imagen (OCR) y devuelve SOLO el texto legible. " +
-                "Si es una diapositiva o apunte, conserva títulos y viñetas. " +
-                "Si no hay texto, responde: (sin texto).",
+                "Haz OCR de la imagen y devuelve SOLO texto en español (sin explicaciones). " +
+                "Conserva títulos, viñetas y fórmulas lo mejor posible. " +
+                "Si la imagen no tiene texto legible, responde exactamente: SIN_TEXTO",
             },
             { type: "input_image", image_url: dataUrl },
           ],
@@ -84,8 +84,69 @@ async function ocrImageWithOpenAI(file: File): Promise<string> {
     return `OCR failed (HTTP ${res.status}): ${message || "Unknown error"}`;
   }
 
-  const json = (await res.json()) as { output_text?: string };
-  return (json.output_text || "").trim() || "(sin texto)";
+  const json = (await res.json()) as unknown;
+  const extracted = extractTextFromOpenAIResponses(json);
+  const trimmed = extracted.trim();
+  if (!trimmed || trimmed === "SIN_TEXTO") {
+    return "(sin texto legible en la imagen)";
+  }
+  return trimmed;
+}
+
+function extractTextFromOpenAIResponses(payload: unknown): string {
+  if (!payload || typeof payload !== "object") return "";
+
+  const root = payload as Record<string, unknown>;
+
+  // Some SDKs / API versions expose a convenience field.
+  if (typeof root.output_text === "string" && root.output_text.trim()) return root.output_text;
+
+  const parts: string[] = [];
+  collectOpenAIResponseText(payload, parts);
+
+  // De-dupe while keeping order
+  const seen = new Set<string>();
+  const deduped: string[] = [];
+  for (const p of parts) {
+    const t = p.trim();
+    if (!t) continue;
+    if (seen.has(t)) continue;
+    seen.add(t);
+    deduped.push(t);
+  }
+
+  return deduped.join("\n").trim();
+}
+
+function collectOpenAIResponseText(node: unknown, out: string[]): void {
+  if (!node) return;
+
+  if (typeof node === "string") {
+    if (node.trim()) out.push(node);
+    return;
+  }
+
+  if (Array.isArray(node)) {
+    for (const item of node) collectOpenAIResponseText(item, out);
+    return;
+  }
+
+  if (typeof node !== "object") return;
+
+  const obj = node as Record<string, unknown>;
+
+  const type = obj.type;
+  const text = obj.text;
+  if (typeof type === "string" && typeof text === "string" && text.trim()) {
+    // Most text-bearing blocks in Responses API use types like output_text / input_text.
+    if (type.endsWith("text")) {
+      out.push(text);
+    }
+  }
+
+  for (const value of Object.values(obj)) {
+    collectOpenAIResponseText(value, out);
+  }
 }
 
 export async function POST(req: Request) {
