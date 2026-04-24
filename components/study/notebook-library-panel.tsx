@@ -8,22 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { sanitizeStorageFilename, subjectToPathSegment } from "@/lib/notebooks/paths";
+import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cn } from "@/lib/cn";
-
-export type NotebookDocumentRow = {
-  id: string;
-  user_id: string;
-  subject: string;
-  storage_path: string;
-  filename: string;
-  mime_type: string;
-  size_bytes: number;
-  extracted_text: string | null;
-  created_at: string;
-  updated_at: string;
-};
 
 const MAX_BYTES = 50 * 1024 * 1024; // aligned with bucket limit in migration (50 MiB)
 

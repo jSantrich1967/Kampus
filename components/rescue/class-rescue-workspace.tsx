@@ -11,8 +11,11 @@ import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { RescueNotebookPicker } from "@/components/rescue/rescue-notebook-picker";
 import { generateRescuePack, type RescuePack } from "@/lib/class-rescue";
 import { cn } from "@/lib/cn";
+import type { NotebookDocumentRow } from "@/lib/notebooks/types";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type SourceKind = "pdf" | "audio" | "image" | "slides" | "link" | "notes";
 
@@ -20,6 +23,13 @@ function readFilesAsSeed(files: File[] | null): { seed: string; label: string } 
   if (!files || files.length === 0) return { seed: "", label: "Sin archivos" };
   const names = files.map((f) => `${f.name}:${f.size}`);
   return { seed: names.join("|"), label: names.map((n) => n.split(":")[0]).join(", ") };
+}
+
+function mimeToSourceKind(mime: string): SourceKind {
+  const m = mime.toLowerCase();
+  if (m.includes("pdf")) return "pdf";
+  if (m.startsWith("image/")) return "image";
+  return "notes";
 }
 
 function Section({
@@ -70,6 +80,8 @@ export function ClassRescueWorkspace() {
   const [extractedText, setExtractedText] = useState("");
   const [extractBusy, setExtractBusy] = useState(false);
   const [extractError, setExtractError] = useState<string | null>(null);
+  const [librarySelection, setLibrarySelection] = useState<NotebookDocumentRow | null>(null);
+  const [libraryExtractBusy, setLibraryExtractBusy] = useState(false);
 
   const premium = profile.plan === "premium";
 
@@ -88,9 +100,11 @@ export function ClassRescueWorkspace() {
     let cancelled = false;
     const list = files ?? [];
     if (list.length === 0) {
-      setExtractedText("");
-      setExtractError(null);
       setExtractBusy(false);
+      if (!librarySelection) {
+        setExtractedText("");
+        setExtractError(null);
+      }
       return;
     }
 
@@ -116,7 +130,51 @@ export function ClassRescueWorkspace() {
     return () => {
       cancelled = true;
     };
-  }, [files]);
+  }, [files, librarySelection]);
+
+  async function applyLibraryDocument(doc: NotebookDocumentRow) {
+    setLibrarySelection(doc);
+    setFiles(null);
+    setKind(mimeToSourceKind(doc.mime_type));
+    setSubjectHint((prev) => (prev.trim() ? prev : doc.subject));
+    setExtractError(null);
+    setGenHint(null);
+
+    const cached = doc.extracted_text?.trim();
+    if (cached) {
+      setExtractedText(cached);
+      setLibraryExtractBusy(false);
+      return;
+    }
+
+    setLibraryExtractBusy(true);
+    setExtractedText("");
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error } = await supabase.storage.from("notebooks").createSignedUrl(doc.storage_path, 180);
+      if (error || !data?.signedUrl) throw new Error(error?.message || "No se pudo abrir el archivo en la nube.");
+      const r = await fetch(data.signedUrl);
+      if (!r.ok) throw new Error("No se pudo descargar el archivo.");
+      const blob = await r.blob();
+      const file = new File([blob], doc.filename, { type: doc.mime_type || blob.type || "application/octet-stream" });
+      const fd = new FormData();
+      fd.append("files", file);
+      const res = await fetch("/api/rescue/extract", { method: "POST", body: fd });
+      const json = (await res.json()) as { combinedText?: string; error?: string };
+      if (!res.ok) throw new Error(json.error || "Extracción fallida");
+      setExtractedText((json.combinedText || "").trim());
+    } catch (e) {
+      setExtractError(e instanceof Error ? e.message : "No pudimos leer el archivo de la biblioteca.");
+    } finally {
+      setLibraryExtractBusy(false);
+    }
+  }
+
+  function clearLibrarySelection() {
+    setLibrarySelection(null);
+    setExtractedText("");
+    setExtractError(null);
+  }
 
   useEffect(() => {
     const raw = searchParams.get("subject");
@@ -131,6 +189,7 @@ export function ClassRescueWorkspace() {
   async function runRescue() {
     const f = readFilesAsSeed(files);
     const list = files ?? [];
+    const fromLibrary = librarySelection !== null;
     // Prioritize real extracted content over pasted notes for the demo hash / fallback pack.
     const seedText = [extractedText, notes, f.seed, link].filter(Boolean).join("\n");
 
@@ -139,11 +198,27 @@ export function ClassRescueWorkspace() {
       setGenHint("Espera a que termine la extracción del texto del archivo y luego genera el kit.");
       return;
     }
+    if (fromLibrary && libraryExtractBusy) {
+      setGenHint("Espera a que termine la lectura del archivo de tu biblioteca.");
+      return;
+    }
     if (list.length > 0 && !extractBusy && !extractedText.trim()) {
       setGenHint(
         "No hay texto extraído del archivo todavía (o está vacío). El kit será breve y no inventará temario genérico de la materia.",
       );
     }
+    if (fromLibrary && !libraryExtractBusy && !extractedText.trim()) {
+      setGenHint("No hay texto extraído del archivo de la biblioteca. Revisa permisos o vuelve a subir el archivo en Biblioteca.");
+    }
+
+    const sourceLabel =
+      fromLibrary && librarySelection
+        ? librarySelection.filename
+        : f.seed
+          ? f.label
+          : link.trim()
+            ? "enlace"
+            : "notas";
 
     setPackBusy(true);
     setPackError(null);
@@ -153,12 +228,12 @@ export function ClassRescueWorkspace() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subjectHint,
-          sourceLabel: f.seed ? f.label : link.trim() ? "enlace" : "notas",
+          sourceLabel,
           sourceKind: kind,
           extractedFileText: extractedText,
           notes,
           link,
-          uploadedFileCount: list.length,
+          uploadedFileCount: fromLibrary ? 1 : list.length,
           seedText: f.seed && !extractedText && !notes && !link ? f.seed : "",
         }),
       });
@@ -175,7 +250,7 @@ export function ClassRescueWorkspace() {
         generateRescuePack({
           seedText,
           subjectHint,
-          sourceLabel: f.seed ? f.label : link.trim() ? "enlace" : "notas",
+          sourceLabel,
           sourceKind: kind,
         }),
       );
@@ -253,16 +328,30 @@ export function ClassRescueWorkspace() {
             </div>
           </div>
 
+          <div className="md:col-span-2">
+            <RescueNotebookPicker
+              subjectFilter={subjectHint}
+              activeDocId={librarySelection?.id ?? null}
+              busy={libraryExtractBusy}
+              onPick={(doc) => void applyLibraryDocument(doc)}
+              onClear={clearLibrarySelection}
+            />
+          </div>
+
           <label className="space-y-2 text-sm md:col-span-2">
-            <span className="text-slate-300">Archivos</span>
+            <span className="text-slate-300">Archivos (local)</span>
             <input
               type="file"
               multiple
               className="block w-full text-sm text-slate-300 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-500/20 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-100 hover:file:bg-indigo-500/30"
-              onChange={(e) => setFiles(e.target.files ? Array.from(e.target.files) : null)}
+              onChange={(e) => {
+                const next = e.target.files ? Array.from(e.target.files) : null;
+                if (next && next.length > 0) setLibrarySelection(null);
+                setFiles(next);
+              }}
             />
             <div className="text-xs text-slate-500">
-              Nota: por ahora esto no se sube a la nube; se usa localmente para generar el kit (demo).
+              Opcional: sube aquí solo para esta sesión, o usa “Desde mi biblioteca” para archivos que ya guardaste (persisten al recargar).
             </div>
             {fileUrls.length > 0 ? (
               <div className="mt-2 space-y-2">
@@ -296,8 +385,10 @@ export function ClassRescueWorkspace() {
               </div>
             ) : null}
 
-            {extractBusy ? (
-              <div className="mt-2 text-xs text-slate-400">Leyendo archivo y extrayendo texto…</div>
+            {extractBusy || libraryExtractBusy ? (
+              <div className="mt-2 text-xs text-slate-400">
+                {libraryExtractBusy ? "Leyendo archivo de la biblioteca…" : "Leyendo archivo y extrayendo texto…"}
+              </div>
             ) : null}
             {extractError ? (
               <div className="mt-2 text-xs text-rose-300">{extractError}</div>
@@ -339,12 +430,24 @@ export function ClassRescueWorkspace() {
             type="button"
             onClick={runRescue}
             className="gap-2"
-            disabled={packBusy || ((files?.length ?? 0) > 0 && extractBusy)}
+            disabled={packBusy || ((files?.length ?? 0) > 0 && extractBusy) || libraryExtractBusy}
           >
             <Wand2 className="h-4 w-4" />
             {packBusy ? "Generando…" : "Generar kit de rescate"}
           </Button>
-          <Button type="button" variant="secondary" onClick={() => setPack(null)}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setPack(null);
+              setLibrarySelection(null);
+              setFiles(null);
+              setExtractedText("");
+              setExtractError(null);
+              setGenHint(null);
+              setPackError(null);
+            }}
+          >
             Limpiar
           </Button>
           {genHint ? <div className="text-xs text-slate-400">{genHint}</div> : null}
