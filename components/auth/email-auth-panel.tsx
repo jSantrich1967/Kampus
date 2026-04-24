@@ -48,6 +48,13 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
     }
   }, [urlError, t.errorGeneric]);
 
+  function formatSupabaseAuthErrorMessage(raw: string | undefined): string {
+    const msg = (raw ?? "").toLowerCase();
+    if (msg.includes("email") && msg.includes("confirm")) return t.errorEmailNotConfirmed;
+    if (msg.includes("not confirmed")) return t.errorEmailNotConfirmed;
+    return raw || t.errorGeneric;
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -65,7 +72,7 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
       if (mode === "login") {
         const { error: signErr } = await supabase.auth.signInWithPassword({ email, password });
         if (signErr) {
-          setError(t.errorGeneric);
+          setError(formatSupabaseAuthErrorMessage(signErr.message));
           return;
         }
         router.replace(nextPath);
@@ -83,7 +90,7 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
         },
       });
       if (signUpErr) {
-        setError(signUpErr.message || t.errorGeneric);
+        setError(formatSupabaseAuthErrorMessage(signUpErr.message));
         return;
       }
       if (data.session) {
@@ -119,7 +126,7 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
           : undefined,
       });
       if (resendErr) {
-        setError(resendErr.message || t.errorGeneric);
+        setError(formatSupabaseAuthErrorMessage(resendErr.message));
         return;
       }
       setMessage(t.resendSent);

@@ -16,6 +16,8 @@ export const authCopy = {
     supabaseMissing:
       "Faltan NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_ANON_KEY en .env.local. Sin ellas el inicio de sesión no está disponible.",
     errorGeneric: "No pudimos completar la acción. Revisa correo y contraseña.",
+    errorEmailNotConfirmed:
+      "Tu correo aún no está confirmado. Revisa tu bandeja (spam/promociones) o usa «Reenviar correo de confirmación» en Crear cuenta. Para pruebas, puedes desactivar «Confirm email» en Supabase → Authentication → Providers → Email.",
     checkEmail: "Si tu proyecto requiere confirmación, revisa tu correo para activar la cuenta.",
     registerSuccess: "Cuenta creada. Si pide confirmación por correo, ábrelo antes de entrar.",
     resendConfirmation: "Reenviar correo de confirmación",
