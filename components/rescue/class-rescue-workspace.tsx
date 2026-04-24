@@ -18,6 +18,8 @@ import { cn } from "@/lib/cn";
 import { combineNotebookExtractedTextForPack } from "@/lib/notebooks/document-tags";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 import { subjectToPathSegment } from "@/lib/notebooks/paths";
+import { buildRescueTagNotesSection } from "@/lib/notebooks/rescue-pack-plain-text";
+import { saveRescueKitAsNotebookDocument } from "@/lib/notebooks/save-rescue-kit-document";
 import { postRescuePack } from "@/lib/rescue/post-rescue-pack";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -60,6 +62,12 @@ export function ClassRescueWorkspace() {
   const [notebookBundleSlug, setNotebookBundleSlug] = useState<string | null>(null);
   const [notebookDocCount, setNotebookDocCount] = useState(0);
   const lastNotebookFromUrl = useRef<string>("");
+  /** Misma clasificación que al subir hojas en Mis cuadernos (Tema / Punto / Ejercicios). */
+  const [kitTopic, setKitTopic] = useState("");
+  const [kitLessonPoint, setKitLessonPoint] = useState("");
+  const [kitPracticeExercises, setKitPracticeExercises] = useState("");
+  const [saveKitBusy, setSaveKitBusy] = useState(false);
+  const [saveKitMessage, setSaveKitMessage] = useState<string | null>(null);
 
   const premium = profile.plan === "premium";
 
@@ -117,6 +125,9 @@ export function ClassRescueWorkspace() {
     setFiles(null);
     setKind(mimeToSourceKind(doc.mime_type));
     setSubjectHint((prev) => (prev.trim() ? prev : doc.subject));
+    setKitTopic(doc.topic ?? "");
+    setKitLessonPoint(doc.lesson_point ?? "");
+    setKitPracticeExercises(doc.practice_exercises ?? "");
     setExtractError(null);
     setGenHint(null);
 
@@ -154,6 +165,9 @@ export function ClassRescueWorkspace() {
     setLibrarySelection(null);
     setExtractedText("");
     setExtractError(null);
+    setKitTopic("");
+    setKitLessonPoint("");
+    setKitPracticeExercises("");
   }
 
   useEffect(() => {
@@ -195,7 +209,11 @@ export function ClassRescueWorkspace() {
         setNotebookBundleSlug(nb);
         setNotebookDocCount(filtered.length);
         setExtractedText(combined);
-        setSubjectHint((prev) => (prev.trim() ? prev : filtered[0]!.subject));
+        const first = filtered[0]!;
+        setSubjectHint((prev) => (prev.trim() ? prev : first.subject));
+        setKitTopic(first.topic ?? "");
+        setKitLessonPoint(first.lesson_point ?? "");
+        setKitPracticeExercises(first.practice_exercises ?? "");
         setKind("notes");
         setExtractError(null);
         setGenHint(
@@ -226,8 +244,10 @@ export function ClassRescueWorkspace() {
     const list = files ?? [];
     const fromNotebookBundle = Boolean(notebookBundleSlug && notebookDocCount > 0);
     const fromLibrary = librarySelection !== null || fromNotebookBundle;
+    const tagSection = buildRescueTagNotesSection(subjectHint, kitTopic, kitLessonPoint, kitPracticeExercises);
+    const notesForApi = [tagSection, notes].filter(Boolean).join("\n\n---\n\n");
     // Prioritize real extracted content over pasted notes for the demo hash / fallback pack.
-    const seedText = [extractedText, notes, f.seed, link].filter(Boolean).join("\n");
+    const seedText = [extractedText, notesForApi, f.seed, link].filter(Boolean).join("\n");
 
     setGenHint(null);
     if (list.length > 0 && extractBusy) {
@@ -267,10 +287,10 @@ export function ClassRescueWorkspace() {
           sourceLabel,
           sourceKind: kind,
           extractedFileText: extractedText,
-          notes,
+          notes: notesForApi,
           link,
           uploadedFileCount: librarySelection ? 1 : fromNotebookBundle ? notebookDocCount : list.length,
-          seedText: f.seed && !extractedText && !notes && !link ? f.seed : "",
+          seedText: f.seed && !extractedText && !notesForApi && !link ? f.seed : "",
         },
         { seedText, subjectHint, sourceLabel, sourceKind: kind },
       );
@@ -279,6 +299,33 @@ export function ClassRescueWorkspace() {
       setGenHint(null);
     } finally {
       setPackBusy(false);
+    }
+  }
+
+  async function saveKitToNotebook() {
+    if (!pack || !authUserId) return;
+    if (!isSupabaseConfigured()) {
+      setSaveKitMessage("Configura Supabase para guardar en Mis cuadernos.");
+      return;
+    }
+    setSaveKitBusy(true);
+    setSaveKitMessage(null);
+    try {
+      await saveRescueKitAsNotebookDocument({
+        authUserId,
+        subject: subjectHint.trim() || "General",
+        topic: kitTopic,
+        lesson_point: kitLessonPoint,
+        practice_exercises: kitPracticeExercises,
+        pack,
+      });
+      setSaveKitMessage(
+        `Guardado en el cuaderno «${subjectHint.trim() || "General"}». Abre Mis cuadernos o el lector: verás una hoja «Rescate …» con Tema / Punto / Ejercicios que indicaste.`,
+      );
+    } catch (e) {
+      setSaveKitMessage(e instanceof Error ? e.message : "No se pudo guardar el kit.");
+    } finally {
+      setSaveKitBusy(false);
     }
   }
 
@@ -310,10 +357,11 @@ export function ClassRescueWorkspace() {
         <CardHeader>
           <CardTitle>Entrada de rescate</CardTitle>
           <CardDescription>
-            Puedes subir archivos locales, elegir uno de Mis cuadernos, o abrir un enlace tipo{" "}
+            Indica <strong>Materia foco</strong> y las mismas <strong>etiquetas</strong> que en Mis cuadernos (Tema, Punto,
+            Ejercicios) antes de generar: la IA las usa para orientar el kit y, si guardas el kit, quedan en la nueva hoja
+            del cuaderno. Puedes subir archivos locales, elegir un archivo de Mis cuadernos, o abrir{" "}
             <code className="rounded bg-white/10 px-1 py-0.5 text-[11px]">/study/rescue?notebook=econometria</code> para cargar{" "}
-            <strong>todo</strong> el cuaderno de esa materia. La IA usa el texto extraído; la materia foco solo ayuda a
-            etiquetar.
+            <strong>todo</strong> el cuaderno.
           </CardDescription>
         </CardHeader>
 
@@ -354,6 +402,46 @@ export function ClassRescueWorkspace() {
                   {label}
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-slate-950/40 p-4 md:col-span-2">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Etiquetas del rescate (igual que al alimentar el cuaderno)
+            </p>
+            <p className="mb-3 text-[11px] text-slate-500">
+              La <strong className="text-slate-400">Materia foco</strong> define en qué cuaderno aparecerá si pulsas
+              «Guardar kit en Mis cuadernos». <strong className="text-slate-400">Tema</strong>, <strong className="text-slate-400">Punto</strong> y{" "}
+              <strong className="text-slate-400">Ejercicios prácticos</strong> se guardan en esa hoja y sirven para filtrar el kit de estudio en el lector.
+            </p>
+            <div className="grid gap-3 md:grid-cols-3">
+              <label className="space-y-1 text-xs">
+                <span className="text-slate-500">Tema</span>
+                <input
+                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
+                  value={kitTopic}
+                  onChange={(e) => setKitTopic(e.target.value)}
+                  placeholder="Ej. Números complejos"
+                />
+              </label>
+              <label className="space-y-1 text-xs">
+                <span className="text-slate-500">Punto</span>
+                <input
+                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
+                  value={kitLessonPoint}
+                  onChange={(e) => setKitLessonPoint(e.target.value)}
+                  placeholder="Ej. 2.1 Forma polar"
+                />
+              </label>
+              <label className="space-y-1 text-xs">
+                <span className="text-slate-500">Ejercicios prácticos</span>
+                <input
+                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
+                  value={kitPracticeExercises}
+                  onChange={(e) => setKitPracticeExercises(e.target.value)}
+                  placeholder="Ej. 1–12 pág. 45"
+                />
+              </label>
             </div>
           </div>
 
@@ -483,6 +571,10 @@ export function ClassRescueWorkspace() {
               setExtractError(null);
               setGenHint(null);
               setPackError(null);
+              setKitTopic("");
+              setKitLessonPoint("");
+              setKitPracticeExercises("");
+              setSaveKitMessage(null);
             }}
           >
             Limpiar
@@ -493,27 +585,67 @@ export function ClassRescueWorkspace() {
       </Card>
 
       {pack ? (
-        <RescuePackDisplay
-          pack={pack}
-          premium={premium}
-          headerActions={
-            <>
-              <ShareLinkButton
-                pathname="/study/rescue"
-                campaign="rescue_pack"
-                extra={{ subject: subjectHint.trim() || undefined, kit: pack.subjectLine.slice(0, 40) }}
-                refHandle={profile.university || "kampus"}
-                label="Compartir kit"
-                copiedLabel="Copiado"
-              />
-              <Link href="/pass-mode">
-                <Button variant="secondary" size="sm">
-                  Llevar esto a Modo aprobar
-                </Button>
-              </Link>
-            </>
-          }
-        />
+        <>
+          <RescuePackDisplay
+            pack={pack}
+            premium={premium}
+            headerActions={
+              <>
+                <ShareLinkButton
+                  pathname="/study/rescue"
+                  campaign="rescue_pack"
+                  extra={{ subject: subjectHint.trim() || undefined, kit: pack.subjectLine.slice(0, 40) }}
+                  refHandle={profile.university || "kampus"}
+                  label="Compartir kit"
+                  copiedLabel="Copiado"
+                />
+                <Link href="/pass-mode">
+                  <Button variant="secondary" size="sm">
+                    Llevar esto a Modo aprobar
+                  </Button>
+                </Link>
+              </>
+            }
+          />
+
+          <Card className="border-emerald-400/20 bg-emerald-500/[0.06]">
+            <CardHeader>
+              <CardTitle className="text-emerald-100">Guardar en Mis cuadernos</CardTitle>
+              <CardDescription>
+                Crea una hoja de texto en el cuaderno de <strong>{subjectHint.trim() || "General"}</strong> con este kit
+                completo y las etiquetas Tema / Punto / Ejercicios que escribiste arriba (para verla en el lector y filtrar
+                después).
+              </CardDescription>
+            </CardHeader>
+            <div className="flex flex-col gap-3 px-6 pb-6">
+              {!authUserId ? (
+                <p className="text-sm text-slate-400">Inicia sesión para guardar el kit en tu cuaderno.</p>
+              ) : !isSupabaseConfigured() ? (
+                <p className="text-sm text-slate-400">Configura Supabase en el proyecto para usar Mis cuadernos.</p>
+              ) : (
+                <>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="secondary" className="gap-2" disabled={saveKitBusy} onClick={() => void saveKitToNotebook()}>
+                      {saveKitBusy ? "Guardando…" : "Guardar kit en Mis cuadernos"}
+                    </Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => router.push("/study/library")}>
+                      Abrir Mis cuadernos
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => router.push(`/study/notebook/${subjectToPathSegment(subjectHint.trim() || "General")}`)}
+                    >
+                      Abrir lector de esta materia
+                    </Button>
+                  </div>
+                  {saveKitMessage ? <p className="text-sm text-emerald-200/90">{saveKitMessage}</p> : null}
+                </>
+              )}
+            </div>
+          </Card>
+        </>
       ) : (
         <Card>
           <CardHeader>
