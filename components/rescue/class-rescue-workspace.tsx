@@ -17,7 +17,11 @@ import type { RescuePack } from "@/lib/class-rescue";
 import { cn } from "@/lib/cn";
 import { combineNotebookExtractedTextForPack } from "@/lib/notebooks/document-tags";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
-import { buildNotebookTagOptions, type NotebookTagRow } from "@/lib/notebooks/notebook-filter-options";
+import {
+  buildNotebookTagOptions,
+  firstNotebookKitTagsForSubject,
+  type NotebookTagRow,
+} from "@/lib/notebooks/notebook-filter-options";
 import { subjectToPathSegment } from "@/lib/notebooks/paths";
 import { buildRescueSourceDocumentBody, buildRescueTagNotesSection } from "@/lib/notebooks/rescue-pack-plain-text";
 import { saveRescueNotebookSource } from "@/lib/notebooks/save-rescue-source-document";
@@ -152,15 +156,43 @@ export function ClassRescueWorkspace() {
     if (q != null && q.trim() !== "") return;
     if (subjectHint.trim()) return;
     if (subjectSelectOptions.length === 0) return;
-    setSubjectHint(subjectSelectOptions[0]!);
-  }, [searchParams, subjectHint, subjectSelectOptions]);
+    const next = subjectSelectOptions[0]!;
+    setSubjectHint(next);
+    const kit = firstNotebookKitTagsForSubject(notebookTagRows, profile.subjects, next);
+    setKitTopic(kit.topic);
+    setKitLessonPoint(kit.lessonPoint);
+    setKitPracticeExercises(kit.practiceExercises);
+  }, [searchParams, subjectHint, subjectSelectOptions, notebookTagRows, profile.subjects]);
+
+  /** When focus subject changes, pre-fill Tema/Punto/Ejercicios from that cuaderno’s sheets (first tag per list). */
+  function fillKitTagsForFocusSubject(focusRaw: string) {
+    const focus = focusRaw.trim();
+    if (!focus) {
+      setKitTopic("");
+      setKitLessonPoint("");
+      setKitPracticeExercises("");
+      return;
+    }
+    const kit = firstNotebookKitTagsForSubject(notebookTagRows, profile.subjects, focus);
+    setKitTopic(kit.topic);
+    setKitLessonPoint(kit.lessonPoint);
+    setKitPracticeExercises(kit.practiceExercises);
+  }
+
+  /** If hojas load after subject is set, fill any tag field still empty so selects are not stuck on «Sin filtro». */
+  useEffect(() => {
+    const focus = subjectHint.trim();
+    if (!focus) return;
+    const kit = firstNotebookKitTagsForSubject(notebookTagRows, profile.subjects, focus);
+    setKitTopic((t) => (t.trim() ? t : kit.topic));
+    setKitLessonPoint((p) => (p.trim() ? p : kit.lessonPoint));
+    setKitPracticeExercises((e) => (e.trim() ? e : kit.practiceExercises));
+  }, [notebookTagRows, profile.subjects, subjectHint]);
 
   function handleNotebookFocusChange(next: string) {
     const prev = subjectHintRef.current;
     if (prev.trim() !== next.trim()) {
-      setKitTopic("");
-      setKitLessonPoint("");
-      setKitPracticeExercises("");
+      fillKitTagsForFocusSubject(next);
     }
     setSubjectHint(next);
   }
@@ -339,11 +371,12 @@ export function ClassRescueWorkspace() {
     }
     const prev = subjectHintRef.current;
     if (prev.trim() === next.trim()) return;
-    setKitTopic("");
-    setKitLessonPoint("");
-    setKitPracticeExercises("");
+    const kit = firstNotebookKitTagsForSubject(notebookTagRows, profile.subjects, next);
+    setKitTopic(kit.topic);
+    setKitLessonPoint(kit.lessonPoint);
+    setKitPracticeExercises(kit.practiceExercises);
     setSubjectHint(next);
-  }, [searchParams]);
+  }, [searchParams, notebookTagRows, profile.subjects]);
 
   async function runRescue() {
     const f = readFilesAsSeed(files);
@@ -470,8 +503,8 @@ export function ClassRescueWorkspace() {
           <CardDescription>
             Indica <strong>Materia foco</strong> (cuaderno) y las <strong>etiquetas</strong> que ya usas en Mis cuadernos
             (Tema, Punto, Ejercicios): con sesión y Supabase verás <strong>listas desplegables</strong> con tus materias y
-            el contenido etiquetado de tus hojas. Al <strong>cambiar de cuaderno</strong> aquí, Tema / Punto / Ejercicios se
-            vacían para no mezclar etiquetas de otra materia. Si pulsas «Guardar material de entrada», en el cuaderno solo se guarda lo
+            el contenido etiquetado de tus hojas.             Al <strong>cambiar de cuaderno</strong> aquí, Tema / Punto / Ejercicios se
+            rellenan solos con la primera etiqueta disponible en tus hojas de esa materia (puedes cambiarlas en los desplegables). Si pulsas «Guardar material de entrada», en el cuaderno solo se guarda lo
             que <strong>entraste</strong> (texto extraído, apuntes, enlace), no el kit generado por la IA. También puedes
             subir archivos locales, elegir un archivo abajo, o abrir{" "}
             <code className="rounded bg-white/10 px-1 py-0.5 text-[11px]">/study/library/rescue?notebook=econometria</code>{" "}
@@ -556,7 +589,8 @@ export function ClassRescueWorkspace() {
               La <strong className="text-slate-400">Materia foco</strong> define en qué cuaderno aparecerá si pulsas
               «Guardar material en el cuaderno». <strong className="text-slate-400">Tema</strong>, <strong className="text-slate-400">Punto</strong> y{" "}
               <strong className="text-slate-400">Ejercicios prácticos</strong> salen de las etiquetas reales de tus
-              archivos en ese cuaderno.
+              archivos en ese cuaderno; al elegir la materia foco intentamos <strong className="text-slate-400">preseleccionar</strong> la
+              primera de cada lista (orden alfabético).
             </p>
             <div className="grid gap-3 md:grid-cols-3">
               <label className="space-y-1 text-xs">

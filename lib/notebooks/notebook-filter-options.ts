@@ -44,3 +44,17 @@ export function buildNotebookTagOptions(rows: NotebookTagRow[], profileSubjects:
     practiceExercises: uniqSorted(subset.map((r) => r.practice_exercises ?? "")),
   };
 }
+
+/** First tag in each dimension for the focus subject (sorted lists from `buildNotebookTagOptions`). */
+export function firstNotebookKitTagsForSubject(
+  rows: NotebookTagRow[],
+  profileSubjects: string[],
+  focusSubject: string,
+): { topic: string; lessonPoint: string; practiceExercises: string } {
+  const opt = buildNotebookTagOptions(rows, profileSubjects, focusSubject);
+  return {
+    topic: opt.topics[0] ?? "",
+    lessonPoint: opt.lessonPoints[0] ?? "",
+    practiceExercises: opt.practiceExercises[0] ?? "",
+  };
+}
