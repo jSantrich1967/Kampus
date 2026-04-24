@@ -67,7 +67,7 @@ export function TodayDashboard() {
     <div className="space-y-8">
       <PageHeader
         eyebrow="Hoy"
-        title={t.greeting(profile.university)}
+        title={t.greeting({ name: profile.displayName, institution: profile.university })}
         description={t.tagline}
         actions={
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

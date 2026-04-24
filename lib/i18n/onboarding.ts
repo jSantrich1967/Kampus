@@ -9,6 +9,7 @@ export const onboardingCopy: Record<
     progress: (current: number, total: number) => string;
     roles: { student: string; teacher: string; institution: string; learner: string };
     fields: {
+      name: string;
       university: string;
       major: string;
       semester: string;
@@ -41,6 +42,7 @@ export const onboardingCopy: Record<
       learner: "Autodidacta",
     },
     fields: {
+      name: "Tu nombre (opcional)",
       university: "Institución (opcional)",
       major: "Carrera / programa",
       semester: "Semestre",

@@ -3,7 +3,7 @@ import type { Locale } from "@/lib/i18n/nav";
 export const todayCopy: Record<
   Locale,
   {
-    greeting: (uni: string) => string;
+    greeting: (opts: { name: string; institution: string }) => string;
     tagline: string;
     passCta: string;
     rescueCta: string;
@@ -28,7 +28,10 @@ export const todayCopy: Record<
   }
 > = {
   es: {
-    greeting: (uni) => (uni ? `Hola — impulsemos tu semana en ${uni}.` : "Hola — impulsemos tu semana."),
+    greeting: ({ name, institution }) => {
+      const who = name?.trim() ? `, ${name.trim()}` : "";
+      return institution ? `Hola${who} — impulsemos tu semana en ${institution}.` : `Hola${who} — impulsemos tu semana.`;
+    },
     tagline: "Tu siguiente mejor paso, sin ruido.",
     passCta: "Abrir Modo aprobar",
     rescueCta: "Rescatar una clase",

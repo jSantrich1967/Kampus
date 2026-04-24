@@ -24,6 +24,7 @@ export function OnboardingFlow() {
 
   const [step, setStep] = useState(0);
   const [role, setRole] = useState<UserRole>("student");
+  const [displayName, setDisplayName] = useState("");
   const [university, setUniversity] = useState("");
   const [major, setMajor] = useState("");
   const [semester, setSemester] = useState("");
@@ -90,6 +91,7 @@ export function OnboardingFlow() {
       onboardingFinished: true,
       plan: profile.plan,
       role,
+      displayName: displayName.trim(),
       university: university.trim(),
       major: major.trim(),
       semester: semester.trim(),
@@ -193,6 +195,15 @@ export function OnboardingFlow() {
                 </CardDescription>
               </CardHeader>
               <div className="grid gap-4 md:grid-cols-2">
+                <label className="space-y-2 text-sm">
+                  <span className="text-slate-300">{t.fields.name}</span>
+                  <input
+                    className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 outline-none ring-indigo-400/40 focus:ring"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Ej.: Juan, Ana, J. Santrich…"
+                  />
+                </label>
                 <label className="space-y-2 text-sm">
                   <span className="text-slate-300">{t.fields.university}</span>
                   <input
