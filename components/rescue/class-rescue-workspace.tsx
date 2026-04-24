@@ -64,6 +64,9 @@ export function ClassRescueWorkspace() {
   const [files, setFiles] = useState<File[] | null>(null);
   const [kind, setKind] = useState<SourceKind>("notes");
   const [pack, setPack] = useState<RescuePack | null>(null);
+  const [extractedText, setExtractedText] = useState("");
+  const [extractBusy, setExtractBusy] = useState(false);
+  const [extractError, setExtractError] = useState<string | null>(null);
 
   const premium = profile.plan === "premium";
 
@@ -79,6 +82,40 @@ export function ClassRescueWorkspace() {
   }, [fileUrls]);
 
   useEffect(() => {
+    let cancelled = false;
+    const list = files ?? [];
+    if (list.length === 0) {
+      setExtractedText("");
+      setExtractError(null);
+      setExtractBusy(false);
+      return;
+    }
+
+    const run = async () => {
+      setExtractBusy(true);
+      setExtractError(null);
+      try {
+        const fd = new FormData();
+        list.forEach((f) => fd.append("files", f));
+        const res = await fetch("/api/rescue/extract", { method: "POST", body: fd });
+        const json = (await res.json()) as { combinedText?: string; error?: string };
+        if (!res.ok) throw new Error(json.error || "Extraction failed");
+        if (!cancelled) setExtractedText((json.combinedText || "").trim());
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "No pudimos leer el archivo.";
+        if (!cancelled) setExtractError(msg);
+      } finally {
+        if (!cancelled) setExtractBusy(false);
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [files]);
+
+  useEffect(() => {
     const raw = searchParams.get("subject");
     if (!raw) return;
     try {
@@ -90,7 +127,7 @@ export function ClassRescueWorkspace() {
 
   function runRescue() {
     const f = readFilesAsSeed(files);
-    const seedText = [notes, f.seed, link].filter(Boolean).join("\n");
+    const seedText = [notes, extractedText, f.seed, link].filter(Boolean).join("\n");
     setPack(
       generateRescuePack({
         seedText,
@@ -210,6 +247,22 @@ export function ClassRescueWorkspace() {
                     </div>
                   </div>
                 ))}
+              </div>
+            ) : null}
+
+            {extractBusy ? (
+              <div className="mt-2 text-xs text-slate-400">Leyendo archivo y extrayendo texto…</div>
+            ) : null}
+            {extractError ? (
+              <div className="mt-2 text-xs text-rose-300">{extractError}</div>
+            ) : null}
+            {extractedText ? (
+              <div className="mt-3 rounded-xl border border-white/10 bg-slate-950/40 p-3">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Vista previa (texto extraído)</div>
+                <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap text-xs leading-relaxed text-slate-200">
+                  {extractedText.slice(0, 2400)}
+                  {extractedText.length > 2400 ? "\n\n…(recortado)" : ""}
+                </pre>
               </div>
             ) : null}
           </label>
