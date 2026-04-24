@@ -15,6 +15,7 @@ import { RescueNotebookPicker } from "@/components/rescue/rescue-notebook-picker
 import { RescuePackDisplay } from "@/components/rescue/rescue-pack-display";
 import type { RescuePack } from "@/lib/class-rescue";
 import { cn } from "@/lib/cn";
+import { combineNotebookExtractedTextForPack } from "@/lib/notebooks/document-tags";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 import { subjectToPathSegment } from "@/lib/notebooks/paths";
 import { postRescuePack } from "@/lib/rescue/post-rescue-pack";
@@ -186,12 +187,7 @@ export function ClassRescueWorkspace() {
           }
           return;
         }
-        const combined = filtered
-          .map(
-            (d) =>
-              `# ${d.filename}\n${d.extracted_text?.trim() ? d.extracted_text.trim() : "(sin texto extraído aún — puedes re-subir el archivo en Mis cuadernos)"}`,
-          )
-          .join("\n\n");
+        const combined = combineNotebookExtractedTextForPack(filtered);
         if (cancelled) return;
         lastNotebookFromUrl.current = loadKey;
         setFiles(null);

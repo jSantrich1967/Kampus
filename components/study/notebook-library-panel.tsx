@@ -28,6 +28,15 @@ export function NotebookLibraryPanel() {
   const [error, setError] = useState<string | null>(null);
   /** Which subject "notebook" is expanded to show pages (files). */
   const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
+  /** Etiquetas aplicadas a cada archivo de la siguiente subida (Materia = selector de arriba). */
+  const [uploadTopic, setUploadTopic] = useState("");
+  const [uploadLessonPoint, setUploadLessonPoint] = useState("");
+  const [uploadPracticeExercises, setUploadPracticeExercises] = useState("");
+  const [editingDocId, setEditingDocId] = useState<string | null>(null);
+  const [editTopic, setEditTopic] = useState("");
+  const [editLessonPoint, setEditLessonPoint] = useState("");
+  const [editPractice, setEditPractice] = useState("");
+  const [savingTags, setSavingTags] = useState(false);
 
   useEffect(() => {
     if (customSubject.trim()) return;
@@ -133,6 +142,9 @@ export function NotebookLibraryPanel() {
         const { error: insErr } = await supabase.from("notebook_documents").insert({
           user_id: authUserId,
           subject: effectiveSubject,
+          topic: uploadTopic.trim(),
+          lesson_point: uploadLessonPoint.trim(),
+          practice_exercises: uploadPracticeExercises.trim(),
           storage_path: storagePath,
           filename: file.name,
           mime_type: file.type || "application/octet-stream",
@@ -167,6 +179,43 @@ export function NotebookLibraryPanel() {
     } catch (e) {
       const msg = e instanceof Error ? e.message : "No se pudo borrar.";
       setError(formatNotebookCloudError(msg));
+    }
+  }
+
+  function openTagEditor(doc: NotebookDocumentRow) {
+    setEditingDocId(doc.id);
+    setEditTopic(doc.topic ?? "");
+    setEditLessonPoint(doc.lesson_point ?? "");
+    setEditPractice(doc.practice_exercises ?? "");
+  }
+
+  function closeTagEditor() {
+    setEditingDocId(null);
+  }
+
+  async function saveDocTags(docId: string) {
+    if (!authUserId) return;
+    setSavingTags(true);
+    setError(null);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { error: upErr } = await supabase
+        .from("notebook_documents")
+        .update({
+          topic: editTopic.trim(),
+          lesson_point: editLessonPoint.trim(),
+          practice_exercises: editPractice.trim(),
+        })
+        .eq("id", docId)
+        .eq("user_id", authUserId);
+      if (upErr) throw upErr;
+      closeTagEditor();
+      await loadDocs();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "No se pudieron guardar las etiquetas.";
+      setError(formatNotebookCloudError(msg));
+    } finally {
+      setSavingTags(false);
     }
   }
 
@@ -247,6 +296,46 @@ export function NotebookLibraryPanel() {
               placeholder="Ej. Econometría II"
             />
           </label>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-slate-950/40 p-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Etiquetas del material (opcional · se aplican a la próxima subida)
+          </p>
+          <p className="mb-3 text-[11px] text-slate-500">
+            La <strong className="text-slate-400">Materia</strong> es el cuaderno (arriba). Aquí puedes detallar{" "}
+            <strong className="text-slate-400">Tema</strong>, <strong className="text-slate-400">Punto</strong> y{" "}
+            <strong className="text-slate-400">Ejercicios prácticos</strong> para filtrar el kit de estudio en el lector.
+          </p>
+          <div className="grid gap-3 md:grid-cols-3">
+            <label className="space-y-1 text-xs">
+              <span className="text-slate-500">Tema</span>
+              <input
+                className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
+                value={uploadTopic}
+                onChange={(e) => setUploadTopic(e.target.value)}
+                placeholder="Ej. Números complejos"
+              />
+            </label>
+            <label className="space-y-1 text-xs">
+              <span className="text-slate-500">Punto</span>
+              <input
+                className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
+                value={uploadLessonPoint}
+                onChange={(e) => setUploadLessonPoint(e.target.value)}
+                placeholder="Ej. 2.1 Forma polar"
+              />
+            </label>
+            <label className="space-y-1 text-xs">
+              <span className="text-slate-500">Ejercicios prácticos</span>
+              <input
+                className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
+                value={uploadPracticeExercises}
+                onChange={(e) => setUploadPracticeExercises(e.target.value)}
+                placeholder="Ej. 1–12 pág. 45"
+              />
+            </label>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -398,6 +487,23 @@ export function NotebookLibraryPanel() {
                                     {new Date(doc.created_at).toLocaleString("es")}
                                   </span>
                                 </div>
+                                {(doc.topic ?? "").trim() || (doc.lesson_point ?? "").trim() || (doc.practice_exercises ?? "").trim() ? (
+                                  <div className="mt-1.5 flex flex-wrap gap-1.5 text-[10px] text-slate-400">
+                                    {(doc.topic ?? "").trim() ? (
+                                      <span className="rounded-md bg-indigo-500/15 px-1.5 py-0.5 text-indigo-100">
+                                        Tema: {(doc.topic ?? "").trim()}
+                                      </span>
+                                    ) : null}
+                                    {(doc.lesson_point ?? "").trim() ? (
+                                      <span className="rounded-md bg-white/10 px-1.5 py-0.5">Punto: {(doc.lesson_point ?? "").trim()}</span>
+                                    ) : null}
+                                    {(doc.practice_exercises ?? "").trim() ? (
+                                      <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-emerald-100">
+                                        Ej.: {(doc.practice_exercises ?? "").trim()}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                ) : null}
                                 {doc.extracted_text ? (
                                   <details className="mt-2 text-xs text-slate-400">
                                     <summary className="cursor-pointer text-indigo-200/90">Texto extraído</summary>
@@ -408,7 +514,16 @@ export function NotebookLibraryPanel() {
                                   </details>
                                 ) : null}
                               </div>
-                              <div className="flex shrink-0 gap-2">
+                              <div className="flex shrink-0 flex-wrap gap-2">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="ring-1 ring-white/15"
+                                  onClick={() => openTagEditor(doc)}
+                                >
+                                  Etiquetas
+                                </Button>
                                 <Button type="button" size="sm" variant="secondary" onClick={() => void signedDownload(doc)}>
                                   Descargar
                                 </Button>
@@ -424,6 +539,45 @@ export function NotebookLibraryPanel() {
                                 </Button>
                               </div>
                             </div>
+                            {editingDocId === doc.id ? (
+                              <div className="mt-3 space-y-3 rounded-xl border border-indigo-400/25 bg-indigo-500/10 p-3">
+                                <p className="text-xs font-medium text-indigo-100">Editar Tema, Punto y Ejercicios</p>
+                                <div className="grid gap-2 sm:grid-cols-3">
+                                  <label className="space-y-1 text-[11px]">
+                                    <span className="text-slate-500">Tema</span>
+                                    <input
+                                      className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-1.5 text-xs text-slate-200 outline-none focus:ring focus:ring-indigo-400/30"
+                                      value={editTopic}
+                                      onChange={(e) => setEditTopic(e.target.value)}
+                                    />
+                                  </label>
+                                  <label className="space-y-1 text-[11px]">
+                                    <span className="text-slate-500">Punto</span>
+                                    <input
+                                      className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-1.5 text-xs text-slate-200 outline-none focus:ring focus:ring-indigo-400/30"
+                                      value={editLessonPoint}
+                                      onChange={(e) => setEditLessonPoint(e.target.value)}
+                                    />
+                                  </label>
+                                  <label className="space-y-1 text-[11px]">
+                                    <span className="text-slate-500">Ejercicios prácticos</span>
+                                    <input
+                                      className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-1.5 text-xs text-slate-200 outline-none focus:ring focus:ring-indigo-400/30"
+                                      value={editPractice}
+                                      onChange={(e) => setEditPractice(e.target.value)}
+                                    />
+                                  </label>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  <Button type="button" size="sm" disabled={savingTags} onClick={() => void saveDocTags(doc.id)}>
+                                    {savingTags ? "Guardando…" : "Guardar"}
+                                  </Button>
+                                  <Button type="button" size="sm" variant="ghost" disabled={savingTags} onClick={closeTagEditor}>
+                                    Cancelar
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : null}
                           </li>
                         ))}
                       </ul>
