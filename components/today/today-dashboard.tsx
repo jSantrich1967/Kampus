@@ -180,7 +180,7 @@ export function TodayDashboard() {
           </CardHeader>
           <Link href="/study/library">
             <Button variant="secondary" className="w-full">
-              Ir a biblioteca
+              Ir a mis cuadernos
             </Button>
           </Link>
         </Card>

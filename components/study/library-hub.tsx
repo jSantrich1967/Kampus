@@ -16,16 +16,16 @@ export function LibraryHub() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Recursos"
-        title="Biblioteca IA"
-        description="Dificultad, tiempo de consumo y utilidad para examen — rutas recomendadas por riesgo."
+        eyebrow="Estudiar"
+        title="Mis cuadernos"
+        description="Aquí viven tus cuadernos por materia. Sube material, ábrelo clase a clase y desde cada cuaderno salta a rescate, radar o práctica cuando lo necesites."
         actions={
           <ShareLinkButton
             pathname="/study/library"
             campaign="ai_library"
             extra={{ focus }}
             refHandle={profile.university || "kampus"}
-            label="Compartir biblioteca"
+            label="Compartir enlace de mis cuadernos"
             copiedLabel="Copiado"
           />
         }
@@ -64,7 +64,7 @@ export function LibraryHub() {
         <CardHeader>
           <CardTitle>Ruta recomendada (demo)</CardTitle>
           <CardDescription>
-            Conecta con radar y rescate cuando exista contenido indexado.
+            Con material en tus cuadernos, enlaza con radar y rescate para preparar la semana.
           </CardDescription>
         </CardHeader>
         <div className="flex flex-wrap gap-2">

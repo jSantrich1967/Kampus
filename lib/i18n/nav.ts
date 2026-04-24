@@ -17,7 +17,7 @@ export const navCopy = {
       passMode: "Modo aprobar",
       rescue: "Rescate de clase",
       flashcards: "Tarjetas",
-      library: "Biblioteca IA",
+      library: "Mis cuadernos",
       exams: "Exámenes",
       risk: "Radar académico",
       community: "Comunidad",

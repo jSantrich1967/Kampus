@@ -50,7 +50,7 @@ export function AttributionBanner() {
       case "academic_radar":
         return "Llegaste desde un radar académico compartido";
       case "ai_library":
-        return "Llegaste desde la biblioteca IA compartida";
+        return "Llegaste desde el enlace compartido de Mis cuadernos";
       case "exam_workflow":
         return "Llegaste desde un flujo de exámenes compartido";
       case "teacher_workflow":

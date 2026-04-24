@@ -42,7 +42,7 @@ export const todayCopy: Record<
     preparedness: "Preparación estimada",
     streak: "Racha",
     continueTitle: "Continúa donde quedaste",
-    continueBody: "Retoma el último flujo de práctica o rescate.",
+    continueBody: "Abre tus cuadernos para retomar material y lanzar rescate o práctica desde ahí.",
     teacherTitle: "Atajos de docente",
     teacherBody: "Publica feedback más rápido y detecta patrones de error.",
     institutionTitle: "Salud académica del cohorte",

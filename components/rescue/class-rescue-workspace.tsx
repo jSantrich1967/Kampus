@@ -2,8 +2,8 @@
 
 import { FileAudio, FileImage, FileText, Link2, Sparkles, Wand2 } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ShareLinkButton } from "@/components/growth/share-link-button";
 import { PageHeader } from "@/components/layout/page-header";
@@ -15,7 +15,9 @@ import { RescueNotebookPicker } from "@/components/rescue/rescue-notebook-picker
 import { generateRescuePack, type RescuePack } from "@/lib/class-rescue";
 import { cn } from "@/lib/cn";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
+import { subjectToPathSegment } from "@/lib/notebooks/paths";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 type SourceKind = "pdf" | "audio" | "image" | "slides" | "link" | "notes";
 
@@ -65,7 +67,8 @@ function Section({
 }
 
 export function ClassRescueWorkspace() {
-  const { profile } = useKampus();
+  const router = useRouter();
+  const { profile, authUserId } = useKampus();
   const searchParams = useSearchParams();
 
   const [subjectHint, setSubjectHint] = useState(profile.subjects[0] ?? "");
@@ -82,6 +85,10 @@ export function ClassRescueWorkspace() {
   const [extractError, setExtractError] = useState<string | null>(null);
   const [librarySelection, setLibrarySelection] = useState<NotebookDocumentRow | null>(null);
   const [libraryExtractBusy, setLibraryExtractBusy] = useState(false);
+  /** Whole-notebook import from URL ?notebook=slug (combined extracted text). */
+  const [notebookBundleSlug, setNotebookBundleSlug] = useState<string | null>(null);
+  const [notebookDocCount, setNotebookDocCount] = useState(0);
+  const lastNotebookFromUrl = useRef<string>("");
 
   const premium = profile.plan === "premium";
 
@@ -101,7 +108,7 @@ export function ClassRescueWorkspace() {
     const list = files ?? [];
     if (list.length === 0) {
       setExtractBusy(false);
-      if (!librarySelection) {
+      if (!librarySelection && !notebookBundleSlug) {
         setExtractedText("");
         setExtractError(null);
       }
@@ -130,9 +137,11 @@ export function ClassRescueWorkspace() {
     return () => {
       cancelled = true;
     };
-  }, [files, librarySelection]);
+  }, [files, librarySelection, notebookBundleSlug]);
 
   async function applyLibraryDocument(doc: NotebookDocumentRow) {
+    setNotebookBundleSlug(null);
+    setNotebookDocCount(0);
     setLibrarySelection(doc);
     setFiles(null);
     setKind(mimeToSourceKind(doc.mime_type));
@@ -164,7 +173,7 @@ export function ClassRescueWorkspace() {
       if (!res.ok) throw new Error(json.error || "Extracción fallida");
       setExtractedText((json.combinedText || "").trim());
     } catch (e) {
-      setExtractError(e instanceof Error ? e.message : "No pudimos leer el archivo de la biblioteca.");
+      setExtractError(e instanceof Error ? e.message : "No pudimos leer el archivo desde Mis cuadernos.");
     } finally {
       setLibraryExtractBusy(false);
     }
@@ -175,6 +184,66 @@ export function ClassRescueWorkspace() {
     setExtractedText("");
     setExtractError(null);
   }
+
+  useEffect(() => {
+    const nb = searchParams.get("notebook")?.trim();
+    if (!nb) {
+      lastNotebookFromUrl.current = "";
+      return;
+    }
+    if (!authUserId || !isSupabaseConfigured()) return;
+
+    let cancelled = false;
+    const loadKey = `${authUserId}::${nb}`;
+    if (lastNotebookFromUrl.current === loadKey) return;
+
+    void (async () => {
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from("notebook_documents")
+          .select("*")
+          .eq("user_id", authUserId)
+          .order("created_at", { ascending: true });
+        if (cancelled || error) return;
+        const rows = (data as NotebookDocumentRow[]) ?? [];
+        const filtered = rows.filter((d) => subjectToPathSegment(d.subject) === nb);
+        if (filtered.length === 0) {
+          if (!cancelled) {
+            setGenHint(
+              `No hay archivos en el cuaderno «${nb}». Sube material en Mis cuadernos o revisa el nombre de la materia.`,
+            );
+          }
+          return;
+        }
+        const combined = filtered
+          .map(
+            (d) =>
+              `# ${d.filename}\n${d.extracted_text?.trim() ? d.extracted_text.trim() : "(sin texto extraído aún — puedes re-subir el archivo en Mis cuadernos)"}`,
+          )
+          .join("\n\n");
+        if (cancelled) return;
+        lastNotebookFromUrl.current = loadKey;
+        setFiles(null);
+        setLibrarySelection(null);
+        setNotebookBundleSlug(nb);
+        setNotebookDocCount(filtered.length);
+        setExtractedText(combined);
+        setSubjectHint((prev) => (prev.trim() ? prev : filtered[0]!.subject));
+        setKind("notes");
+        setExtractError(null);
+        setGenHint(
+          `Cuaderno enlazado: ${filtered.length} archivo${filtered.length === 1 ? "" : "s"}. Revisa la vista previa y pulsa «Generar kit de rescate».`,
+        );
+      } catch {
+        if (!cancelled) setGenHint("No pudimos leer tu cuaderno desde Mis cuadernos. ¿Sesión iniciada?");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, authUserId]);
 
   useEffect(() => {
     const raw = searchParams.get("subject");
@@ -189,7 +258,8 @@ export function ClassRescueWorkspace() {
   async function runRescue() {
     const f = readFilesAsSeed(files);
     const list = files ?? [];
-    const fromLibrary = librarySelection !== null;
+    const fromNotebookBundle = Boolean(notebookBundleSlug && notebookDocCount > 0);
+    const fromLibrary = librarySelection !== null || fromNotebookBundle;
     // Prioritize real extracted content over pasted notes for the demo hash / fallback pack.
     const seedText = [extractedText, notes, f.seed, link].filter(Boolean).join("\n");
 
@@ -199,7 +269,7 @@ export function ClassRescueWorkspace() {
       return;
     }
     if (fromLibrary && libraryExtractBusy) {
-      setGenHint("Espera a que termine la lectura del archivo de tu biblioteca.");
+      setGenHint("Espera a que termine la lectura del archivo desde Mis cuadernos.");
       return;
     }
     if (list.length > 0 && !extractBusy && !extractedText.trim()) {
@@ -208,17 +278,19 @@ export function ClassRescueWorkspace() {
       );
     }
     if (fromLibrary && !libraryExtractBusy && !extractedText.trim()) {
-      setGenHint("No hay texto extraído del archivo de la biblioteca. Revisa permisos o vuelve a subir el archivo en Biblioteca.");
+      setGenHint("No hay texto extraído del archivo en Mis cuadernos. Revisa permisos o vuelve a subir el archivo allí.");
     }
 
     const sourceLabel =
       fromLibrary && librarySelection
         ? librarySelection.filename
-        : f.seed
-          ? f.label
-          : link.trim()
-            ? "enlace"
-            : "notas";
+        : fromNotebookBundle
+          ? `Cuaderno (${notebookDocCount} archivos)`
+          : f.seed
+            ? f.label
+            : link.trim()
+              ? "enlace"
+              : "notas";
 
     setPackBusy(true);
     setPackError(null);
@@ -233,7 +305,7 @@ export function ClassRescueWorkspace() {
           extractedFileText: extractedText,
           notes,
           link,
-          uploadedFileCount: fromLibrary ? 1 : list.length,
+          uploadedFileCount: librarySelection ? 1 : fromNotebookBundle ? notebookDocCount : list.length,
           seedText: f.seed && !extractedText && !notes && !link ? f.seed : "",
         }),
       });
@@ -264,10 +336,13 @@ export function ClassRescueWorkspace() {
       <PageHeader
         eyebrow="Rescate de clase"
         title="Recupera la clase en minutos."
-        description="Sube material o pega un enlace. Generamos un kit de estudio completo — listo para conectar con tu pipeline de IA."
+        description="Conecta con Mis cuadernos: puedes traer un archivo o todo un cuaderno por materia, y generar el kit aquí."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone={premium ? "success" : "neutral"}>{premium ? "Premium" : "Gratis"}</Badge>
+            <Button type="button" variant="secondary" size="sm" onClick={() => router.push("/study/library")}>
+              Mis cuadernos
+            </Button>
             <ShareLinkButton
               pathname="/rescue"
               campaign="rescue_pack"
@@ -284,7 +359,10 @@ export function ClassRescueWorkspace() {
         <CardHeader>
           <CardTitle>Entrada de rescate</CardTitle>
           <CardDescription>
-            La IA prioriza el texto extraído de tus archivos (OCR/PDF/TXT) y tus apuntes pegados. La materia foco solo etiqueta; no sustituye al contenido del archivo.
+            Puedes subir archivos locales, elegir uno de Mis cuadernos, o abrir un enlace tipo{" "}
+            <code className="rounded bg-white/10 px-1 py-0.5 text-[11px]">/rescue?notebook=econometria</code> para cargar{" "}
+            <strong>todo</strong> el cuaderno de esa materia. La IA usa el texto extraído; la materia foco solo ayuda a
+            etiquetar.
           </CardDescription>
         </CardHeader>
 
@@ -346,12 +424,17 @@ export function ClassRescueWorkspace() {
               className="block w-full text-sm text-slate-300 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-500/20 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-100 hover:file:bg-indigo-500/30"
               onChange={(e) => {
                 const next = e.target.files ? Array.from(e.target.files) : null;
-                if (next && next.length > 0) setLibrarySelection(null);
+                if (next && next.length > 0) {
+                  setLibrarySelection(null);
+                  setNotebookBundleSlug(null);
+                  setNotebookDocCount(0);
+                  lastNotebookFromUrl.current = "";
+                }
                 setFiles(next);
               }}
             />
             <div className="text-xs text-slate-500">
-              Opcional: sube aquí solo para esta sesión, o usa “Desde mi biblioteca” para archivos que ya guardaste (persisten al recargar).
+              Opcional: sube aquí solo para esta sesión, o usa “Desde mis cuadernos” para archivos que ya guardaste (persisten al recargar).
             </div>
             {fileUrls.length > 0 ? (
               <div className="mt-2 space-y-2">
@@ -387,7 +470,7 @@ export function ClassRescueWorkspace() {
 
             {extractBusy || libraryExtractBusy ? (
               <div className="mt-2 text-xs text-slate-400">
-                {libraryExtractBusy ? "Leyendo archivo de la biblioteca…" : "Leyendo archivo y extrayendo texto…"}
+                {libraryExtractBusy ? "Leyendo archivo de Mis cuadernos…" : "Leyendo archivo y extrayendo texto…"}
               </div>
             ) : null}
             {extractError ? (
@@ -441,6 +524,9 @@ export function ClassRescueWorkspace() {
             onClick={() => {
               setPack(null);
               setLibrarySelection(null);
+              setNotebookBundleSlug(null);
+              setNotebookDocCount(0);
+              lastNotebookFromUrl.current = "";
               setFiles(null);
               setExtractedText("");
               setExtractError(null);

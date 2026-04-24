@@ -137,7 +137,7 @@ export function NotebookReader({ subjectSlug }: Props) {
           <Link href="/study/library">
             <Button variant="secondary" size="sm" className="gap-2">
               <ArrowLeft className="h-4 w-4" />
-              Volver a biblioteca
+              Volver a mis cuadernos
             </Button>
           </Link>
         }
@@ -156,7 +156,7 @@ export function NotebookReader({ subjectSlug }: Props) {
         <p className="text-sm text-slate-400">
           No hay archivos en este cuaderno.{" "}
           <Link href="/study/library" className="text-indigo-300 underline-offset-2 hover:underline">
-            Vuelve a la biblioteca
+            Vuelve a Mis cuadernos
           </Link>{" "}
           y sube material para esta materia.
         </p>
@@ -265,17 +265,23 @@ export function NotebookReader({ subjectSlug }: Props) {
                       </pre>
                     </div>
                   ) : (
-                    <p className="text-xs text-slate-500">No hay texto extraído para esta hoja. Puedes volver a subir el archivo en la biblioteca para intentar OCR de nuevo.</p>
+                    <p className="text-xs text-slate-500">No hay texto extraído para esta hoja. Puedes volver a subir el archivo en Mis cuadernos para intentar OCR de nuevo.</p>
                   )}
 
                   <p className="text-center text-[11px] text-slate-600">Tip: usa las flechas del teclado ← → para pasar de clase.</p>
 
                   <div className="flex flex-wrap justify-center gap-2 border-t border-white/10 pt-4">
                     <Link
+                      href={`/rescue?subject=${encodeURIComponent(subjectLabel)}&notebook=${encodeURIComponent(subjectSlug)}`}
+                      className="inline-flex items-center justify-center rounded-xl border border-emerald-400/25 bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-500/25"
+                    >
+                      Rescate con todo este cuaderno
+                    </Link>
+                    <Link
                       href={`/rescue?subject=${encodeURIComponent(subjectLabel)}`}
                       className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-slate-100 hover:bg-white/10"
                     >
-                      Ir a rescate con esta materia
+                      Solo materia en rescate
                     </Link>
                   </div>
                 </div>

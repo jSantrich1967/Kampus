@@ -202,7 +202,7 @@ export function NotebookLibraryPanel() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BookMarked className="h-5 w-5 text-indigo-300" />
-            Mis cuadernos por materia
+            Cuadernos por materia
           </CardTitle>
           <CardDescription>Inicia sesión para subir PDFs, imágenes o apuntes y reutilizarlos después (no se pierden al recargar).</CardDescription>
         </CardHeader>
@@ -215,10 +215,10 @@ export function NotebookLibraryPanel() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <BookMarked className="h-5 w-5 text-indigo-300" />
-          Mis cuadernos por materia
+          Cuadernos por materia
         </CardTitle>
         <CardDescription>
-          Cada materia es un cuaderno con portada propia. Dentro verás las “hojas” (archivos). Todo queda en tu cuenta en la nube.
+          Cada materia es un cuaderno con portada propia. Dentro verás las “hojas” (archivos). Desde aquí puedes abrir el lector o ir a rescate con todo el cuaderno.
         </CardDescription>
       </CardHeader>
 
@@ -346,26 +346,42 @@ export function NotebookLibraryPanel() {
                         </p>
                         <p className="relative mt-2 text-[10px] uppercase tracking-[0.2em] text-white/45">Cuaderno</p>
 
-                        <Link
-                          href={`/study/notebook/${subjectToPathSegment(subjectName)}`}
-                          className="relative z-20 mt-4 inline-flex w-full max-w-full items-center justify-center gap-2 rounded-xl border border-white/25 bg-black/35 px-3 py-2.5 text-sm font-semibold text-white shadow-lg backdrop-blur-sm hover:bg-black/45"
-                        >
-                          <BookOpen className="h-4 w-4 shrink-0" />
-                          Abrir cuaderno (vista clase por clase)
-                        </Link>
+                        <div className="relative z-20 mt-4 flex flex-col gap-2 sm:flex-row">
+                          <Link
+                            href={`/study/notebook/${subjectToPathSegment(subjectName)}`}
+                            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/25 bg-black/35 px-3 py-2.5 text-sm font-semibold text-white shadow-lg backdrop-blur-sm hover:bg-black/45"
+                          >
+                            <BookOpen className="h-4 w-4 shrink-0" />
+                            Abrir cuaderno (clases)
+                          </Link>
+                          <Link
+                            href={`/rescue?notebook=${subjectToPathSegment(subjectName)}&subject=${encodeURIComponent(subjectName)}`}
+                            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-3 py-2.5 text-sm font-semibold text-emerald-100 hover:bg-emerald-500/25"
+                          >
+                            Rescate con todo el cuaderno
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {expanded ? (
                     <div className="border-t border-white/10 bg-slate-950/80 px-3 py-3">
-                      <Link
-                        href={`/study/notebook/${subjectToPathSegment(subjectName)}`}
-                        className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl border border-indigo-400/30 bg-indigo-500/15 py-2.5 text-xs font-semibold text-indigo-100 hover:bg-indigo-500/25"
-                      >
-                        <BookOpen className="h-3.5 w-3.5" />
-                        Ver en pantalla de cuaderno
-                      </Link>
+                      <div className="mb-3 flex flex-col gap-2 sm:flex-row">
+                        <Link
+                          href={`/study/notebook/${subjectToPathSegment(subjectName)}`}
+                          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-indigo-400/30 bg-indigo-500/15 py-2.5 text-xs font-semibold text-indigo-100 hover:bg-indigo-500/25"
+                        >
+                          <BookOpen className="h-3.5 w-3.5" />
+                          Ver en pantalla de cuaderno
+                        </Link>
+                        <Link
+                          href={`/rescue?notebook=${subjectToPathSegment(subjectName)}&subject=${encodeURIComponent(subjectName)}`}
+                          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/10 py-2.5 text-xs font-semibold text-emerald-100 hover:bg-emerald-500/20"
+                        >
+                          Rescate con todo el cuaderno
+                        </Link>
+                      </div>
                       <p className="mb-2 text-xs text-slate-500">Páginas en este cuaderno</p>
                       <ul className="space-y-2">
                         {pages.map((doc) => (

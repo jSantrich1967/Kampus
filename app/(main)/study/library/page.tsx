@@ -3,7 +3,7 @@ import { Suspense } from "react";
 
 import { LibraryHub } from "@/components/study/library-hub";
 
-export const metadata: Metadata = { title: "Biblioteca IA" };
+export const metadata: Metadata = { title: "Mis cuadernos" };
 
 export default function LibraryPage() {
   return (

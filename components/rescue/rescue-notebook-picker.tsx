@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button } from "@/components/ui/button";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
+import { subjectToPathSegment } from "@/lib/notebooks/paths";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
@@ -58,7 +59,7 @@ export function RescueNotebookPicker({ subjectFilter, activeDocId, busy, onPick,
   if (!authUserId) {
     return (
       <div className="rounded-xl border border-white/10 bg-slate-950/30 px-3 py-3 text-sm text-slate-400">
-        <span className="text-slate-500">Biblioteca:</span> inicia sesión para elegir archivos guardados por materia.
+        <span className="text-slate-500">Mis cuadernos:</span> inicia sesión para elegir archivos guardados por materia.
       </div>
     );
   }
@@ -68,7 +69,7 @@ export function RescueNotebookPicker({ subjectFilter, activeDocId, busy, onPick,
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm font-medium text-indigo-100">
           <BookMarked className="h-4 w-4 text-indigo-300" />
-          Desde mi biblioteca
+          Desde mis cuadernos
         </div>
         <div className="flex flex-wrap gap-2">
           <Button type="button" size="sm" variant="ghost" className="text-xs" onClick={() => void load()} disabled={loading}>
@@ -76,17 +77,31 @@ export function RescueNotebookPicker({ subjectFilter, activeDocId, busy, onPick,
             Actualizar
           </Button>
           <Link href="/study/library" className="text-xs text-indigo-200 underline-offset-2 hover:underline">
-            Gestionar cuadernos
+            Abrir Mis cuadernos
           </Link>
         </div>
       </div>
       <p className="mt-1 text-xs text-slate-500">
-        Usa un archivo que ya subiste en Biblioteca. Filtra por la materia foco o el nombre del archivo.
+        Usa un archivo que ya subiste en Mis cuadernos. Filtra por la materia foco o el nombre del archivo.
       </p>
+
+      {subjectFilter.trim() ? (
+        <div className="mt-2 rounded-lg border border-white/10 bg-slate-950/50 px-2 py-2">
+          <p className="text-[11px] text-slate-400">
+            ¿Quieres usar <strong>todo</strong> el cuaderno de la materia foco en el rescate?
+          </p>
+          <Link
+            href={`/rescue?notebook=${subjectToPathSegment(subjectFilter.trim())}&subject=${encodeURIComponent(subjectFilter.trim())}`}
+            className="mt-1 inline-flex text-xs font-semibold text-indigo-200 underline-offset-2 hover:underline"
+          >
+            Cargar cuaderno «{subjectFilter.trim()}» en rescate →
+          </Link>
+        </div>
+      ) : null}
 
       {activeDocId ? (
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-emerald-200/90">Archivo de biblioteca seleccionado.</span>
+          <span className="text-xs text-emerald-200/90">Archivo de Mis cuadernos seleccionado.</span>
           <Button type="button" size="sm" variant="secondary" className="h-7 text-xs" onClick={onClear} disabled={busy}>
             Quitar selección
           </Button>
@@ -95,7 +110,7 @@ export function RescueNotebookPicker({ subjectFilter, activeDocId, busy, onPick,
 
       <div className="mt-3 max-h-48 space-y-2 overflow-auto pr-1">
         {filtered.length === 0 && !loading ? (
-          <p className="text-xs text-slate-500">No hay archivos en tu biblioteca (o no coinciden con el filtro).</p>
+          <p className="text-xs text-slate-500">No hay archivos en Mis cuadernos (o no coinciden con el filtro).</p>
         ) : null}
         {filtered.map((doc) => (
           <div
