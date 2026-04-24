@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { NotebookLibraryPanel } from "@/components/study/notebook-library-panel";
 
 export function LibraryHub() {
   const { profile } = useKampus();
@@ -29,6 +30,8 @@ export function LibraryHub() {
           />
         }
       />
+
+      <NotebookLibraryPanel />
 
       <div className="grid gap-4 md:grid-cols-3">
         {[
