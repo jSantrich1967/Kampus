@@ -361,7 +361,7 @@ export function NotebookLibraryPanel() {
         {error ? <p className="text-sm text-rose-300">{error}</p> : null}
 
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-400">Tus cuadernos</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Tus cuadernos</h3>
           {docs.length === 0 && !loading ? (
             <p className="text-sm text-slate-500">
               Aún no tienes cuadernos. Elige una materia arriba y sube un PDF o una foto: aparecerá como portada con el nombre de esa asignatura.
@@ -390,7 +390,7 @@ export function NotebookLibraryPanel() {
                     />
                     {/* Portada (ya no es un solo botón: el enlace del cuaderno es visible aquí) */}
                     <div
-                      className="relative min-h-[12.5rem] pl-5 pr-12 pt-5 pb-3"
+                      className="relative min-h-[11rem] pl-5 pr-12 pt-5 pb-5"
                       style={{ background }}
                     >
                       <div
@@ -412,66 +412,47 @@ export function NotebookLibraryPanel() {
                           className={cn("h-5 w-5 transition-transform duration-200", expanded ? "rotate-180" : "")}
                         />
                       </button>
-                      <div className="relative min-w-0 pr-1">
+                      <div className="relative flex gap-4 pr-1">
                         <div
-                          className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/20 bg-black/25 text-xl font-bold tracking-tight text-white shadow-inner backdrop-blur-sm"
+                          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-black/30 text-lg font-bold tracking-tight text-white shadow-inner backdrop-blur-sm"
                           aria-hidden
                         >
                           {initials}
                         </div>
-                        <h4 className="mt-4 line-clamp-2 text-lg font-semibold leading-snug text-white drop-shadow-sm">
-                          {subjectName}
-                        </h4>
-                        <p className="mt-1 text-xs font-medium text-white/75">
-                          {pageCount === 1 ? "1 hoja" : `${pageCount} hojas`}
-                          {lastTouch ? (
-                            <>
-                              {" · última "}
-                              <span suppressHydrationWarning>
-                                {new Date(lastTouch).toLocaleDateString("es")}
-                              </span>
-                            </>
-                          ) : null}
-                        </p>
-                        <p className="relative mt-2 text-[10px] uppercase tracking-[0.2em] text-white/45">Cuaderno</p>
-
-                        <div className="relative z-20 mt-4 flex flex-col gap-2 sm:flex-row">
-                          <Link
-                            href={`/study/notebook/${subjectToPathSegment(subjectName)}`}
-                            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/25 bg-black/35 px-3 py-2.5 text-sm font-semibold text-white shadow-lg backdrop-blur-sm hover:bg-black/45"
-                          >
-                            <BookOpen className="h-4 w-4 shrink-0" />
-                            Abrir cuaderno (clases)
-                          </Link>
-                          <Link
-                            href={`/study/library/rescue?notebook=${subjectToPathSegment(subjectName)}&subject=${encodeURIComponent(subjectName)}`}
-                            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-3 py-2.5 text-sm font-semibold text-emerald-100 hover:bg-emerald-500/25"
-                          >
-                            Kit de estudios con todo el cuaderno
-                          </Link>
+                        <div className="min-w-0 flex-1 pt-0.5">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/50">Cuaderno</p>
+                          <h4 className="mt-1 line-clamp-2 text-lg font-semibold leading-snug text-white drop-shadow-sm">
+                            {subjectName}
+                          </h4>
+                          <p className="mt-2 text-xs leading-relaxed text-white/80">
+                            {pageCount === 1 ? "1 hoja" : `${pageCount} hojas`}
+                            {lastTouch ? (
+                              <>
+                                {" · última actualización "}
+                                <span suppressHydrationWarning>
+                                  {new Date(lastTouch).toLocaleDateString("es")}
+                                </span>
+                              </>
+                            ) : null}
+                          </p>
                         </div>
+                      </div>
+
+                      <div className="relative z-20 mt-5">
+                        <Link
+                          href={`/study/notebook/${subjectToPathSegment(subjectName)}`}
+                          className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/30 bg-black/40 px-4 py-3 text-sm font-semibold text-white shadow-lg backdrop-blur-md transition hover:bg-black/55 hover:border-white/40"
+                        >
+                          <BookOpen className="h-4 w-4 shrink-0 opacity-90" />
+                          Abrir cuaderno
+                        </Link>
                       </div>
                     </div>
                   </div>
 
                   {expanded ? (
-                    <div className="border-t border-white/10 bg-slate-950/80 px-3 py-3">
-                      <div className="mb-3 flex flex-col gap-2 sm:flex-row">
-                        <Link
-                          href={`/study/notebook/${subjectToPathSegment(subjectName)}`}
-                          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-indigo-400/30 bg-indigo-500/15 py-2.5 text-xs font-semibold text-indigo-100 hover:bg-indigo-500/25"
-                        >
-                          <BookOpen className="h-3.5 w-3.5" />
-                          Ver en pantalla de cuaderno
-                        </Link>
-                        <Link
-                          href={`/study/library/rescue?notebook=${subjectToPathSegment(subjectName)}&subject=${encodeURIComponent(subjectName)}`}
-                          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/10 py-2.5 text-xs font-semibold text-emerald-100 hover:bg-emerald-500/20"
-                        >
-                          Kit de estudios con todo el cuaderno
-                        </Link>
-                      </div>
-                      <p className="mb-2 text-xs text-slate-500">Páginas en este cuaderno</p>
+                    <div className="border-t border-white/10 bg-slate-950/80 px-4 py-4">
+                      <p className="mb-3 text-xs font-medium text-slate-400">Páginas en este cuaderno</p>
                       <ul className="space-y-2">
                         {pages.map((doc) => (
                           <li
