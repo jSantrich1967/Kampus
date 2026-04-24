@@ -3,7 +3,7 @@
 import { FileAudio, FileImage, FileText, Link2, Sparkles, Wand2 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { ShareLinkButton } from "@/components/growth/share-link-button";
 import { PageHeader } from "@/components/layout/page-header";
@@ -16,9 +16,9 @@ import { cn } from "@/lib/cn";
 
 type SourceKind = "pdf" | "audio" | "image" | "slides" | "link" | "notes";
 
-function readFilesAsSeed(files: FileList | null): { seed: string; label: string } {
+function readFilesAsSeed(files: File[] | null): { seed: string; label: string } {
   if (!files || files.length === 0) return { seed: "", label: "Sin archivos" };
-  const names = Array.from(files).map((f) => `${f.name}:${f.size}`);
+  const names = files.map((f) => `${f.name}:${f.size}`);
   return { seed: names.join("|"), label: names.map((n) => n.split(":")[0]).join(", ") };
 }
 
@@ -61,11 +61,22 @@ export function ClassRescueWorkspace() {
   const [subjectHint, setSubjectHint] = useState(profile.subjects[0] ?? "");
   const [link, setLink] = useState("");
   const [notes, setNotes] = useState("");
-  const [files, setFiles] = useState<FileList | null>(null);
+  const [files, setFiles] = useState<File[] | null>(null);
   const [kind, setKind] = useState<SourceKind>("notes");
   const [pack, setPack] = useState<RescuePack | null>(null);
 
   const premium = profile.plan === "premium";
+
+  const fileUrls = useMemo(() => {
+    const list = files ?? [];
+    return list.map((file) => ({ file, url: URL.createObjectURL(file) }));
+  }, [files]);
+
+  useEffect(() => {
+    return () => {
+      fileUrls.forEach((f) => URL.revokeObjectURL(f.url));
+    };
+  }, [fileUrls]);
 
   useEffect(() => {
     const raw = searchParams.get("subject");
@@ -165,8 +176,42 @@ export function ClassRescueWorkspace() {
               type="file"
               multiple
               className="block w-full text-sm text-slate-300 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-500/20 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-100 hover:file:bg-indigo-500/30"
-              onChange={(e) => setFiles(e.target.files)}
+              onChange={(e) => setFiles(e.target.files ? Array.from(e.target.files) : null)}
             />
+            <div className="text-xs text-slate-500">
+              Nota: por ahora esto no se sube a la nube; se usa localmente para generar el kit (demo).
+            </div>
+            {fileUrls.length > 0 ? (
+              <div className="mt-2 space-y-2">
+                {fileUrls.map(({ file, url }) => (
+                  <div key={`${file.name}:${file.size}:${file.lastModified}`} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm text-slate-200">{file.name}</div>
+                      <div className="text-xs text-slate-500">
+                        {(file.size / 1024 / 1024).toFixed(2)} MB
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <a
+                        className="rounded-lg bg-white/5 px-3 py-1 text-xs text-slate-200 ring-1 ring-white/10 hover:bg-white/10"
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Ver
+                      </a>
+                      <a
+                        className="rounded-lg bg-indigo-500/15 px-3 py-1 text-xs text-indigo-100 ring-1 ring-indigo-400/20 hover:bg-indigo-500/25"
+                        href={url}
+                        download={file.name}
+                      >
+                        Descargar
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </label>
 
           <label className="space-y-2 text-sm md:col-span-2">
