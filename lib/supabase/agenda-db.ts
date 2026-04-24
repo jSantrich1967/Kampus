@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
+import { demoExamDueDatesSameMonth } from "@/lib/calendar/local-iso-date";
 import { examFeedbackSchema, examQuestionSchema, type Exam, type ExamAttempt, type ExamFeedback } from "@/lib/schemas/exams";
 import type { StudentWork } from "@/lib/schemas/student-work";
 import { formatAgendaCloudError } from "@/lib/notebooks/storage-errors";
@@ -117,8 +118,7 @@ export async function ensureDemoExamsRemote(client: SupabaseClient, userId: stri
   if ((count ?? 0) > 0) return;
 
   const subject = (subjectHint && subjectHint.trim()) || "Econometría";
-  const due1 = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const due2 = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const { due1, due2 } = demoExamDueDatesSameMonth();
   const { error: iErr } = await client.from("user_exams").insert([
     {
       user_id: userId,

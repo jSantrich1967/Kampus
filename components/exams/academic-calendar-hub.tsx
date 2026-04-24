@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { buildAgendaEvents, monthMatrix, type AgendaEvent } from "@/lib/calendar/agenda-events";
+import { localIsoDate } from "@/lib/calendar/local-iso-date";
 import { cn } from "@/lib/cn";
 import { formatAgendaCloudError } from "@/lib/notebooks/storage-errors";
 import type { Exam } from "@/lib/schemas/exams";
@@ -139,7 +140,7 @@ export function AcademicCalendarHub() {
   const monthTitle = cursor.toLocaleString("es-ES", { month: "long", year: "numeric" });
 
   const upcoming = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localIsoDate();
     return events.filter((e) => e.date >= today).slice(0, 12);
   }, [events]);
 
@@ -254,16 +255,21 @@ export function AcademicCalendarHub() {
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-        <div className="flex flex-wrap gap-2 text-xs text-slate-500">
-          <span className="inline-flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-emerald-400/80" /> Examen
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-indigo-400/80" /> Exposición
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-slate-400/80" /> Trabajo
-          </span>
+        <div className="flex flex-col items-end gap-1 text-xs text-slate-500">
+          <div className="flex flex-wrap justify-end gap-2">
+            <span className="inline-flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-emerald-400/80" /> Examen
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-indigo-400/80" /> Exposición
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-slate-400/80" /> Trabajo
+            </span>
+          </div>
+          <p className="max-w-sm text-right text-[11px] leading-snug text-slate-600">
+            Exposición y trabajo: fecha en el planificador o entregas en la columna derecha. Exámenes demo usan fechas en tu zona horaria (mes actual cuando cabe).
+          </p>
         </div>
       </div>
 
@@ -282,7 +288,7 @@ export function AcademicCalendarHub() {
             }
             const dayEvents = eventsOnDay(events, y, m0, day);
             const iso = `${y}-${String(m0 + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-            const isToday = iso === new Date().toISOString().slice(0, 10);
+            const isToday = iso === localIsoDate();
             return (
               <div
                 key={iso}

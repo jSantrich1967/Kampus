@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { demoExamDueDatesSameMonth } from "@/lib/calendar/local-iso-date";
 import { examAttemptSchema, examSchema, type Exam, type ExamAttempt, type ExamFeedback } from "@/lib/schemas/exams";
 
 const EXAMS_KEY = "kampus.exams.v1";
@@ -38,6 +39,7 @@ export function seedDemoExamsIfEmpty(subjectHint?: string) {
   if (existing.length > 0) return;
 
   const subject = (subjectHint && subjectHint.trim()) || "Econometría";
+  const { due1, due2 } = demoExamDueDatesSameMonth();
   const demo: Exam[] = [
     {
       id: uid("exam"),
@@ -45,7 +47,7 @@ export function seedDemoExamsIfEmpty(subjectHint?: string) {
       title: "Parcial 1 (demo)",
       description: "Responde con claridad y muestra pasos cuando aplique.",
       status: "open",
-      dueDate: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+      dueDate: due1,
       questions: [
         { id: "q1", prompt: "Define heterocedasticidad y explica por qué importa." },
         { id: "q2", prompt: "Describe un test para detectarla y cómo interpretar el resultado." },
@@ -58,7 +60,7 @@ export function seedDemoExamsIfEmpty(subjectHint?: string) {
       title: "Quiz corto de práctica (demo)",
       description: "Pensado para 12–18 minutos.",
       status: "open",
-      dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+      dueDate: due2,
       questions: [{ id: "q1", prompt: "Explica la intuición detrás de MCO y menciona un supuesto clave." }],
       createdAt: nowIso(),
     },
