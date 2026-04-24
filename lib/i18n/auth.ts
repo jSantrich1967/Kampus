@@ -18,6 +18,10 @@ export const authCopy = {
     errorGeneric: "No pudimos completar la acción. Revisa correo y contraseña.",
     errorEmailNotConfirmed:
       "Tu correo aún no está confirmado. Revisa tu bandeja (spam/promociones) o usa «Reenviar correo de confirmación» en Crear cuenta. Para pruebas, puedes desactivar «Confirm email» en Supabase → Authentication → Providers → Email.",
+    errorUserAlreadyRegistered:
+      "Ese correo ya tiene una cuenta. Ve a «Entrar» (o usa «Olvidé mi contraseña» si la agregamos / si no recuerdas la clave).",
+    errorInvalidLoginCredentials:
+      "Correo o contraseña incorrectos. Si acabas de registrarte y no confirmaste el correo, desactiva «Confirm email» para pruebas o espera/reenviar la confirmación.",
     checkEmail: "Si tu proyecto requiere confirmación, revisa tu correo para activar la cuenta.",
     registerSuccess: "Cuenta creada. Si pide confirmación por correo, ábrelo antes de entrar.",
     resendConfirmation: "Reenviar correo de confirmación",

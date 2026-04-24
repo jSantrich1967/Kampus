@@ -52,6 +52,8 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
     const msg = (raw ?? "").toLowerCase();
     if (msg.includes("email") && msg.includes("confirm")) return t.errorEmailNotConfirmed;
     if (msg.includes("not confirmed")) return t.errorEmailNotConfirmed;
+    if (msg.includes("user already registered")) return t.errorUserAlreadyRegistered;
+    if (msg.includes("invalid login credentials")) return t.errorInvalidLoginCredentials;
     return raw || t.errorGeneric;
   }
 
