@@ -128,7 +128,7 @@ export function CommunityHub() {
               pathname="/study/library/rescue"
               campaign="rescue_pack"
               refHandle={profile.university || "kampus"}
-              label={es ? "Compartir rescate" : "Share rescue"}
+              label={es ? "Compartir kit de estudios" : "Share study kit"}
               copiedLabel={es ? "Copiado" : "Copied"}
             />
           </div>

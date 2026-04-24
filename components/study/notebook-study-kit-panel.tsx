@@ -248,7 +248,7 @@ export function NotebookStudyKitPanel({ pages, currentPage, subjectLabel, subjec
               href={`/study/library/rescue?subject=${encodeURIComponent(subjectLabel)}&notebook=${encodeURIComponent(subjectSlug)}`}
               className="text-xs text-slate-400 underline-offset-2 hover:text-slate-200 hover:underline"
             >
-              Abrir en Rescate de clase (más opciones)
+              Abrir kit de estudios del cuaderno (más opciones)
             </Link>
           </div>
 

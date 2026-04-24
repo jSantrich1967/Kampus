@@ -222,7 +222,7 @@ export function ClassRescueWorkspace() {
         setKind("notes");
         setExtractError(null);
         setGenHint(
-          `Cuaderno enlazado: ${filtered.length} archivo${filtered.length === 1 ? "" : "s"}. Revisa la vista previa y pulsa «Generar kit de rescate».`,
+          `Cuaderno enlazado: ${filtered.length} archivo${filtered.length === 1 ? "" : "s"}. Revisa la vista previa y pulsa «Generar kit de estudios del cuaderno».`,
         );
       } catch {
         if (!cancelled) setGenHint("No pudimos leer tu cuaderno desde Mis cuadernos. ¿Sesión iniciada?");
@@ -256,7 +256,7 @@ export function ClassRescueWorkspace() {
 
     setGenHint(null);
     if (list.length > 0 && extractBusy) {
-      setGenHint("Espera a que termine la extracción del texto del archivo y luego genera el kit.");
+      setGenHint("Espera a que termine la extracción del texto del archivo y luego genera el kit de estudios.");
       return;
     }
     if (fromLibrary && libraryExtractBusy) {
@@ -265,7 +265,7 @@ export function ClassRescueWorkspace() {
     }
     if (list.length > 0 && !extractBusy && !extractedText.trim()) {
       setGenHint(
-        "No hay texto extraído del archivo todavía (o está vacío). El kit será breve y no inventará temario genérico de la materia.",
+        "No hay texto extraído del archivo todavía (o está vacío). El kit de estudios será breve y no inventará temario genérico de la materia.",
       );
     }
     if (fromLibrary && !libraryExtractBusy && !extractedText.trim()) {
@@ -330,7 +330,7 @@ export function ClassRescueWorkspace() {
         sourceText,
       });
       setSaveKitMessage(
-        `Guardado el material que usaste para el rescate en el cuaderno «${subjectHint.trim() || "General"}» (no el kit de la IA). Ábrelo en Mis cuadernos o en el lector para completar el cuaderno con esa fuente.`,
+        `Guardado el material de entrada en el cuaderno «${subjectHint.trim() || "General"}» (no el kit de estudios de la IA). Ábrelo en Mis cuadernos o en el lector para completar el cuaderno con esa fuente.`,
       );
     } catch (e) {
       setSaveKitMessage(e instanceof Error ? e.message : "No se pudo guardar el material.");
@@ -343,8 +343,8 @@ export function ClassRescueWorkspace() {
     <div className="space-y-8">
       <PageHeader
         eyebrow="Mis cuadernos"
-        title="Rescate de clase"
-        description="Parte de tu cuaderno: recupera clases perdidas con el material que ya guardaste, subida local o todo un cuaderno por materia para generar el kit."
+        title="Kit de estudios del cuaderno"
+        description="Con la materia foco y las mismas etiquetas que en Mis cuadernos (Tema, Punto, Ejercicios), la IA arma un kit de estudio a partir del material que elijas: hojas guardadas, subida local o todo el cuaderno de una materia."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone={premium ? "success" : "neutral"}>{premium ? "Premium" : "Gratis"}</Badge>
@@ -365,12 +365,12 @@ export function ClassRescueWorkspace() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Entrada de rescate</CardTitle>
+          <CardTitle>Material y filtros del cuaderno</CardTitle>
           <CardDescription>
             Indica <strong>Materia foco</strong> y las mismas <strong>etiquetas</strong> que en Mis cuadernos (Tema, Punto,
-            Ejercicios) antes de generar: la IA las usa para orientar el kit. Si pulsas «Guardar material del rescate»,
+            Ejercicios): actúan como filtros y guían el kit de estudios. Si pulsas «Guardar material de entrada»,
             en el cuaderno solo se guarda lo que <strong>entraste</strong> (texto extraído, apuntes, enlace), no el kit
-            generado. Puedes subir archivos locales, elegir un archivo de Mis cuadernos, o abrir{" "}
+            generado por la IA. Puedes subir archivos locales, elegir un archivo de Mis cuadernos, o abrir{" "}
             <code className="rounded bg-white/10 px-1 py-0.5 text-[11px]">/study/library/rescue?notebook=econometria</code> para cargar{" "}
             <strong>todo</strong> el cuaderno.
           </CardDescription>
@@ -418,7 +418,7 @@ export function ClassRescueWorkspace() {
 
           <div className="rounded-xl border border-white/10 bg-slate-950/40 p-4 md:col-span-2">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Etiquetas del rescate (igual que al alimentar el cuaderno)
+              Etiquetas del cuaderno (filtros del kit de estudios)
             </p>
             <p className="mb-3 text-[11px] text-slate-500">
               La <strong className="text-slate-400">Materia foco</strong> define en qué cuaderno aparecerá si pulsas
@@ -566,7 +566,7 @@ export function ClassRescueWorkspace() {
             disabled={packBusy || ((files?.length ?? 0) > 0 && extractBusy) || libraryExtractBusy}
           >
             <Wand2 className="h-4 w-4" />
-            {packBusy ? "Generando…" : "Generar kit de rescate"}
+            {packBusy ? "Generando…" : "Generar kit de estudios del cuaderno"}
           </Button>
           <Button
             type="button"
@@ -591,7 +591,9 @@ export function ClassRescueWorkspace() {
             Limpiar
           </Button>
           {genHint ? <div className="text-xs text-slate-400">{genHint}</div> : null}
-          {packError ? <div className="text-xs text-amber-200">Usamos un kit básico porque falló la IA: {packError}</div> : null}
+          {packError ? (
+            <div className="text-xs text-amber-200">Mostramos un kit de estudios básico porque falló la IA: {packError}</div>
+          ) : null}
         </div>
       </Card>
 
@@ -606,7 +608,7 @@ export function ClassRescueWorkspace() {
                 campaign="rescue_pack"
                 extra={{ subject: subjectHint.trim() || undefined, kit: pack.subjectLine.slice(0, 40) }}
                 refHandle={profile.university || "kampus"}
-                label="Compartir kit"
+                label="Compartir kit de estudios"
                 copiedLabel="Copiado"
               />
               <Link href="/pass-mode">
@@ -620,9 +622,10 @@ export function ClassRescueWorkspace() {
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>Kit vacío</CardTitle>
+            <CardTitle>Aún no hay kit de estudios</CardTitle>
             <CardDescription>
-              Cuando generes, verás resúmenes, quiz, checklist y más — conectado a Modo aprobar.
+              Cuando generes con tus filtros (materia y etiquetas), verás resúmenes, quiz, checklist y más — conectado a
+              Modo aprobar.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -632,9 +635,9 @@ export function ClassRescueWorkspace() {
         <CardHeader>
           <CardTitle className="text-emerald-100">Guardar material en el cuaderno</CardTitle>
           <CardDescription>
-            Guarda en <strong>{subjectHint.trim() || "General"}</strong> solo lo que <strong>alimentó</strong> este rescate:
-            texto extraído de archivos, apuntes pegados y enlace (no el kit de la IA). Sirve para completar el cuaderno con
-            la fuente que usaste.
+            Guarda en <strong>{subjectHint.trim() || "General"}</strong> solo lo que <strong>alimentó</strong> esta sesión
+            de estudio: texto extraído de archivos, apuntes pegados y enlace (no el kit generado por la IA). Sirve para
+            completar el cuaderno con la fuente que usaste.
           </CardDescription>
         </CardHeader>
         <div className="flex flex-col gap-3 px-6 pb-6">
@@ -655,7 +658,7 @@ export function ClassRescueWorkspace() {
                   disabled={saveKitBusy || !hasSaveableRescueSource}
                   onClick={() => void saveKitToNotebook()}
                 >
-                  {saveKitBusy ? "Guardando…" : "Guardar material del rescate"}
+                  {saveKitBusy ? "Guardando…" : "Guardar material de entrada"}
                 </Button>
                 <Button type="button" variant="ghost" size="sm" onClick={() => router.push("/study/library")}>
                   Abrir Mis cuadernos

@@ -84,7 +84,7 @@ function riskForSubject(
 
   if (profile.missedClassesApprox >= 4) {
     score += 10;
-    reasons.push("Las clases perdidas se acumulan — los rescates cierran la brecha.");
+    reasons.push("Las clases perdidas se acumulan — un kit de estudios del cuaderno cierra la brecha.");
   }
 
   let risk: RiskLevel = "low";
@@ -93,7 +93,7 @@ function riskForSubject(
 
   const nextAction =
     risk === "high"
-      ? "Ejecuta Rescate de clase con el material más reciente y luego practica 20 tarjetas."
+      ? "Ejecuta el kit de estudios del cuaderno con el material más reciente y luego practica 20 tarjetas."
       : risk === "medium"
         ? "Haz 25 minutos de repaso enfocado + 10 preguntas de recuerdo rápido."
         : "Mantén con un repaso ligero y un quiz para sostener la confianza.";
@@ -190,7 +190,7 @@ export function buildPassModePlan(profile: UserProfile): PassModePlan {
   const preparednessScore = Math.max(12, Math.min(92, Math.round(88 - avgRisk * 0.35)));
 
   const nextBestActions = [
-    `Abre Rescate de clase para "${top}" y genera preguntas probables de examen.`,
+    `Abre el kit de estudios del cuaderno para "${top}" y genera preguntas probables de examen.`,
     `Haz un sprint de tarjetas de 12 minutos sobre: ${profile.weakTopics.slice(0, 2).join(", ") || "tus apuntes más recientes"}.`,
     profile.interestedInCommunity
       ? "Únete a un hilo de la comunidad de la materia pidiendo una explicación de un compañero/a."

@@ -51,7 +51,7 @@ export function FlashcardsWorkspace() {
           </Link>
           <Link href="/study/library/rescue">
             <Button size="sm" variant="ghost">
-              {es ? "Generar tarjetas desde rescate" : "Generate from rescue"}
+              {es ? "Generar tarjetas desde kit del cuaderno" : "Generate from notebook study kit"}
             </Button>
           </Link>
         </div>

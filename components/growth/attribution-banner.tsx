@@ -36,7 +36,7 @@ export function AttributionBanner() {
       case "today_digest":
         return "Llegaste desde un resumen compartido de Hoy";
       case "rescue_pack":
-        return "Llegaste desde un kit de rescate compartido";
+        return "Llegaste desde un kit de estudios del cuaderno compartido";
       case "pass_mode":
         return "Llegaste desde un plan compartido (Modo aprobar)";
       case "quiz_deck":

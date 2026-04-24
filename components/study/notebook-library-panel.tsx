@@ -267,7 +267,7 @@ export function NotebookLibraryPanel() {
           Cuadernos por materia
         </CardTitle>
         <CardDescription>
-          Cada materia es un cuaderno con portada propia. Dentro verás las “hojas” (archivos). Desde aquí puedes abrir el lector o ir a rescate con todo el cuaderno.
+          Cada materia es un cuaderno con portada propia. Dentro verás las “hojas” (archivos). Desde aquí puedes abrir el lector o generar el kit de estudios con todo el cuaderno.
         </CardDescription>
       </CardHeader>
 
@@ -447,7 +447,7 @@ export function NotebookLibraryPanel() {
                             href={`/study/library/rescue?notebook=${subjectToPathSegment(subjectName)}&subject=${encodeURIComponent(subjectName)}`}
                             className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-3 py-2.5 text-sm font-semibold text-emerald-100 hover:bg-emerald-500/25"
                           >
-                            Rescate con todo el cuaderno
+                            Kit de estudios con todo el cuaderno
                           </Link>
                         </div>
                       </div>
@@ -468,7 +468,7 @@ export function NotebookLibraryPanel() {
                           href={`/study/library/rescue?notebook=${subjectToPathSegment(subjectName)}&subject=${encodeURIComponent(subjectName)}`}
                           className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/10 py-2.5 text-xs font-semibold text-emerald-100 hover:bg-emerald-500/20"
                         >
-                          Rescate con todo el cuaderno
+                          Kit de estudios con todo el cuaderno
                         </Link>
                       </div>
                       <p className="mb-2 text-xs text-slate-500">Páginas en este cuaderno</p>

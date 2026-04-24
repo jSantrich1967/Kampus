@@ -27,7 +27,7 @@ export function AcademicRiskRadar() {
       <PageHeader
         eyebrow="Radar académico"
         title="Dónde duele, y qué hacer hoy."
-        description="Señal heurística a partir de fechas, temas débiles y carga. Conecta con Modo aprobar y Rescate."
+        description="Señal heurística a partir de fechas, temas débiles y carga. Conecta con Modo aprobar y kit de estudios del cuaderno."
         actions={
           <ShareLinkButton
             pathname="/risk"
@@ -69,7 +69,7 @@ export function AcademicRiskRadar() {
                 {profile.role === "student" || profile.role === "teacher" ? (
                   <Link href="/study/library/rescue">
                     <Button size="sm" variant="ghost">
-                      Rescate
+                      Kit de estudios
                     </Button>
                   </Link>
                 ) : null}

@@ -15,7 +15,7 @@ export const navCopy = {
     items: {
       today: "Hoy",
       passMode: "Modo aprobar",
-      rescue: "Rescate de clase",
+      rescue: "Kit de estudios del cuaderno",
       flashcards: "Tarjetas",
       library: "Mis cuadernos",
       exams: "Exámenes",

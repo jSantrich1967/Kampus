@@ -25,7 +25,7 @@ function PackSection({
           <div>
             <Badge tone="accent">Premium</Badge>
             <p className="mt-3 text-sm text-slate-200">
-              Desbloquea rescates profundos: banco completo de preguntas, exportación de mapa mental y pack de examen.
+              Desbloquea kits de estudio profundos: banco completo de preguntas, exportación de mapa mental y pack de examen.
             </p>
           </div>
         </div>

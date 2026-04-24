@@ -84,7 +84,7 @@ export function PassModePanel() {
             <CardHeader>
               <CardTitle>Próximas mejores acciones</CardTitle>
               <CardDescription>
-                Conecta estudio, rescate y comunidad.
+                Conecta estudio, kit del cuaderno y comunidad.
               </CardDescription>
             </CardHeader>
             <ul className="space-y-2 text-sm text-slate-200">
@@ -97,7 +97,7 @@ export function PassModePanel() {
             <div className="mt-4 flex flex-col gap-2">
               <Link href="/study/library/rescue">
                 <Button variant="secondary" className="w-full">
-                  Abrir rescate
+                  Abrir kit de estudios
                 </Button>
               </Link>
               <Link href="/study/flashcards">
@@ -113,7 +113,7 @@ export function PassModePanel() {
               <CardHeader>
                 <CardTitle>Desbloquea Premium</CardTitle>
                 <CardDescription>
-                  Recalibración diaria, simulador de profesor y rescates profundos sin límite.
+                  Recalibración diaria, simulador de profesor y kits de estudio profundos sin límite.
                 </CardDescription>
               </CardHeader>
               <Button type="button" className="w-full" onClick={() => router.push("/settings")}>

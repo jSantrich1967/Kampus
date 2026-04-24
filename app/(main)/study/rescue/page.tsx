@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** @deprecated Use `/study/library/rescue` (rescate vive dentro de Mis cuadernos). */
+/** @deprecated Use `/study/library/rescue` (kit de estudios vive dentro de Mis cuadernos). */
 export default async function StudyRescueRedirect({
   searchParams,
 }: {

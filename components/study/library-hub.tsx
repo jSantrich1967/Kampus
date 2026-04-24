@@ -21,7 +21,7 @@ export function LibraryHub() {
       <PageHeader
         eyebrow={t.groups.learn}
         title="Mis cuadernos"
-        description="Cuadernos por materia: sube material, ábrelo clase a clase, genera kits de estudio y recupera clases perdidas — el rescate vive aquí, como parte del mismo flujo."
+        description="Cuadernos por materia: sube material, ábrelo clase a clase y genera kits de estudio desde tus filtros (materia, tema, punto…), con el mismo flujo de biblioteca y lector."
         actions={
           <ShareLinkButton
             pathname="/study/library"
@@ -41,16 +41,16 @@ export function LibraryHub() {
             {t.items.rescue}
           </CardTitle>
           <CardDescription>
-            Genera el kit a partir de tus archivos, apuntes o todo un cuaderno. Si guardas en el cuaderno, se archiva el{" "}
-            <strong>material que entraste</strong> al rescate (no el kit de la IA), con tus etiquetas, para completar la
-            fuente del cuaderno.
+            Arma el kit de estudios a partir de tus archivos, apuntes o todo un cuaderno, usando materia y etiquetas como
+            filtros. Si guardas en el cuaderno, se archiva el <strong>material que entraste</strong> (no el kit de la IA),
+            con esas etiquetas, para completar la fuente del cuaderno.
           </CardDescription>
         </CardHeader>
         <div className="flex flex-wrap gap-2 px-6 pb-6">
           <Link href="/study/library/rescue">
             <Button size="sm" className="gap-2">
               <Sparkles className="h-4 w-4" />
-              Abrir rescate de clase
+              Abrir kit de estudios del cuaderno
             </Button>
           </Link>
         </div>
@@ -89,7 +89,7 @@ export function LibraryHub() {
         <CardHeader>
           <CardTitle>Ruta recomendada (demo)</CardTitle>
           <CardDescription>
-            Con material en tus cuadernos, enlaza con radar y rescate para preparar la semana.
+            Con material en tus cuadernos, enlaza con radar y kit de estudios para preparar la semana.
           </CardDescription>
         </CardHeader>
         <div className="flex flex-wrap gap-2">
@@ -100,7 +100,7 @@ export function LibraryHub() {
           </Link>
           <Link href="/study/library/rescue">
             <Button size="sm" variant="ghost">
-              Abrir rescate
+              Abrir kit de estudios
             </Button>
           </Link>
         </div>

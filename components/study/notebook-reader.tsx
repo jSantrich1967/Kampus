@@ -277,13 +277,13 @@ export function NotebookReader({ subjectSlug }: Props) {
                       href={`/study/library/rescue?subject=${encodeURIComponent(subjectLabel)}&notebook=${encodeURIComponent(subjectSlug)}`}
                       className="inline-flex items-center justify-center rounded-xl border border-emerald-400/25 bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-500/25"
                     >
-                      Rescate con todo este cuaderno
+                      Kit de estudios con todo este cuaderno
                     </Link>
                     <Link
                       href={`/study/library/rescue?subject=${encodeURIComponent(subjectLabel)}`}
                       className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-slate-100 hover:bg-white/10"
                     >
-                      Solo materia en rescate
+                      Solo materia foco en el kit
                     </Link>
                   </div>
                 </div>

@@ -7,12 +7,12 @@ export type SaveRescueNotebookSourceInput = {
   topic: string;
   lesson_point: string;
   practice_exercises: string;
-  /** Texto combinado: extracción + apuntes pegados + enlace (lo que alimentó el rescate, sin el kit de la IA). */
+  /** Texto combinado: extracción + apuntes pegados + enlace (material de entrada, sin el kit de estudios de la IA). */
   sourceText: string;
 };
 
 /**
- * Sube a Storage y crea fila en `notebook_documents` con el **material fuente** del rescate (no el kit generado).
+ * Sube a Storage y crea fila en `notebook_documents` con el **material fuente** de entrada (no el kit generado).
  */
 export async function saveRescueNotebookSource(input: SaveRescueNotebookSourceInput): Promise<void> {
   const body = input.sourceText.trim();
@@ -21,7 +21,7 @@ export async function saveRescueNotebookSource(input: SaveRescueNotebookSourceIn
   const subject = input.subject.trim() || "General";
   const segment = subjectToPathSegment(subject);
   const blob = new Blob([body], { type: "text/plain;charset=utf-8" });
-  const displayName = `Material rescate ${new Date().toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" })}.txt`.replace(
+  const displayName = `Material cuaderno ${new Date().toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" })}.txt`.replace(
     /[/\\?%*:|"<>]/g,
     "-",
   );

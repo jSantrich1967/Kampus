@@ -88,13 +88,13 @@ export function RescueNotebookPicker({ subjectFilter, activeDocId, busy, onPick,
       {subjectFilter.trim() ? (
         <div className="mt-2 rounded-lg border border-white/10 bg-slate-950/50 px-2 py-2">
           <p className="text-[11px] text-slate-400">
-            ¿Quieres usar <strong>todo</strong> el cuaderno de la materia foco en el rescate?
+            ¿Quieres usar <strong>todo</strong> el cuaderno de la materia foco para el kit de estudios?
           </p>
           <Link
             href={`/study/library/rescue?notebook=${subjectToPathSegment(subjectFilter.trim())}&subject=${encodeURIComponent(subjectFilter.trim())}`}
             className="mt-1 inline-flex text-xs font-semibold text-indigo-200 underline-offset-2 hover:underline"
           >
-            Cargar cuaderno «{subjectFilter.trim()}» en rescate →
+            Cargar cuaderno «{subjectFilter.trim()}» en el kit de estudios →
           </Link>
         </div>
       ) : null}
@@ -132,7 +132,7 @@ export function RescueNotebookPicker({ subjectFilter, activeDocId, busy, onPick,
               disabled={busy}
               onClick={() => onPick(doc)}
             >
-              {activeDocId === doc.id ? "Activo" : "Usar en rescate"}
+              {activeDocId === doc.id ? "Activo" : "Usar en el kit"}
             </Button>
           </div>
         ))}

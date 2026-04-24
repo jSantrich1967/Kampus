@@ -173,7 +173,7 @@ export function OnboardingFlow() {
                     <div className="text-base font-semibold">{label}</div>
                     <div className="mt-1 text-xs text-slate-400">
                       {value === "student"
-                        ? "Plan diario, rescate y práctica."
+                        ? "Plan diario, kit del cuaderno y práctica."
                         : value === "teacher"
                           ? "Corrección y feedback más rápido."
                           : value === "learner"
