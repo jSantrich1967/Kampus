@@ -1,12 +1,13 @@
 "use client";
 
-import { BookMarked, Loader2, Trash2, Upload } from "lucide-react";
+import { BookMarked, ChevronDown, Loader2, Trash2, Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { initialsFromSubject, notebookCoverGradient } from "@/lib/notebooks/cover-styles";
 import { sanitizeStorageFilename, subjectToPathSegment } from "@/lib/notebooks/paths";
 import { formatNotebookCloudError } from "@/lib/notebooks/storage-errors";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
@@ -24,6 +25,8 @@ export function NotebookLibraryPanel() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Which subject "notebook" is expanded to show pages (files). */
+  const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
 
   useEffect(() => {
     if (customSubject.trim()) return;
@@ -36,6 +39,30 @@ export function NotebookLibraryPanel() {
     if (c) return c;
     return subject.trim() || "General";
   }, [customSubject, subject]);
+
+  /** Cuadernos agrupados por materia (orden: materias del perfil primero, luego alfabético). */
+  const notebooksBySubject = useMemo(() => {
+    const map = new Map<string, NotebookDocumentRow[]>();
+    for (const d of docs) {
+      const key = (d.subject || "General").trim() || "General";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(d);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    }
+    const keys = Array.from(map.keys());
+    const rank = (s: string) => {
+      const i = profile.subjects.indexOf(s);
+      return i === -1 ? 1000 : i;
+    };
+    keys.sort((a, b) => {
+      const d = rank(a) - rank(b);
+      if (d !== 0) return d;
+      return a.localeCompare(b, "es");
+    });
+    return keys.map((subjectKey) => ({ subject: subjectKey, pages: map.get(subjectKey)! }));
+  }, [docs, profile.subjects]);
 
   const loadDocs = useCallback(async () => {
     if (!isSupabaseConfigured() || !authUserId) return;
@@ -117,6 +144,7 @@ export function NotebookLibraryPanel() {
         }
       }
       await loadDocs();
+      setExpandedSubject(effectiveSubject);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Error al subir.";
       setError(formatNotebookCloudError(msg));
@@ -189,7 +217,7 @@ export function NotebookLibraryPanel() {
           Mis cuadernos por materia
         </CardTitle>
         <CardDescription>
-          Los archivos se guardan en tu cuenta (Storage privado). Opcionalmente extraemos texto al subir para búsquedas y rescates futuros.
+          Cada materia es un cuaderno con portada propia. Dentro verás las “hojas” (archivos). Todo queda en tu cuenta en la nube.
         </CardDescription>
       </CardHeader>
 
@@ -237,56 +265,134 @@ export function NotebookLibraryPanel() {
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Actualizar lista
           </Button>
-          <Badge tone="neutral">Materia activa: {effectiveSubject}</Badge>
+          <Badge tone="neutral">Subiendo al cuaderno: {effectiveSubject}</Badge>
         </div>
 
         {error ? <p className="text-sm text-rose-300">{error}</p> : null}
 
-        <div className="space-y-2">
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-400">Tus cuadernos</h3>
           {docs.length === 0 && !loading ? (
-            <p className="text-sm text-slate-500">Aún no hay archivos. Sube un PDF o una foto de tus apuntes.</p>
+            <p className="text-sm text-slate-500">
+              Aún no tienes cuadernos. Elige una materia arriba y sube un PDF o una foto: aparecerá como portada con el nombre de esa asignatura.
+            </p>
           ) : null}
-          {docs.map((doc) => (
-            <div
-              key={doc.id}
-              className="flex flex-col gap-2 rounded-xl border border-white/10 bg-slate-950/40 px-3 py-3 md:flex-row md:items-center md:justify-between"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="truncate font-medium text-white">{doc.filename}</div>
-                <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
-                  <span>{doc.subject}</span>
-                  <span>·</span>
-                  <span>{(doc.size_bytes / 1024 / 1024).toFixed(2)} MB</span>
-                  <span>·</span>
-                  <span>{new Date(doc.created_at).toLocaleString("es")}</span>
-                </div>
-                {doc.extracted_text ? (
-                  <details className="mt-2 text-xs text-slate-400">
-                    <summary className="cursor-pointer text-indigo-200/90">Texto extraído (vista previa)</summary>
-                    <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-950/80 p-2 text-slate-300">
-                      {doc.extracted_text.slice(0, 2000)}
-                      {doc.extracted_text.length > 2000 ? "…" : ""}
-                    </pre>
-                  </details>
-                ) : null}
-              </div>
-              <div className="flex shrink-0 gap-2">
-                <Button type="button" size="sm" variant="secondary" onClick={() => void signedDownload(doc)}>
-                  Descargar
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className={cn("text-rose-300 hover:bg-rose-500/10")}
-                  onClick={() => void removeDoc(doc)}
-                  aria-label={`Eliminar ${doc.filename}`}
+
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            {notebooksBySubject.map(({ subject: subjectName, pages }) => {
+              const { background, spine } = notebookCoverGradient(subjectName);
+              const initials = initialsFromSubject(subjectName);
+              const expanded = expandedSubject === subjectName;
+              const lastTouch = pages[0]?.created_at;
+              const pageCount = pages.length;
+
+              return (
+                <div
+                  key={subjectName}
+                  className="flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-950/50 shadow-lg shadow-black/20 ring-1 ring-white/5"
                 >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
+                  <button
+                    type="button"
+                    onClick={() => setExpandedSubject(expanded ? null : subjectName)}
+                    className="group relative w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60"
+                  >
+                    {/* Lomo del cuaderno */}
+                    <div
+                      className="absolute bottom-0 left-0 top-0 z-10 w-3 border-r border-black/20 shadow-inner"
+                      style={{ background: spine }}
+                      aria-hidden
+                    />
+                    {/* Portada */}
+                    <div
+                      className="relative min-h-[11rem] pl-5 pr-4 pt-5 pb-4"
+                      style={{ background }}
+                    >
+                      <div
+                        className="pointer-events-none absolute inset-0 opacity-[0.12]"
+                        style={{
+                          backgroundImage:
+                            "repeating-linear-gradient(-12deg, transparent, transparent 3px, rgba(255,255,255,0.04) 3px, rgba(255,255,255,0.04) 4px)",
+                        }}
+                        aria-hidden
+                      />
+                      <div className="relative flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div
+                            className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/20 bg-black/25 text-xl font-bold tracking-tight text-white shadow-inner backdrop-blur-sm"
+                            aria-hidden
+                          >
+                            {initials}
+                          </div>
+                          <h4 className="mt-4 line-clamp-2 text-lg font-semibold leading-snug text-white drop-shadow-sm">
+                            {subjectName}
+                          </h4>
+                          <p className="mt-1 text-xs font-medium text-white/75">
+                            {pageCount === 1 ? "1 hoja" : `${pageCount} hojas`}
+                            {lastTouch ? ` · última ${new Date(lastTouch).toLocaleDateString("es")}` : ""}
+                          </p>
+                        </div>
+                        <ChevronDown
+                          className={cn(
+                            "h-5 w-5 shrink-0 text-white/70 transition-transform duration-200",
+                            expanded ? "rotate-180" : "group-hover:translate-y-0.5",
+                          )}
+                          aria-hidden
+                        />
+                      </div>
+                      <p className="relative mt-3 text-[10px] uppercase tracking-[0.2em] text-white/45">Cuaderno</p>
+                    </div>
+                  </button>
+
+                  {expanded ? (
+                    <div className="border-t border-white/10 bg-slate-950/80 px-3 py-3">
+                      <p className="mb-2 text-xs text-slate-500">Páginas en este cuaderno</p>
+                      <ul className="space-y-2">
+                        {pages.map((doc) => (
+                          <li
+                            key={doc.id}
+                            className="rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2.5"
+                          >
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate text-sm font-medium text-slate-100">{doc.filename}</div>
+                                <div className="mt-0.5 text-[11px] text-slate-500">
+                                  {(doc.size_bytes / 1024 / 1024).toFixed(2)} MB · {new Date(doc.created_at).toLocaleString("es")}
+                                </div>
+                                {doc.extracted_text ? (
+                                  <details className="mt-2 text-xs text-slate-400">
+                                    <summary className="cursor-pointer text-indigo-200/90">Texto extraído</summary>
+                                    <pre className="mt-2 max-h-28 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-950 p-2 text-[11px] text-slate-300">
+                                      {doc.extracted_text.slice(0, 2000)}
+                                      {doc.extracted_text.length > 2000 ? "…" : ""}
+                                    </pre>
+                                  </details>
+                                ) : null}
+                              </div>
+                              <div className="flex shrink-0 gap-2">
+                                <Button type="button" size="sm" variant="secondary" onClick={() => void signedDownload(doc)}>
+                                  Descargar
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-rose-300 hover:bg-rose-500/10"
+                                  onClick={() => void removeDoc(doc)}
+                                  aria-label={`Eliminar ${doc.filename}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </Card>
