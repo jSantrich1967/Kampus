@@ -1,6 +1,7 @@
 "use client";
 
-import { BookMarked, ChevronDown, Loader2, Trash2, Upload } from "lucide-react";
+import { BookMarked, BookOpen, ChevronDown, Loader2, Trash2, Upload } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
@@ -349,6 +350,16 @@ export function NotebookLibraryPanel() {
                       <p className="relative mt-3 text-[10px] uppercase tracking-[0.2em] text-white/45">Cuaderno</p>
                     </div>
                   </button>
+
+                  <div className="border-t border-white/10 bg-slate-950/70 px-3 py-2">
+                    <Link
+                      href={`/study/notebook/${subjectToPathSegment(subjectName)}`}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-indigo-400/25 bg-indigo-500/15 px-3 py-2 text-xs font-medium text-indigo-100 hover:bg-indigo-500/25"
+                    >
+                      <BookOpen className="h-3.5 w-3.5" />
+                      Abrir como cuaderno (clases)
+                    </Link>
+                  </div>
 
                   {expanded ? (
                     <div className="border-t border-white/10 bg-slate-950/80 px-3 py-3">
