@@ -1,4 +1,3 @@
-import pdf from "pdf-parse";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -39,7 +38,9 @@ export async function POST(req: Request) {
 
       if (isPdf(mime, name)) {
         const buf = Buffer.from(await f.arrayBuffer());
-        const parsed = await pdf(buf);
+        // `pdf-parse` ESM export is `PDFParse`, not a default export (Next/Turbopack builds are ESM).
+        const mod = (await import("pdf-parse")) as unknown as { PDFParse: (data: Buffer) => Promise<{ text?: string }> };
+        const parsed = await mod.PDFParse(buf);
         extracted.push({ name, type: mime, size, text: (parsed.text || "").trim() });
         continue;
       }
