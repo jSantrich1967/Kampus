@@ -64,6 +64,8 @@ export function ClassRescueWorkspace() {
   const [files, setFiles] = useState<File[] | null>(null);
   const [kind, setKind] = useState<SourceKind>("notes");
   const [pack, setPack] = useState<RescuePack | null>(null);
+  const [packBusy, setPackBusy] = useState(false);
+  const [packError, setPackError] = useState<string | null>(null);
   const [extractedText, setExtractedText] = useState("");
   const [extractBusy, setExtractBusy] = useState(false);
   const [extractError, setExtractError] = useState<string | null>(null);
@@ -125,17 +127,41 @@ export function ClassRescueWorkspace() {
     }
   }, [searchParams]);
 
-  function runRescue() {
+  async function runRescue() {
     const f = readFilesAsSeed(files);
     const seedText = [notes, extractedText, f.seed, link].filter(Boolean).join("\n");
-    setPack(
-      generateRescuePack({
-        seedText,
-        subjectHint,
-        sourceLabel: f.seed ? f.label : link.trim() ? "enlace" : "notas",
-        sourceKind: kind,
-      }),
-    );
+    setPackBusy(true);
+    setPackError(null);
+    try {
+      const res = await fetch("/api/rescue/pack", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          seedText,
+          subjectHint,
+          sourceLabel: f.seed ? f.label : link.trim() ? "enlace" : "notas",
+          sourceKind: kind,
+        }),
+      });
+      const json = (await res.json()) as { pack?: RescuePack; error?: string };
+      if (!res.ok) throw new Error(json.error || "No pudimos generar el kit.");
+      if (!json.pack) throw new Error("Respuesta incompleta del servidor.");
+      setPack(json.pack);
+    } catch (e) {
+      // Fallback: genera un kit básico determinístico si falla la IA.
+      const msg = e instanceof Error ? e.message : "No pudimos generar el kit.";
+      setPackError(msg);
+      setPack(
+        generateRescuePack({
+          seedText,
+          subjectHint,
+          sourceLabel: f.seed ? f.label : link.trim() ? "enlace" : "notas",
+          sourceKind: kind,
+        }),
+      );
+    } finally {
+      setPackBusy(false);
+    }
   }
 
   return (
@@ -288,14 +314,15 @@ export function ClassRescueWorkspace() {
           </label>
         </div>
 
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Button type="button" onClick={runRescue} className="gap-2">
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <Button type="button" onClick={runRescue} className="gap-2" disabled={packBusy}>
             <Wand2 className="h-4 w-4" />
-            Generar kit de rescate
+            {packBusy ? "Generando…" : "Generar kit de rescate"}
           </Button>
           <Button type="button" variant="secondary" onClick={() => setPack(null)}>
             Limpiar
           </Button>
+          {packError ? <div className="text-xs text-amber-200">Usamos un kit básico porque falló la IA: {packError}</div> : null}
         </div>
       </Card>
 
