@@ -6,11 +6,34 @@ import { rescuePackSchema } from "@/lib/schemas/rescue-pack";
 export const runtime = "nodejs";
 
 const requestSchema = z.object({
-  seedText: z.string().default(""),
   subjectHint: z.string().default(""),
   sourceLabel: z.string().default(""),
   sourceKind: z.string().optional(),
+  /** OCR / PDF / TXT — primary grounding for uploaded files */
+  extractedFileText: z.string().default(""),
+  notes: z.string().default(""),
+  link: z.string().default(""),
+  uploadedFileCount: z.number().int().min(0).default(0),
+  /** Legacy: combined blob if older clients omit structured fields */
+  seedText: z.string().default(""),
 });
+
+const MIN_EXTRACT_CHARS = 25;
+
+function looksLikeNoUsefulExtract(text: string): boolean {
+  const t = text.trim();
+  if (!t) return true;
+  const lower = t.toLowerCase();
+  if (lower.includes("sin texto") || lower.includes("no text") || lower.includes("missing openai")) return true;
+  if (t.replace(/\s+/g, "").length < MIN_EXTRACT_CHARS) return true;
+  return false;
+}
+
+function clip(text: string, max: number): string {
+  const t = text.trim();
+  if (t.length <= max) return t;
+  return `${t.slice(0, max)}\n\n...(recortado)`;
+}
 
 function extractTextFromOpenAIResponses(payload: unknown): string {
   if (!payload || typeof payload !== "object") return "";
@@ -130,9 +153,44 @@ export async function POST(req: Request) {
     const subject = body.subjectHint.trim() || "la materia";
     const sourceLabel = body.sourceLabel.trim() || "material";
 
-    // Keep token usage predictable: we only send a limited excerpt.
-    const seed = (body.seedText || "").trim();
-    const excerpt = seed.length > 9000 ? `${seed.slice(0, 9000)}\n\n...(recortado)` : seed;
+    const extracted = (body.extractedFileText || "").trim();
+    const notes = (body.notes || "").trim();
+    const link = (body.link || "").trim();
+    const legacySeed = (body.seedText || "").trim();
+    const hasUploadedFiles = body.uploadedFileCount > 0;
+    const extractUseful = !looksLikeNoUsefulExtract(extracted);
+    const hasNotes = notes.length > 0;
+    const hasLink = link.length > 0;
+
+    let groundingMode = "";
+    if (hasUploadedFiles && extractUseful) {
+      groundingMode = [
+        "MODO DE ANCLAJE (obligatorio): Hay CONTENIDO EXTRAÍDO DEL ARCHIVO con texto sustancial.",
+        "Todo el kit (resúmenes, ideas clave, preguntas, quiz, tarjetas, checklist, mapa) debe derivarse PRINCIPALMENTE de ese bloque.",
+        `La “Materia foco” (${subject}) es solo etiqueta: NO añadas temario genérico de esa materia si NO aparece en el texto extraído.`,
+        "Si necesitas nombrar la materia, hazlo al inicio del subjectLine o en 1 frase, pero el contenido debe reflejar el archivo.",
+        "Prohibido inventar modelos, técnicas o listas típicas de examen que no estén en el texto (p. ej. Tobit/Probit) salvo que el texto las mencione.",
+      ].join(" ");
+    } else if (hasUploadedFiles && !extractUseful) {
+      groundingMode = [
+        "MODO DE ANCLAJE (obligatorio): Subieron archivo(s), pero el texto extraído está vacío o no es útil.",
+        "NO generes un temario amplio ni “clase magistral” genérico de la materia para rellenar.",
+        "Genera un kit CORTO y honesto: explica que falta texto extraíble, sugiere foto más nítida/PDF/texto, y da pasos prácticos para recuperar la clase.",
+        "keyIdeas / preguntas / quiz deben enfocarse en cómo mejorar la fuente y qué hacer ahora (no contenido académico inventado).",
+      ].join(" ");
+    } else if (hasNotes) {
+      groundingMode =
+        "MODO DE ANCLAJE: No hay archivo con texto extraído; basa el kit en NOTAS PEGADAS. No inventes párrafos que contradigan esas notas.";
+    } else if (hasLink) {
+      groundingMode =
+        "MODO DE ANCLAJE: Solo hay un enlace (no tenemos el contenido web descargado). Sé prudente: no inventes detalles del enlace; pide pegar extractos o subir archivo.";
+    } else if (legacySeed) {
+      groundingMode =
+        "MODO DE ANCLAJE: Solo hay metadatos / texto mínimo. No rellenes con temario largo; mantén el kit breve y orientado a qué falta para poder estudiar.";
+    } else {
+      groundingMode =
+        "MODO DE ANCLAJE: Casi no hay fuente. Kit mínimo: qué información falta y cómo obtenerla.";
+    }
 
     const system = [
       "Eres un tutor experto. Tu trabajo es convertir apuntes crudos en un kit de estudio accionable.",
@@ -143,10 +201,13 @@ export async function POST(req: Request) {
     ].join(" ");
 
     const user = [
-      `Materia foco: ${subject}`,
+      groundingMode,
+      "",
+      `Materia foco (etiqueta): ${subject}`,
+      `Archivos subidos: ${hasUploadedFiles ? "sí" : "no"}${hasUploadedFiles ? ` (${body.uploadedFileCount})` : ""}`,
       `Fuente: ${sourceLabel}${body.sourceKind ? ` (${body.sourceKind})` : ""}`,
       "",
-      "Usa el texto de la fuente para producir un objeto con EXACTAMENTE estas llaves:",
+      "Produce un objeto JSON con EXACTAMENTE estas llaves:",
       Object.keys(rescuePackSchema.shape).join(", "),
       "",
       "Reglas importantes:",
@@ -157,9 +218,20 @@ export async function POST(req: Request) {
       "- studyChecklist: 6–10 pasos concretos (con tiempos si aplica).",
       "- mindMapOutline: un outline tipo mapa mental (texto con indentación).",
       "- questionsForClass: 5–8 preguntas para aclarar dudas con el profe/mentor.",
+      "- subjectLine: debe reflejar el TEMA del material (del texto extraído o notas), no solo el nombre genérico de la materia.",
       "",
-      "Texto de la fuente (puede estar incompleto):",
-      excerpt || "(sin texto)",
+      "--- CONTENIDO EXTRAÍDO DEL ARCHIVO (prioridad si hay texto útil) ---",
+      clip(extracted || "(vacío)", 9000),
+      "",
+      "--- NOTAS PEGADAS ---",
+      clip(notes || "(vacío)", 4000),
+      "",
+      "--- ENLACE ---",
+      link || "(vacío)",
+      "",
+      ...(legacySeed && !extracted && !notes && !link
+        ? ["--- METADATOS / LEGACY ---", clip(legacySeed, 2000)]
+        : []),
     ].join("\n");
 
     const res = await fetch("https://api.openai.com/v1/responses", {
@@ -174,7 +246,7 @@ export async function POST(req: Request) {
           { role: "system", content: [{ type: "input_text", text: system }] },
           { role: "user", content: [{ type: "input_text", text: user }] },
         ],
-        temperature: 0.4,
+        temperature: extractUseful ? 0.25 : 0.35,
       }),
     });
 

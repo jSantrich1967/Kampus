@@ -66,6 +66,7 @@ export function ClassRescueWorkspace() {
   const [pack, setPack] = useState<RescuePack | null>(null);
   const [packBusy, setPackBusy] = useState(false);
   const [packError, setPackError] = useState<string | null>(null);
+  const [genHint, setGenHint] = useState<string | null>(null);
   const [extractedText, setExtractedText] = useState("");
   const [extractBusy, setExtractBusy] = useState(false);
   const [extractError, setExtractError] = useState<string | null>(null);
@@ -129,7 +130,21 @@ export function ClassRescueWorkspace() {
 
   async function runRescue() {
     const f = readFilesAsSeed(files);
-    const seedText = [notes, extractedText, f.seed, link].filter(Boolean).join("\n");
+    const list = files ?? [];
+    // Prioritize real extracted content over pasted notes for the demo hash / fallback pack.
+    const seedText = [extractedText, notes, f.seed, link].filter(Boolean).join("\n");
+
+    setGenHint(null);
+    if (list.length > 0 && extractBusy) {
+      setGenHint("Espera a que termine la extracción del texto del archivo y luego genera el kit.");
+      return;
+    }
+    if (list.length > 0 && !extractBusy && !extractedText.trim()) {
+      setGenHint(
+        "No hay texto extraído del archivo todavía (o está vacío). El kit será breve y no inventará temario genérico de la materia.",
+      );
+    }
+
     setPackBusy(true);
     setPackError(null);
     try {
@@ -137,16 +152,21 @@ export function ClassRescueWorkspace() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          seedText,
           subjectHint,
           sourceLabel: f.seed ? f.label : link.trim() ? "enlace" : "notas",
           sourceKind: kind,
+          extractedFileText: extractedText,
+          notes,
+          link,
+          uploadedFileCount: list.length,
+          seedText: f.seed && !extractedText && !notes && !link ? f.seed : "",
         }),
       });
       const json = (await res.json()) as { pack?: RescuePack; error?: string };
       if (!res.ok) throw new Error(json.error || "No pudimos generar el kit.");
       if (!json.pack) throw new Error("Respuesta incompleta del servidor.");
       setPack(json.pack);
+      setGenHint(null);
     } catch (e) {
       // Fallback: genera un kit básico determinístico si falla la IA.
       const msg = e instanceof Error ? e.message : "No pudimos generar el kit.";
@@ -189,7 +209,7 @@ export function ClassRescueWorkspace() {
         <CardHeader>
           <CardTitle>Entrada de rescate</CardTitle>
           <CardDescription>
-            Selecciona el tipo de fuente. La generación usa nombre/tamaño de archivos + texto que pegues (demo).
+            La IA prioriza el texto extraído de tus archivos (OCR/PDF/TXT) y tus apuntes pegados. La materia foco solo etiqueta; no sustituye al contenido del archivo.
           </CardDescription>
         </CardHeader>
 
@@ -315,13 +335,19 @@ export function ClassRescueWorkspace() {
         </div>
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <Button type="button" onClick={runRescue} className="gap-2" disabled={packBusy}>
+          <Button
+            type="button"
+            onClick={runRescue}
+            className="gap-2"
+            disabled={packBusy || ((files?.length ?? 0) > 0 && extractBusy)}
+          >
             <Wand2 className="h-4 w-4" />
             {packBusy ? "Generando…" : "Generar kit de rescate"}
           </Button>
           <Button type="button" variant="secondary" onClick={() => setPack(null)}>
             Limpiar
           </Button>
+          {genHint ? <div className="text-xs text-slate-400">{genHint}</div> : null}
           {packError ? <div className="text-xs text-amber-200">Usamos un kit básico porque falló la IA: {packError}</div> : null}
         </div>
       </Card>
