@@ -65,8 +65,23 @@ async function ocrImageWithOpenAI(file: File): Promise<string> {
   });
 
   if (!res.ok) {
-    const body = await res.text();
-    return `[OCR failed: ${res.status}. ${body.slice(0, 240)}]`;
+    let message = "";
+    try {
+      const json = (await res.json()) as { error?: { message?: string } };
+      message = json.error?.message ?? "";
+    } catch {
+      message = (await res.text()).slice(0, 240);
+    }
+
+    if (res.status === 429) {
+      return (
+        "OCR no disponible ahora: tu cuenta de OpenAI se quedó sin cuota/saldo (HTTP 429). " +
+        "Entra a OpenAI Platform → Billing/Usage, añade método de pago o aumenta límites, " +
+        "y luego reintenta."
+      );
+    }
+
+    return `OCR failed (HTTP ${res.status}): ${message || "Unknown error"}`;
   }
 
   const json = (await res.json()) as { output_text?: string };
