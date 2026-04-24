@@ -16,13 +16,20 @@ function uniqSorted(vals: string[]): string[] {
   return Array.from(s).sort((a, b) => a.localeCompare(b, "es"));
 }
 
-/** Misma idea que al agrupar cuadernos: slug o texto sin acentos case-insensitive. */
+/** Misma idea que al agrupar cuadernos: slug, texto, o comparación base (acentos / mayúsculas). */
 export function notebookSubjectsMatch(docSubject: string, focus: string): boolean {
-  const a = docSubject.trim();
-  const b = focus.trim();
+  const a = String(docSubject ?? "").trim();
+  const b = String(focus ?? "").trim();
   if (!a || !b) return false;
   if (a.toLowerCase() === b.toLowerCase()) return true;
-  return subjectToPathSegment(a) === subjectToPathSegment(b);
+  if (subjectToPathSegment(a) === subjectToPathSegment(b)) return true;
+  // "Econometría" vs "Econometria", typos leves de acentuación en UI vs BD
+  try {
+    if (a.localeCompare(b, "es", { sensitivity: "base" }) === 0) return true;
+  } catch {
+    /* ignore invalid locale in exotic runtimes */
+  }
+  return false;
 }
 
 /**
@@ -31,11 +38,11 @@ export function notebookSubjectsMatch(docSubject: string, focus: string): boolea
  */
 export function buildNotebookTagOptions(rows: NotebookTagRow[], profileSubjects: string[], focusSubject: string): NotebookTagOptions {
   const fromProfile = profileSubjects.map((s) => s.trim()).filter(Boolean);
-  const fromDocs = rows.map((r) => r.subject.trim()).filter(Boolean);
+  const fromDocs = rows.map((r) => String(r.subject ?? "").trim()).filter(Boolean);
   const subjects = uniqSorted([...fromProfile, ...fromDocs]);
 
   const focus = focusSubject.trim();
-  const subset = focus ? rows.filter((r) => notebookSubjectsMatch(r.subject, focus)) : rows;
+  const subset = focus ? rows.filter((r) => notebookSubjectsMatch(String(r.subject ?? ""), focus)) : rows;
 
   return {
     subjects,

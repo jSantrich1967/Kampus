@@ -20,6 +20,7 @@ import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 import {
   buildNotebookTagOptions,
   firstNotebookKitTagsForSubject,
+  notebookSubjectsMatch,
   type NotebookTagRow,
 } from "@/lib/notebooks/notebook-filter-options";
 import { subjectToPathSegment } from "@/lib/notebooks/paths";
@@ -75,6 +76,8 @@ export function ClassRescueWorkspace() {
   const [saveKitMessage, setSaveKitMessage] = useState<string | null>(null);
   const [notebookTagRows, setNotebookTagRows] = useState<NotebookTagRow[]>([]);
   const [notebookTagsLoading, setNotebookTagsLoading] = useState(false);
+  const [notebookTagsLoadError, setNotebookTagsLoadError] = useState<string | null>(null);
+  const [tagFetchNonce, setTagFetchNonce] = useState(0);
 
   /** Keeps latest subject for handlers without nesting setState updaters. */
   const subjectHintRef = useRef(subjectHint);
@@ -86,6 +89,12 @@ export function ClassRescueWorkspace() {
     () => buildNotebookTagOptions(notebookTagRows, profile.subjects, subjectHint),
     [notebookTagRows, profile.subjects, subjectHint],
   );
+
+  const matchedTagRowCount = useMemo(() => {
+    const f = subjectHint.trim();
+    if (!f) return 0;
+    return notebookTagRows.filter((r) => notebookSubjectsMatch(String(r.subject ?? ""), f)).length;
+  }, [notebookTagRows, subjectHint]);
 
   const subjectSelectOptions = useMemo(() => {
     const set = new Set(notebookTagOptions.subjects);
@@ -123,11 +132,13 @@ export function ClassRescueWorkspace() {
   useEffect(() => {
     if (!authUserId || !isSupabaseConfigured()) {
       setNotebookTagRows([]);
+      setNotebookTagsLoadError(null);
       return;
     }
     let cancelled = false;
     void (async () => {
       setNotebookTagsLoading(true);
+      setNotebookTagsLoadError(null);
       try {
         const supabase = createSupabaseBrowserClient();
         const { data, error } = await supabase
@@ -136,8 +147,16 @@ export function ClassRescueWorkspace() {
           .eq("user_id", authUserId);
         if (error) throw error;
         if (!cancelled) setNotebookTagRows((data as NotebookTagRow[]) ?? []);
-      } catch {
-        if (!cancelled) setNotebookTagRows([]);
+      } catch (e) {
+        console.error("[ClassRescueWorkspace] notebook_documents tags", e);
+        if (!cancelled) {
+          setNotebookTagRows([]);
+          const msg =
+            e && typeof e === "object" && "message" in e && typeof (e as { message: unknown }).message === "string"
+              ? (e as { message: string }).message
+              : "No se pudieron leer las hojas.";
+          setNotebookTagsLoadError(msg);
+        }
       } finally {
         if (!cancelled) setNotebookTagsLoading(false);
       }
@@ -145,7 +164,7 @@ export function ClassRescueWorkspace() {
     return () => {
       cancelled = true;
     };
-  }, [authUserId]);
+  }, [authUserId, tagFetchNonce]);
 
   /**
    * If nothing is selected but we already know materias, pick the first so filtros always scope to a cuaderno.
@@ -592,6 +611,57 @@ export function ClassRescueWorkspace() {
               archivos en ese cuaderno; al elegir la materia foco intentamos <strong className="text-slate-400">preseleccionar</strong> la
               primera de cada lista (orden alfabético).
             </p>
+            {notebookTagsLoadError ? (
+              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-100/95">
+                <span>No se pudieron cargar las etiquetas desde la nube: {notebookTagsLoadError}</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 border-amber-400/40 bg-transparent text-[11px] text-amber-50 hover:bg-amber-500/20"
+                  onClick={() => setTagFetchNonce((n) => n + 1)}
+                >
+                  Reintentar
+                </Button>
+              </div>
+            ) : null}
+            {!notebookTagsLoading &&
+            !notebookTagsLoadError &&
+            authUserId &&
+            isSupabaseConfigured() &&
+            subjectHint.trim() &&
+            notebookTagRows.length === 0 ? (
+              <p className="mb-3 text-[11px] text-slate-500">
+                No hay hojas indexadas en Supabase para tu cuenta, o aún no termina la sesión. Las listas de Tema / Punto
+                solo se rellenan con archivos que veas en <strong className="text-slate-400">Mis cuadernos</strong> para
+                esa materia.
+              </p>
+            ) : null}
+            {!notebookTagsLoading &&
+            !notebookTagsLoadError &&
+            authUserId &&
+            isSupabaseConfigured() &&
+            subjectHint.trim() &&
+            notebookTagRows.length > 0 &&
+            matchedTagRowCount === 0 ? (
+              <p className="mb-3 text-[11px] text-amber-200/80">
+                No encontramos archivos cuya <strong className="text-amber-100">materia en la nube</strong> coincida con «
+                {subjectHint.trim()}». Revisa en Mis cuadernos el nombre exacto del cuaderno (acentos, mayúsculas) o
+                elige otra materia foco.
+              </p>
+            ) : null}
+            {!notebookTagsLoading &&
+            !notebookTagsLoadError &&
+            matchedTagRowCount > 0 &&
+            notebookTagOptions.topics.length === 0 &&
+            notebookTagOptions.lessonPoints.length === 0 &&
+            notebookTagOptions.practiceExercises.length === 0 ? (
+              <p className="mb-3 text-[11px] text-slate-500">
+                Hay {matchedTagRowCount} archivo{matchedTagRowCount === 1 ? "" : "s"} en este cuaderno en la nube, pero{" "}
+                <strong className="text-slate-400">sin etiquetas</strong> de Tema / Punto / Ejercicios. Edita cada hoja
+                en Mis cuadernos para que aparezcan aquí en los desplegables.
+              </p>
+            ) : null}
             <div className="grid gap-3 md:grid-cols-3">
               <label className="space-y-1 text-xs">
                 <span className="text-slate-500">Tema</span>

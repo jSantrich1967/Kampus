@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button } from "@/components/ui/button";
+import { notebookSubjectsMatch } from "@/lib/notebooks/notebook-filter-options";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 import { subjectToPathSegment } from "@/lib/notebooks/paths";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -49,9 +50,15 @@ export function RescueNotebookPicker({ subjectFilter, activeDocId, busy, onPick,
   }, [load]);
 
   const filtered = useMemo(() => {
-    const q = subjectFilter.trim().toLowerCase();
+    const q = subjectFilter.trim();
     if (!q) return docs;
-    return docs.filter((d) => d.subject.toLowerCase().includes(q) || d.filename.toLowerCase().includes(q));
+    const qLower = q.toLowerCase();
+    return docs.filter(
+      (d) =>
+        notebookSubjectsMatch(d.subject, q) ||
+        d.subject.toLowerCase().includes(qLower) ||
+        d.filename.toLowerCase().includes(qLower),
+    );
   }, [docs, subjectFilter]);
 
   if (!isSupabaseConfigured()) return null;
