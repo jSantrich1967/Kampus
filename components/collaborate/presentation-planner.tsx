@@ -137,6 +137,25 @@ export function PresentationPlanner() {
         />
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>{es ? "Fecha en Mi calendario" : "Date on My calendar"}</CardTitle>
+          <CardDescription>
+            {es
+              ? "Opcional: día de la exposición o ensayo general. Se muestra junto a exámenes y trabajos en Evaluación → Mi calendario."
+              : "Optional: presentation or dress rehearsal day. Shown with exams and assignments under Evaluation → My calendar."}
+          </CardDescription>
+        </CardHeader>
+        <div className="px-5 pb-5">
+          <input
+            type="date"
+            className="w-full max-w-xs rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-slate-200 outline-none ring-indigo-400/40 focus:ring"
+            value={state.presentationDueDate ?? ""}
+            onChange={(e) => setState((p) => ({ ...p, presentationDueDate: e.target.value || undefined }))}
+          />
+        </div>
+      </Card>
+
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-3">

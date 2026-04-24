@@ -11,6 +11,8 @@ export type PresentationSection = {
 
 export type PresentationState = {
   deckTitle: string;
+  /** YYYY-MM-DD — aparece en Mi calendario académico como exposición. */
+  presentationDueDate?: string;
   members: PresentationMember[];
   sections: PresentationSection[];
   masterScript: string;

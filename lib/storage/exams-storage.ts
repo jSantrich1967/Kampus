@@ -58,6 +58,7 @@ export function seedDemoExamsIfEmpty(subjectHint?: string) {
       title: "Quiz corto de práctica (demo)",
       description: "Pensado para 12–18 minutos.",
       status: "open",
+      dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
       questions: [{ id: "q1", prompt: "Explica la intuición detrás de MCO y menciona un supuesto clave." }],
       createdAt: nowIso(),
     },

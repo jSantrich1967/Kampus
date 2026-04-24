@@ -34,9 +34,15 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const groups = filterNavForRole(profile.role);
 
   function pathMatchesNavItem(item: NavItem, pathname: string): boolean {
-    if (pathname === item.href || pathname.startsWith(`${item.href}/`)) return true;
     if (item.key === "library" && pathname.startsWith("/study/notebook")) return true;
-    return false;
+    if (item.key === "exams") {
+      if (pathname.startsWith("/exams/calendar")) return false;
+      return pathname === item.href || pathname.startsWith(`${item.href}/`);
+    }
+    if (item.key === "agendaCalendar") {
+      return pathname === "/exams/calendar" || pathname.startsWith("/exams/calendar/");
+    }
+    return pathname === item.href || pathname.startsWith(`${item.href}/`);
   }
 
   return (

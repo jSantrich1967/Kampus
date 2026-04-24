@@ -34,9 +34,14 @@ export function StudentExamsList() {
         title="Exámenes"
         description="Tus exámenes abiertos, intentos y feedback publicado."
         actions={
-          <Link href="/today">
-            <Button variant="secondary">Volver a Hoy</Button>
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/exams/calendar">
+              <Button variant="secondary">Mi calendario</Button>
+            </Link>
+            <Link href="/today">
+              <Button variant="ghost">Volver a Hoy</Button>
+            </Link>
+          </div>
         }
       />
 

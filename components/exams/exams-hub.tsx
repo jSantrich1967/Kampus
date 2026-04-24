@@ -28,6 +28,23 @@ export function ExamsHub() {
         }
       />
 
+      <Card className="border-indigo-400/20 bg-indigo-500/[0.06]">
+        <CardHeader>
+          <CardTitle className="text-indigo-100">Mi calendario académico</CardTitle>
+          <CardDescription>
+            Exámenes con fecha, exposición (si pones fecha en el planificador) y trabajos o investigaciones que registres —
+            todo en una sola vista mensual.
+          </CardDescription>
+        </CardHeader>
+        <div className="px-6 pb-6">
+          <Link href="/exams/calendar">
+            <Button size="sm" className="gap-2">
+              Abrir calendario
+            </Button>
+          </Link>
+        </div>
+      </Card>
+
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>

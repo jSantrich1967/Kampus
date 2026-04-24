@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Building2,
+  Calendar,
   CalendarDays,
   Compass,
   Layers3,
@@ -52,6 +53,7 @@ export const navigationGroups: NavGroup[] = [
     id: "evaluate",
     items: [
       { href: "/exams", key: "exams", icon: CalendarDays, roles: ["student", "teacher", "learner"] },
+      { href: "/exams/calendar", key: "agendaCalendar", icon: Calendar, roles: ["student", "teacher", "learner"] },
       { href: "/risk", key: "risk", icon: Radar, roles: ["student", "teacher", "institution", "learner"] },
     ],
   },

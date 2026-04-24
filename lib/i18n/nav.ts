@@ -19,6 +19,7 @@ export const navCopy = {
       flashcards: "Tarjetas",
       library: "Mis cuadernos",
       exams: "Exámenes",
+      agendaCalendar: "Mi calendario",
       risk: "Radar académico",
       community: "Comunidad",
       rooms: "Salas de estudio",
