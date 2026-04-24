@@ -18,8 +18,8 @@ import { cn } from "@/lib/cn";
 import { combineNotebookExtractedTextForPack } from "@/lib/notebooks/document-tags";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 import { subjectToPathSegment } from "@/lib/notebooks/paths";
-import { buildRescueTagNotesSection } from "@/lib/notebooks/rescue-pack-plain-text";
-import { saveRescueKitAsNotebookDocument } from "@/lib/notebooks/save-rescue-kit-document";
+import { buildRescueSourceDocumentBody, buildRescueTagNotesSection } from "@/lib/notebooks/rescue-pack-plain-text";
+import { saveRescueNotebookSource } from "@/lib/notebooks/save-rescue-source-document";
 import { postRescuePack } from "@/lib/rescue/post-rescue-pack";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -70,6 +70,11 @@ export function ClassRescueWorkspace() {
   const [saveKitMessage, setSaveKitMessage] = useState<string | null>(null);
 
   const premium = profile.plan === "premium";
+
+  const hasSaveableRescueSource = useMemo(
+    () => Boolean(buildRescueSourceDocumentBody(extractedText, notes, link).trim()),
+    [extractedText, notes, link],
+  );
 
   const fileUrls = useMemo(() => {
     const list = files ?? [];
@@ -303,27 +308,32 @@ export function ClassRescueWorkspace() {
   }
 
   async function saveKitToNotebook() {
-    if (!pack || !authUserId) return;
+    if (!authUserId) return;
     if (!isSupabaseConfigured()) {
       setSaveKitMessage("Configura Supabase para guardar en Mis cuadernos.");
+      return;
+    }
+    const sourceText = buildRescueSourceDocumentBody(extractedText, notes, link);
+    if (!sourceText.trim()) {
+      setSaveKitMessage("No hay material de entrada para guardar: sube o elige archivos, pega apuntes o añade un enlace.");
       return;
     }
     setSaveKitBusy(true);
     setSaveKitMessage(null);
     try {
-      await saveRescueKitAsNotebookDocument({
+      await saveRescueNotebookSource({
         authUserId,
         subject: subjectHint.trim() || "General",
         topic: kitTopic,
         lesson_point: kitLessonPoint,
         practice_exercises: kitPracticeExercises,
-        pack,
+        sourceText,
       });
       setSaveKitMessage(
-        `Guardado en el cuaderno «${subjectHint.trim() || "General"}». Abre Mis cuadernos o el lector: verás una hoja «Rescate …» con Tema / Punto / Ejercicios que indicaste.`,
+        `Guardado el material que usaste para el rescate en el cuaderno «${subjectHint.trim() || "General"}» (no el kit de la IA). Ábrelo en Mis cuadernos o en el lector para completar el cuaderno con esa fuente.`,
       );
     } catch (e) {
-      setSaveKitMessage(e instanceof Error ? e.message : "No se pudo guardar el kit.");
+      setSaveKitMessage(e instanceof Error ? e.message : "No se pudo guardar el material.");
     } finally {
       setSaveKitBusy(false);
     }
@@ -358,8 +368,9 @@ export function ClassRescueWorkspace() {
           <CardTitle>Entrada de rescate</CardTitle>
           <CardDescription>
             Indica <strong>Materia foco</strong> y las mismas <strong>etiquetas</strong> que en Mis cuadernos (Tema, Punto,
-            Ejercicios) antes de generar: la IA las usa para orientar el kit y, si guardas el kit, quedan en la nueva hoja
-            del cuaderno. Puedes subir archivos locales, elegir un archivo de Mis cuadernos, o abrir{" "}
+            Ejercicios) antes de generar: la IA las usa para orientar el kit. Si pulsas «Guardar material del rescate»,
+            en el cuaderno solo se guarda lo que <strong>entraste</strong> (texto extraído, apuntes, enlace), no el kit
+            generado. Puedes subir archivos locales, elegir un archivo de Mis cuadernos, o abrir{" "}
             <code className="rounded bg-white/10 px-1 py-0.5 text-[11px]">/study/library/rescue?notebook=econometria</code> para cargar{" "}
             <strong>todo</strong> el cuaderno.
           </CardDescription>
@@ -411,7 +422,7 @@ export function ClassRescueWorkspace() {
             </p>
             <p className="mb-3 text-[11px] text-slate-500">
               La <strong className="text-slate-400">Materia foco</strong> define en qué cuaderno aparecerá si pulsas
-              «Guardar kit en Mis cuadernos». <strong className="text-slate-400">Tema</strong>, <strong className="text-slate-400">Punto</strong> y{" "}
+              «Guardar material en el cuaderno». <strong className="text-slate-400">Tema</strong>, <strong className="text-slate-400">Punto</strong> y{" "}
               <strong className="text-slate-400">Ejercicios prácticos</strong> se guardan en esa hoja y sirven para filtrar el kit de estudio en el lector.
             </p>
             <div className="grid gap-3 md:grid-cols-3">
@@ -585,67 +596,27 @@ export function ClassRescueWorkspace() {
       </Card>
 
       {pack ? (
-        <>
-          <RescuePackDisplay
-            pack={pack}
-            premium={premium}
-            headerActions={
-              <>
-                <ShareLinkButton
-                  pathname="/study/library/rescue"
-                  campaign="rescue_pack"
-                  extra={{ subject: subjectHint.trim() || undefined, kit: pack.subjectLine.slice(0, 40) }}
-                  refHandle={profile.university || "kampus"}
-                  label="Compartir kit"
-                  copiedLabel="Copiado"
-                />
-                <Link href="/pass-mode">
-                  <Button variant="secondary" size="sm">
-                    Llevar esto a Modo aprobar
-                  </Button>
-                </Link>
-              </>
-            }
-          />
-
-          <Card className="border-emerald-400/20 bg-emerald-500/[0.06]">
-            <CardHeader>
-              <CardTitle className="text-emerald-100">Guardar en Mis cuadernos</CardTitle>
-              <CardDescription>
-                Crea una hoja de texto en el cuaderno de <strong>{subjectHint.trim() || "General"}</strong> con este kit
-                completo y las etiquetas Tema / Punto / Ejercicios que escribiste arriba (para verla en el lector y filtrar
-                después).
-              </CardDescription>
-            </CardHeader>
-            <div className="flex flex-col gap-3 px-6 pb-6">
-              {!authUserId ? (
-                <p className="text-sm text-slate-400">Inicia sesión para guardar el kit en tu cuaderno.</p>
-              ) : !isSupabaseConfigured() ? (
-                <p className="text-sm text-slate-400">Configura Supabase en el proyecto para usar Mis cuadernos.</p>
-              ) : (
-                <>
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" variant="secondary" className="gap-2" disabled={saveKitBusy} onClick={() => void saveKitToNotebook()}>
-                      {saveKitBusy ? "Guardando…" : "Guardar kit en Mis cuadernos"}
-                    </Button>
-                    <Button type="button" variant="ghost" size="sm" onClick={() => router.push("/study/library")}>
-                      Abrir Mis cuadernos
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => router.push(`/study/notebook/${subjectToPathSegment(subjectHint.trim() || "General")}`)}
-                    >
-                      Abrir lector de esta materia
-                    </Button>
-                  </div>
-                  {saveKitMessage ? <p className="text-sm text-emerald-200/90">{saveKitMessage}</p> : null}
-                </>
-              )}
-            </div>
-          </Card>
-        </>
+        <RescuePackDisplay
+          pack={pack}
+          premium={premium}
+          headerActions={
+            <>
+              <ShareLinkButton
+                pathname="/study/library/rescue"
+                campaign="rescue_pack"
+                extra={{ subject: subjectHint.trim() || undefined, kit: pack.subjectLine.slice(0, 40) }}
+                refHandle={profile.university || "kampus"}
+                label="Compartir kit"
+                copiedLabel="Copiado"
+              />
+              <Link href="/pass-mode">
+                <Button variant="secondary" size="sm">
+                  Llevar esto a Modo aprobar
+                </Button>
+              </Link>
+            </>
+          }
+        />
       ) : (
         <Card>
           <CardHeader>
@@ -656,6 +627,53 @@ export function ClassRescueWorkspace() {
           </CardHeader>
         </Card>
       )}
+
+      <Card className="border-emerald-400/20 bg-emerald-500/[0.06]">
+        <CardHeader>
+          <CardTitle className="text-emerald-100">Guardar material en el cuaderno</CardTitle>
+          <CardDescription>
+            Guarda en <strong>{subjectHint.trim() || "General"}</strong> solo lo que <strong>alimentó</strong> este rescate:
+            texto extraído de archivos, apuntes pegados y enlace (no el kit de la IA). Sirve para completar el cuaderno con
+            la fuente que usaste.
+          </CardDescription>
+        </CardHeader>
+        <div className="flex flex-col gap-3 px-6 pb-6">
+          {!authUserId ? (
+            <p className="text-sm text-slate-400">Inicia sesión para guardar el material en tu cuaderno.</p>
+          ) : !isSupabaseConfigured() ? (
+            <p className="text-sm text-slate-400">Configura Supabase en el proyecto para usar Mis cuadernos.</p>
+          ) : (
+            <>
+              {!hasSaveableRescueSource ? (
+                <p className="text-xs text-slate-500">Añade archivos, texto extraído, apuntes o un enlace para poder guardar.</p>
+              ) : null}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="gap-2"
+                  disabled={saveKitBusy || !hasSaveableRescueSource}
+                  onClick={() => void saveKitToNotebook()}
+                >
+                  {saveKitBusy ? "Guardando…" : "Guardar material del rescate"}
+                </Button>
+                <Button type="button" variant="ghost" size="sm" onClick={() => router.push("/study/library")}>
+                  Abrir Mis cuadernos
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push(`/study/notebook/${subjectToPathSegment(subjectHint.trim() || "General")}`)}
+                >
+                  Abrir lector de esta materia
+                </Button>
+              </div>
+              {saveKitMessage ? <p className="text-sm text-emerald-200/90">{saveKitMessage}</p> : null}
+            </>
+          )}
+        </div>
+      </Card>
     </div>
   );
 }

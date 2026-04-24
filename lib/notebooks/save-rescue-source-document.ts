@@ -1,26 +1,27 @@
-import type { RescuePack } from "@/lib/class-rescue";
 import { sanitizeStorageFilename, subjectToPathSegment } from "@/lib/notebooks/paths";
-import { serializeRescuePackToPlainText } from "@/lib/notebooks/rescue-pack-plain-text";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
-export type SaveRescueKitInput = {
+export type SaveRescueNotebookSourceInput = {
   authUserId: string;
   subject: string;
   topic: string;
   lesson_point: string;
   practice_exercises: string;
-  pack: RescuePack;
+  /** Texto combinado: extracción + apuntes pegados + enlace (lo que alimentó el rescate, sin el kit de la IA). */
+  sourceText: string;
 };
 
 /**
- * Uploads kit as UTF-8 text to `notebooks` bucket and inserts `notebook_documents` (same shape as manual uploads).
+ * Sube a Storage y crea fila en `notebook_documents` con el **material fuente** del rescate (no el kit generado).
  */
-export async function saveRescueKitAsNotebookDocument(input: SaveRescueKitInput): Promise<void> {
+export async function saveRescueNotebookSource(input: SaveRescueNotebookSourceInput): Promise<void> {
+  const body = input.sourceText.trim();
+  if (!body) throw new Error("No hay material de entrada para guardar (texto extraído, apuntes o enlace).");
+
   const subject = input.subject.trim() || "General";
   const segment = subjectToPathSegment(subject);
-  const body = serializeRescuePackToPlainText(input.pack);
   const blob = new Blob([body], { type: "text/plain;charset=utf-8" });
-  const displayName = `Rescate ${new Date().toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" })}.txt`.replace(
+  const displayName = `Material rescate ${new Date().toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" })}.txt`.replace(
     /[/\\?%*:|"<>]/g,
     "-",
   );

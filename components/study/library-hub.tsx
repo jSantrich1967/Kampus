@@ -41,8 +41,9 @@ export function LibraryHub() {
             {t.items.rescue}
           </CardTitle>
           <CardDescription>
-            Genera el kit a partir de tus archivos, apuntes o todo un cuaderno; usa las mismas etiquetas (materia, tema,
-            punto…) y guarda el resultado como una hoja más en tu cuaderno.
+            Genera el kit a partir de tus archivos, apuntes o todo un cuaderno. Si guardas en el cuaderno, se archiva el{" "}
+            <strong>material que entraste</strong> al rescate (no el kit de la IA), con tus etiquetas, para completar la
+            fuente del cuaderno.
           </CardDescription>
         </CardHeader>
         <div className="flex flex-wrap gap-2 px-6 pb-6">

@@ -1,5 +1,3 @@
-import type { RescuePack } from "@/lib/class-rescue";
-
 /**
  * Block prepended to `notes` when calling `/api/rescue/pack` so the model can align the kit with cuaderno tags.
  */
@@ -17,31 +15,18 @@ export function buildRescueTagNotesSection(
   return lines.join("\n");
 }
 
-/** Plain-text export of a generated kit (stored as .txt in Storage + extracted_text). */
-export function serializeRescuePackToPlainText(pack: RescuePack): string {
-  const blocks: string[] = [];
-  blocks.push(`KIT DE RESCATE DE CLASE\n${pack.subjectLine}\n`);
-  blocks.push(`## Resumen rápido\n${pack.quickSummary}`);
-  blocks.push(`## Ideas clave\n${pack.keyIdeas.join("\n")}`);
-  blocks.push(`## Resumen completo\n${pack.fullSummary}`);
-  blocks.push(`## Explicación profunda\n${pack.deepExplanation}`);
-  blocks.push(`## Probables preguntas de examen\n${pack.probableExamQuestions.join("\n")}`);
-  blocks.push(
-    `## Tarjetas\n${pack.flashcards.map((c) => `F: ${c.front}\nR: ${c.back}`).join("\n\n")}`,
-  );
-  blocks.push(
-    `## Quiz\n${pack.quiz
-      .map(
-        (q, i) =>
-          `${i + 1}. ${q.question}\n${q.options.map((o, j) => `   ${String.fromCharCode(65 + j)}. ${o}${j === q.answerIndex ? " ✓" : ""}`).join("\n")}`,
-      )
-      .join("\n\n")}`,
-  );
-  blocks.push(`## Checklist de estudio\n${pack.studyChecklist.join("\n")}`);
-  blocks.push(`## Mapa mental (outline)\n${pack.mindMapOutline}`);
-  blocks.push(`## Explicación fácil\n${pack.easyExplanation}`);
-  blocks.push(`## Explicación técnica\n${pack.technicalExplanation}`);
-  blocks.push(`## Preguntas para clase\n${pack.questionsForClass.join("\n")}`);
-  blocks.push(`## Siguiente recurso sugerido\n${pack.suggestedNextResource}`);
-  return blocks.join("\n\n---\n\n");
+/**
+ * Body stored in the cuaderno: only what you fed into the rescate (extracts, pasted notes, link) — not the IA kit.
+ */
+export function buildRescueSourceDocumentBody(extractedText: string, pastedNotes: string, link: string): string {
+  const ex = extractedText.trim();
+  const n = pastedNotes.trim();
+  const l = link.trim();
+  const parts: string[] = [];
+  if (ex) parts.push(`# Texto extraído / archivos\n\n${ex}`);
+  if (n) parts.push(`# Apuntes pegados\n\n${n}`);
+  if (l) parts.push(`# Enlace\n\n${l}`);
+  if (parts.length === 0) return "";
+  const intro = `Material usado en rescate de clase\nFecha: ${new Date().toLocaleString("es-ES")}\n\n---\n\n`;
+  return intro + parts.join("\n\n---\n\n");
 }
