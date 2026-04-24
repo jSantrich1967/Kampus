@@ -47,19 +47,68 @@ function collectOpenAIResponseText(node: unknown, out: string[]): void {
   Object.values(obj).forEach((v) => collectOpenAIResponseText(v, out));
 }
 
+/**
+ * OpenAI sometimes returns a valid JSON object followed by extra prose (or multiple chunks get concatenated).
+ * `JSON.parse` then fails with: "Unexpected non-whitespace character after JSON at position …".
+ * We extract the first balanced `{ ... }` while respecting string literals.
+ */
+function extractFirstBalancedJsonObject(input: string): string | null {
+  const start = input.indexOf("{");
+  if (start < 0) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+
+  for (let i = start; i < input.length; i += 1) {
+    const c = input[i];
+
+    if (inString) {
+      if (escape) {
+        escape = false;
+      } else if (c === "\\") {
+        escape = true;
+      } else if (c === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (c === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (c === "{") depth += 1;
+    if (c === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return input.slice(start, i + 1);
+      }
+    }
+  }
+
+  return null;
+}
+
+function stripMarkdownJsonFence(text: string): string {
+  let t = text.trim();
+  if (t.startsWith("```")) {
+    t = t.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
+  }
+  return t;
+}
+
 function tryParseJsonObject(text: string): unknown {
-  const trimmed = text.trim();
-  if (!trimmed) return null;
+  const cleaned = stripMarkdownJsonFence(text);
+  if (!cleaned) return null;
 
   try {
-    return JSON.parse(trimmed);
+    return JSON.parse(cleaned);
   } catch {
-    // Sometimes the model wraps JSON in extra text. Try the biggest {...} block.
-    const start = trimmed.indexOf("{");
-    const end = trimmed.lastIndexOf("}");
-    if (start >= 0 && end > start) {
-      const candidate = trimmed.slice(start, end + 1);
-      return JSON.parse(candidate);
+    const balanced = extractFirstBalancedJsonObject(cleaned);
+    if (balanced) {
+      return JSON.parse(balanced);
     }
     throw new Error("Invalid JSON response");
   }
@@ -88,6 +137,7 @@ export async function POST(req: Request) {
     const system = [
       "Eres un tutor experto. Tu trabajo es convertir apuntes crudos en un kit de estudio accionable.",
       "Responde SOLO con un JSON válido, sin markdown, sin texto extra.",
+      "El último carácter de tu respuesta debe ser `}` (cierra el objeto JSON). No escribas nada después.",
       "Todo el contenido debe estar en español (puedes conservar símbolos, fórmulas o términos técnicos).",
       "No inventes datos específicos (fechas, autores, resultados) si no aparecen en la fuente; si falta, dilo de forma general.",
     ].join(" ");
