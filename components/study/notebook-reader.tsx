@@ -26,7 +26,8 @@ export function NotebookReader({ subjectSlug }: Props) {
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [mediaBusy, setMediaBusy] = useState(false);
 
-  const subjectLabel = pages[0]?.subject ?? subjectSlug.replace(/_/g, " ");
+  const subjectLabel =
+    pages[0]?.subject ?? (subjectSlug && subjectSlug.length > 0 ? subjectSlug.replace(/_/g, " ") : "Cuaderno");
 
   const { background, spine } = useMemo(() => notebookCoverGradient(subjectLabel), [subjectLabel]);
 
@@ -47,7 +48,8 @@ export function NotebookReader({ subjectSlug }: Props) {
         .order("created_at", { ascending: true });
       if (qErr) throw qErr;
       const all = (data as NotebookDocumentRow[]) ?? [];
-      const filtered = all.filter((d) => subjectToPathSegment(d.subject) === subjectSlug);
+      const slug = (subjectSlug ?? "").trim();
+      const filtered = slug ? all.filter((d) => subjectToPathSegment(d.subject) === slug) : [];
       setPages(filtered);
       setPageIndex(0);
     } catch (e) {
@@ -101,8 +103,9 @@ export function NotebookReader({ subjectSlug }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [total]);
 
-  const isImage = current?.mime_type.startsWith("image/");
-  const isPdf = current?.mime_type.includes("pdf") || current?.filename.toLowerCase().endsWith(".pdf");
+  const isImage = Boolean(current?.mime_type?.startsWith("image/"));
+  const isPdf =
+    Boolean(current?.mime_type?.includes("pdf")) || Boolean(current?.filename?.toLowerCase().endsWith(".pdf"));
 
   if (!isSupabaseConfigured()) {
     return (
