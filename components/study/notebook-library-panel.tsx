@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { sanitizeStorageFilename, subjectToPathSegment } from "@/lib/notebooks/paths";
+import { formatNotebookCloudError } from "@/lib/notebooks/storage-errors";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -50,7 +51,8 @@ export function NotebookLibraryPanel() {
       if (qErr) throw qErr;
       setDocs((data as NotebookDocumentRow[]) ?? []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudieron cargar los archivos.");
+      const msg = e instanceof Error ? e.message : "No se pudieron cargar los archivos.";
+      setError(formatNotebookCloudError(msg));
     } finally {
       setLoading(false);
     }
@@ -116,7 +118,8 @@ export function NotebookLibraryPanel() {
       }
       await loadDocs();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al subir.");
+      const msg = e instanceof Error ? e.message : "Error al subir.";
+      setError(formatNotebookCloudError(msg));
     } finally {
       setUploading(false);
     }
@@ -133,7 +136,8 @@ export function NotebookLibraryPanel() {
       if (delErr) throw delErr;
       setDocs((prev) => prev.filter((d) => d.id !== doc.id));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo borrar.");
+      const msg = e instanceof Error ? e.message : "No se pudo borrar.";
+      setError(formatNotebookCloudError(msg));
     }
   }
 
@@ -141,7 +145,7 @@ export function NotebookLibraryPanel() {
     const supabase = createSupabaseBrowserClient();
     const { data, error: uErr } = await supabase.storage.from("notebooks").createSignedUrl(doc.storage_path, 3600);
     if (uErr || !data?.signedUrl) {
-      setError(uErr?.message ?? "No se pudo generar el enlace de descarga.");
+      setError(formatNotebookCloudError(uErr?.message ?? "No se pudo generar el enlace de descarga."));
       return;
     }
     window.open(data.signedUrl, "_blank", "noopener,noreferrer");
