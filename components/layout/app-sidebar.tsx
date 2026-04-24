@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { KampusLogo } from "@/components/brand/kampus-logo";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { navCopy } from "@/lib/i18n/nav";
 import { filterNavForRole } from "@/lib/navigation";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cn } from "@/lib/cn";
 
 type AppSidebarProps = {
@@ -16,11 +19,18 @@ type AppSidebarProps = {
 
 export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const pathname = usePathname();
-  const { profile } = useKampus();
+  const router = useRouter();
+  const { profile, authUserId } = useKampus();
   const t = navCopy.es;
   const planLabel = profile.plan === "premium" ? "Premium" : "Gratis";
   const roleLabel =
-    profile.role === "student" ? "Estudiante" : profile.role === "teacher" ? "Docente" : "Institución";
+    profile.role === "student"
+      ? "Estudiante"
+      : profile.role === "teacher"
+        ? "Docente"
+        : profile.role === "learner"
+          ? "Autodidacta"
+          : "Institución";
   const groups = filterNavForRole(profile.role);
 
   return (
@@ -73,7 +83,27 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         ))}
       </nav>
 
-      <div className="border-t border-white/5 p-4 text-[11px] text-slate-500">Hecho para el ritmo real del semestre.</div>
+      <div className="border-t border-white/5 p-4">
+        {isSupabaseConfigured() && authUserId ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="w-full"
+            onClick={async () => {
+              const supabase = createSupabaseBrowserClient();
+              await supabase.auth.signOut();
+              onNavigate?.();
+              router.push("/login");
+              router.refresh();
+            }}
+          >
+            Cerrar sesión
+          </Button>
+        ) : (
+          <div className="text-[11px] text-slate-500">Hecho para el ritmo real del semestre.</div>
+        )}
+      </div>
     </div>
   );
 }
