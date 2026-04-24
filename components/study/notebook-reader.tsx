@@ -4,8 +4,9 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
+import { PageHeader } from "@/components/layout/page-header";
+import { NotebookStudyKitPanel } from "@/components/study/notebook-study-kit-panel";
 import { Button } from "@/components/ui/button";
 import { initialsFromSubject, notebookCoverGradient } from "@/lib/notebooks/cover-styles";
 import { subjectToPathSegment } from "@/lib/notebooks/paths";
@@ -163,67 +164,68 @@ export function NotebookReader({ subjectSlug }: Props) {
       ) : null}
 
       {!loading && total > 0 && current ? (
-        <div className="mx-auto max-w-5xl">
-          {/* Marco tipo cuaderno */}
-          <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-950/80 shadow-2xl shadow-black/40 ring-1 ring-white/5">
-            <div className="flex min-h-[520px] flex-col md:flex-row">
-              {/* Lomo */}
-              <div
-                className="hidden w-4 shrink-0 border-r border-black/30 md:block"
-                style={{ background: spine }}
-                aria-hidden
-              />
-              {/* Contenido */}
-              <div className="flex min-w-0 flex-1 flex-col">
+        <>
+          <div className="mx-auto max-w-5xl">
+            {/* Marco tipo cuaderno */}
+            <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-950/80 shadow-2xl shadow-black/40 ring-1 ring-white/5">
+              <div className="flex min-h-[520px] flex-col md:flex-row">
+                {/* Lomo */}
                 <div
-                  className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3"
-                  style={{ background }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 bg-black/30 text-sm font-bold text-white">
-                      {initialsFromSubject(subjectLabel)}
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-white/60">Clase / sesión</p>
-                      <p className="font-semibold text-white">
-                        {sessionNum} de {total}
-                        <span className="ml-2 font-normal text-white/70">
-                          ·{" "}
-                          <span suppressHydrationWarning>
-                            {new Date(current.created_at).toLocaleString("es", {
-                              dateStyle: "medium",
-                              timeStyle: "short",
-                            })}
+                  className="hidden w-4 shrink-0 border-r border-black/30 md:block"
+                  style={{ background: spine }}
+                  aria-hidden
+                />
+                {/* Contenido */}
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <div
+                    className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3"
+                    style={{ background }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 bg-black/30 text-sm font-bold text-white">
+                        {initialsFromSubject(subjectLabel)}
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-white/60">Clase / sesión</p>
+                        <p className="font-semibold text-white">
+                          {sessionNum} de {total}
+                          <span className="ml-2 font-normal text-white/70">
+                            ·{" "}
+                            <span suppressHydrationWarning>
+                              {new Date(current.created_at).toLocaleString("es", {
+                                dateStyle: "medium",
+                                timeStyle: "short",
+                              })}
+                            </span>
                           </span>
-                        </span>
-                      </p>
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        disabled={pageIndex <= 0}
+                        onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
+                        aria-label="Página anterior"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        disabled={pageIndex >= total - 1}
+                        onClick={() => setPageIndex((i) => Math.min(total - 1, i + 1))}
+                        aria-label="Página siguiente"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      disabled={pageIndex <= 0}
-                      onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
-                      aria-label="Página anterior"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      disabled={pageIndex >= total - 1}
-                      onClick={() => setPageIndex((i) => Math.min(total - 1, i + 1))}
-                      aria-label="Página siguiente"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
 
-                <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 md:p-6">
+                  <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 md:p-6">
                   <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
                     <p className="text-xs text-slate-500">Archivo</p>
                     <p className="truncate text-sm font-medium text-slate-100">{current.filename}</p>
@@ -288,7 +290,15 @@ export function NotebookReader({ subjectSlug }: Props) {
               </div>
             </div>
           </div>
-        </div>
+          </div>
+
+          <NotebookStudyKitPanel
+            pages={pages}
+            currentPage={current}
+            subjectLabel={subjectLabel}
+            subjectSlug={subjectSlug}
+          />
+        </>
       ) : null}
     </div>
   );

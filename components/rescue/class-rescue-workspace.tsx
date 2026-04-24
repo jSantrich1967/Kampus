@@ -12,10 +12,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RescueNotebookPicker } from "@/components/rescue/rescue-notebook-picker";
-import { generateRescuePack, type RescuePack } from "@/lib/class-rescue";
+import { RescuePackDisplay } from "@/components/rescue/rescue-pack-display";
+import type { RescuePack } from "@/lib/class-rescue";
 import { cn } from "@/lib/cn";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 import { subjectToPathSegment } from "@/lib/notebooks/paths";
+import { postRescuePack } from "@/lib/rescue/post-rescue-pack";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
@@ -32,38 +34,6 @@ function mimeToSourceKind(mime: string): SourceKind {
   if (m.includes("pdf")) return "pdf";
   if (m.startsWith("image/")) return "image";
   return "notes";
-}
-
-function Section({
-  title,
-  description,
-  locked,
-  children,
-}: {
-  title: string;
-  description?: string;
-  locked: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <Card className={cn(locked && "relative overflow-hidden")}>
-      {locked ? (
-        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-slate-950/70 p-6 text-center backdrop-blur-sm">
-          <div>
-            <Badge tone="accent">Premium</Badge>
-            <p className="mt-3 text-sm text-slate-200">
-              Desbloquea rescates profundos: banco completo de preguntas, exportación de mapa mental y pack de examen.
-            </p>
-          </div>
-        </div>
-      ) : null}
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        {description ? <CardDescription>{description}</CardDescription> : null}
-      </CardHeader>
-      <div className={cn("space-y-3 text-sm text-slate-200", locked && "blur-sm")}>{children}</div>
-    </Card>
-  );
 }
 
 export function ClassRescueWorkspace() {
@@ -295,10 +265,8 @@ export function ClassRescueWorkspace() {
     setPackBusy(true);
     setPackError(null);
     try {
-      const res = await fetch("/api/rescue/pack", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const { pack: nextPack, packError: err } = await postRescuePack(
+        {
           subjectHint,
           sourceLabel,
           sourceKind: kind,
@@ -307,25 +275,12 @@ export function ClassRescueWorkspace() {
           link,
           uploadedFileCount: librarySelection ? 1 : fromNotebookBundle ? notebookDocCount : list.length,
           seedText: f.seed && !extractedText && !notes && !link ? f.seed : "",
-        }),
-      });
-      const json = (await res.json()) as { pack?: RescuePack; error?: string };
-      if (!res.ok) throw new Error(json.error || "No pudimos generar el kit.");
-      if (!json.pack) throw new Error("Respuesta incompleta del servidor.");
-      setPack(json.pack);
-      setGenHint(null);
-    } catch (e) {
-      // Fallback: genera un kit básico determinístico si falla la IA.
-      const msg = e instanceof Error ? e.message : "No pudimos generar el kit.";
-      setPackError(msg);
-      setPack(
-        generateRescuePack({
-          seedText,
-          subjectHint,
-          sourceLabel,
-          sourceKind: kind,
-        }),
+        },
+        { seedText, subjectHint, sourceLabel, sourceKind: kind },
       );
+      setPack(nextPack);
+      setPackError(err);
+      setGenHint(null);
     } finally {
       setPackBusy(false);
     }
@@ -542,13 +497,11 @@ export function ClassRescueWorkspace() {
       </Card>
 
       {pack ? (
-        <div className="space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="text-xs uppercase tracking-wide text-slate-400">Línea de asunto</div>
-              <div className="text-lg font-semibold text-white">{pack.subjectLine}</div>
-            </div>
-            <div className="flex flex-wrap gap-2">
+        <RescuePackDisplay
+          pack={pack}
+          premium={premium}
+          headerActions={
+            <>
               <ShareLinkButton
                 pathname="/rescue"
                 campaign="rescue_pack"
@@ -562,100 +515,9 @@ export function ClassRescueWorkspace() {
                   Llevar esto a Modo aprobar
                 </Button>
               </Link>
-            </div>
-          </div>
-
-          <div className="grid gap-5 lg:grid-cols-2">
-            <Section title="Resumen rápido" locked={false} description="60 segundos de claridad">
-              <p>{pack.quickSummary}</p>
-            </Section>
-            <Section title="Ideas clave" locked={false} description="Lo que deberías poder explicar">
-              <ul className="list-disc space-y-2 pl-5">
-                {pack.keyIdeas.map((k) => (
-                  <li key={k}>{k}</li>
-                ))}
-              </ul>
-            </Section>
-
-            <Section title="Resumen completo" locked={!premium} description="Nivel guía">
-              <p>{pack.fullSummary}</p>
-            </Section>
-            <Section title="Explicación profunda" locked={!premium} description="Cadena causal + límites">
-              <p>{pack.deepExplanation}</p>
-            </Section>
-
-            <Section title="Probables preguntas de examen" locked={!premium}>
-              <ol className="list-decimal space-y-2 pl-5">
-                {pack.probableExamQuestions.map((q) => (
-                  <li key={q}>{q}</li>
-                ))}
-              </ol>
-            </Section>
-            <Section title="Tarjetas" locked={!premium}>
-              <div className="space-y-3">
-                {pack.flashcards.map((c) => (
-                  <div key={c.front} className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
-                    <div className="text-xs uppercase tracking-wide text-slate-400">Frente</div>
-                    <div className="font-medium text-white">{c.front}</div>
-                    <div className="mt-2 text-xs uppercase tracking-wide text-slate-400">Reverso</div>
-                    <div className="text-slate-200">{c.back}</div>
-                  </div>
-                ))}
-              </div>
-            </Section>
-
-            <Section title="Quiz" locked={!premium}>
-              <div className="space-y-4">
-                {pack.quiz.map((q, idx) => (
-                  <div key={q.question} className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
-                    <div className="font-medium text-white">
-                      {idx + 1}. {q.question}
-                    </div>
-                    <ul className="mt-2 space-y-1 text-slate-300">
-                      {q.options.map((opt, i) => (
-                        <li key={opt} className={cn(i === q.answerIndex && "text-emerald-200")}>
-                          {String.fromCharCode(65 + i)}. {opt}
-                          {i === q.answerIndex ? " (correcta)" : null}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            </Section>
-
-            <Section title="Checklist de estudio" locked={false}>
-              <ul className="list-disc space-y-2 pl-5">
-                {pack.studyChecklist.map((c) => (
-                  <li key={c}>{c}</li>
-                ))}
-              </ul>
-            </Section>
-
-            <Section title="Mapa mental (outline)" locked={!premium}>
-              <pre className="whitespace-pre-wrap rounded-xl border border-white/10 bg-slate-950/60 p-3 text-xs text-slate-200">{pack.mindMapOutline}</pre>
-            </Section>
-
-            <Section title="Explicación fácil" locked={!premium}>
-              <p>{pack.easyExplanation}</p>
-            </Section>
-            <Section title="Explicación técnica" locked={!premium}>
-              <p>{pack.technicalExplanation}</p>
-            </Section>
-
-            <Section title="Preguntas para hacer en clase" locked={!premium}>
-              <ul className="list-disc space-y-2 pl-5">
-                {pack.questionsForClass.map((q) => (
-                  <li key={q}>{q}</li>
-                ))}
-              </ul>
-            </Section>
-
-            <Section title="Siguiente recurso sugerido" locked={false}>
-              <p>{pack.suggestedNextResource}</p>
-            </Section>
-          </div>
-        </div>
+            </>
+          }
+        />
       ) : (
         <Card>
           <CardHeader>
