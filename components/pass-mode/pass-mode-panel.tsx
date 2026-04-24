@@ -95,7 +95,7 @@ export function PassModePanel() {
               ))}
             </ul>
             <div className="mt-4 flex flex-col gap-2">
-              <Link href="/study/rescue">
+              <Link href="/study/library/rescue">
                 <Button variant="secondary" className="w-full">
                   Abrir rescate
                 </Button>

@@ -91,7 +91,7 @@ export function RescueNotebookPicker({ subjectFilter, activeDocId, busy, onPick,
             ¿Quieres usar <strong>todo</strong> el cuaderno de la materia foco en el rescate?
           </p>
           <Link
-            href={`/study/rescue?notebook=${subjectToPathSegment(subjectFilter.trim())}&subject=${encodeURIComponent(subjectFilter.trim())}`}
+            href={`/study/library/rescue?notebook=${subjectToPathSegment(subjectFilter.trim())}&subject=${encodeURIComponent(subjectFilter.trim())}`}
             className="mt-1 inline-flex text-xs font-semibold text-indigo-200 underline-offset-2 hover:underline"
           >
             Cargar cuaderno «{subjectFilter.trim()}» en rescate →

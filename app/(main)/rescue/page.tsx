@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 /**
  * Legacy URL: share links and bookmarks may still use `/rescue`.
- * Canonical route lives under Estudiar → cuadernos: `/study/rescue`.
+ * Canonical route: `/study/library/rescue` (dentro de Mis cuadernos).
  */
 export default async function LegacyRescueRedirect({
   searchParams,
@@ -17,5 +17,5 @@ export default async function LegacyRescueRedirect({
     else q.set(k, v);
   }
   const suffix = q.toString();
-  redirect(suffix ? `/study/rescue?${suffix}` : "/study/rescue");
+  redirect(suffix ? `/study/library/rescue?${suffix}` : "/study/library/rescue");
 }

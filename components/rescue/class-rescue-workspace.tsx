@@ -332,9 +332,9 @@ export function ClassRescueWorkspace() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Cuadernos"
+        eyebrow="Mis cuadernos"
         title="Rescate de clase"
-        description="Recupera clases perdidas con tu material: subida local, archivos de Mis cuadernos o todo un cuaderno por materia para generar el kit."
+        description="Parte de tu cuaderno: recupera clases perdidas con el material que ya guardaste, subida local o todo un cuaderno por materia para generar el kit."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone={premium ? "success" : "neutral"}>{premium ? "Premium" : "Gratis"}</Badge>
@@ -342,7 +342,7 @@ export function ClassRescueWorkspace() {
               Mis cuadernos
             </Button>
             <ShareLinkButton
-              pathname="/study/rescue"
+              pathname="/study/library/rescue"
               campaign="rescue_pack"
               extra={{ subject: subjectHint.trim() || undefined }}
               refHandle={profile.university || "kampus"}
@@ -360,7 +360,7 @@ export function ClassRescueWorkspace() {
             Indica <strong>Materia foco</strong> y las mismas <strong>etiquetas</strong> que en Mis cuadernos (Tema, Punto,
             Ejercicios) antes de generar: la IA las usa para orientar el kit y, si guardas el kit, quedan en la nueva hoja
             del cuaderno. Puedes subir archivos locales, elegir un archivo de Mis cuadernos, o abrir{" "}
-            <code className="rounded bg-white/10 px-1 py-0.5 text-[11px]">/study/rescue?notebook=econometria</code> para cargar{" "}
+            <code className="rounded bg-white/10 px-1 py-0.5 text-[11px]">/study/library/rescue?notebook=econometria</code> para cargar{" "}
             <strong>todo</strong> el cuaderno.
           </CardDescription>
         </CardHeader>
@@ -592,7 +592,7 @@ export function ClassRescueWorkspace() {
             headerActions={
               <>
                 <ShareLinkButton
-                  pathname="/study/rescue"
+                  pathname="/study/library/rescue"
                   campaign="rescue_pack"
                   extra={{ subject: subjectHint.trim() || undefined, kit: pack.subjectLine.slice(0, 40) }}
                   refHandle={profile.university || "kampus"}

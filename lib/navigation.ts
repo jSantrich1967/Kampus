@@ -10,7 +10,6 @@ import {
   Radar,
   School,
   Settings,
-  Sparkles,
   Users,
   Video,
 } from "lucide-react";
@@ -18,22 +17,12 @@ import {
 import type { UserRole } from "@/lib/schemas/profile";
 import type { NavItemKey } from "@/lib/i18n/nav";
 
-/** Indented link under a main nav item (e.g. rescate bajo Mis cuadernos). */
-export type NavSubItem = {
-  href: string;
-  key: NavItemKey;
-  icon: LucideIcon;
-  roles?: UserRole[];
-  premium?: boolean;
-};
-
 export type NavItem = {
   href: string;
   key: NavItemKey;
   icon: LucideIcon;
   roles: UserRole[];
   premium?: boolean;
-  subItems?: NavSubItem[];
 };
 
 export type NavGroup = {
@@ -42,7 +31,7 @@ export type NavGroup = {
 };
 
 /**
- * Opinionated IA: fewer top-level destinations, stronger daily loop (Today → Pass Mode → Rescue).
+ * Opinionated IA: fewer top-level destinations, stronger daily loop (Today → Pass Mode → study hub).
  */
 export const navigationGroups: NavGroup[] = [
   {
@@ -55,13 +44,7 @@ export const navigationGroups: NavGroup[] = [
   {
     id: "learn",
     items: [
-      {
-        href: "/study/library",
-        key: "library",
-        icon: Library,
-        roles: ["student", "teacher", "learner"],
-        subItems: [{ href: "/study/rescue", key: "rescue", icon: Sparkles }],
-      },
+      { href: "/study/library", key: "library", icon: Library, roles: ["student", "teacher", "learner"] },
       { href: "/study/flashcards", key: "flashcards", icon: Layers3, roles: ["student", "teacher", "learner"] },
     ],
   },
@@ -101,13 +84,7 @@ export function filterNavForRole(role: UserRole): NavGroup[] {
   return navigationGroups
     .map((group) => ({
       ...group,
-      items: group.items
-        .filter((item) => item.roles.includes(role))
-        .map((item) => {
-          if (!item.subItems?.length) return item;
-          const sub = item.subItems.filter((s) => (s.roles ?? item.roles).includes(role));
-          return sub.length ? { ...item, subItems: sub } : { ...item, subItems: undefined };
-        }),
+      items: group.items.filter((item) => item.roles.includes(role)),
     }))
     .filter((g) => g.items.length > 0);
 }

@@ -4,7 +4,7 @@ export const navCopy = {
   es: {
     groups: {
       command: "Hoy",
-      learn: "Estudiar",
+      learn: "Cuadernos y estudio",
       evaluate: "Evaluación",
       together: "Juntos",
       work: "Colaboración",

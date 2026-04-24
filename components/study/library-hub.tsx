@@ -1,5 +1,6 @@
 "use client";
 
+import { Sparkles } from "lucide-react";
 import Link from "next/link";
 
 import { ShareLinkButton } from "@/components/growth/share-link-button";
@@ -8,17 +9,19 @@ import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { NotebookLibraryPanel } from "@/components/study/notebook-library-panel";
+import { navCopy } from "@/lib/i18n/nav";
 
 export function LibraryHub() {
   const { profile } = useKampus();
   const focus = profile.subjects[0] ?? "General";
+  const t = navCopy.es;
 
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Estudiar"
+        eyebrow={t.groups.learn}
         title="Mis cuadernos"
-        description="Aquí viven tus cuadernos por materia. Sube material, ábrelo clase a clase y desde cada cuaderno salta a rescate, radar o práctica cuando lo necesites."
+        description="Cuadernos por materia: sube material, ábrelo clase a clase, genera kits de estudio y recupera clases perdidas — el rescate vive aquí, como parte del mismo flujo."
         actions={
           <ShareLinkButton
             pathname="/study/library"
@@ -30,6 +33,27 @@ export function LibraryHub() {
           />
         }
       />
+
+      <Card className="border-indigo-400/25 bg-gradient-to-br from-indigo-500/15 to-slate-950/80 ring-1 ring-indigo-400/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg text-indigo-100">
+            <Sparkles className="h-5 w-5 text-indigo-300" />
+            {t.items.rescue}
+          </CardTitle>
+          <CardDescription>
+            Genera el kit a partir de tus archivos, apuntes o todo un cuaderno; usa las mismas etiquetas (materia, tema,
+            punto…) y guarda el resultado como una hoja más en tu cuaderno.
+          </CardDescription>
+        </CardHeader>
+        <div className="flex flex-wrap gap-2 px-6 pb-6">
+          <Link href="/study/library/rescue">
+            <Button size="sm" className="gap-2">
+              <Sparkles className="h-4 w-4" />
+              Abrir rescate de clase
+            </Button>
+          </Link>
+        </div>
+      </Card>
 
       <NotebookLibraryPanel />
 
@@ -73,7 +97,7 @@ export function LibraryHub() {
               Ver radar
             </Button>
           </Link>
-          <Link href="/study/rescue">
+          <Link href="/study/library/rescue">
             <Button size="sm" variant="ghost">
               Abrir rescate
             </Button>

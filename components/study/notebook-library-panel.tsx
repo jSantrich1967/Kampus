@@ -444,7 +444,7 @@ export function NotebookLibraryPanel() {
                             Abrir cuaderno (clases)
                           </Link>
                           <Link
-                            href={`/study/rescue?notebook=${subjectToPathSegment(subjectName)}&subject=${encodeURIComponent(subjectName)}`}
+                            href={`/study/library/rescue?notebook=${subjectToPathSegment(subjectName)}&subject=${encodeURIComponent(subjectName)}`}
                             className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-3 py-2.5 text-sm font-semibold text-emerald-100 hover:bg-emerald-500/25"
                           >
                             Rescate con todo el cuaderno
@@ -465,7 +465,7 @@ export function NotebookLibraryPanel() {
                           Ver en pantalla de cuaderno
                         </Link>
                         <Link
-                          href={`/study/rescue?notebook=${subjectToPathSegment(subjectName)}&subject=${encodeURIComponent(subjectName)}`}
+                          href={`/study/library/rescue?notebook=${subjectToPathSegment(subjectName)}&subject=${encodeURIComponent(subjectName)}`}
                           className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/10 py-2.5 text-xs font-semibold text-emerald-100 hover:bg-emerald-500/20"
                         >
                           Rescate con todo el cuaderno

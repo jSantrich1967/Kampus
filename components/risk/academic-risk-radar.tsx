@@ -67,7 +67,7 @@ export function AcademicRiskRadar() {
                   </Link>
                 ) : null}
                 {profile.role === "student" || profile.role === "teacher" ? (
-                  <Link href="/study/rescue">
+                  <Link href="/study/library/rescue">
                     <Button size="sm" variant="ghost">
                       Rescate
                     </Button>
