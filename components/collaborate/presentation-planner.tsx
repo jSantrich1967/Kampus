@@ -14,13 +14,16 @@ import {
   type PresentationSection,
   type PresentationState,
 } from "@/lib/storage/presentation-storage";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { fetchPresentationAgendaRemote, upsertPresentationAgendaRemote } from "@/lib/supabase/agenda-db";
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
 export function PresentationPlanner() {
-  const { locale, profile } = useKampus();
+  const { locale, profile, authUserId } = useKampus();
   const es = locale === "es";
 
   const [hydrated, setHydrated] = useState(false);
@@ -30,14 +33,54 @@ export function PresentationPlanner() {
   const [teleIndex, setTeleIndex] = useState(0);
 
   useEffect(() => {
-    setState(loadPresentation());
-    setHydrated(true);
-  }, []);
+    let cancelled = false;
+    const loc = loadPresentation();
+    setState(loc);
+
+    const done = () => {
+      if (!cancelled) setHydrated(true);
+    };
+
+    if (!isSupabaseConfigured() || !authUserId) {
+      done();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    void (async () => {
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const remote = await fetchPresentationAgendaRemote(supabase, authUserId);
+        if (cancelled || !remote) return;
+        setState((prev) => ({
+          ...prev,
+          deckTitle: remote.deckTitle.trim() ? remote.deckTitle : prev.deckTitle,
+          presentationDueDate: remote.presentationDueDate ?? prev.presentationDueDate,
+        }));
+      } finally {
+        done();
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId]);
 
   useEffect(() => {
     if (!hydrated) return;
     savePresentation(state);
   }, [hydrated, state]);
+
+  useEffect(() => {
+    if (!hydrated || !isSupabaseConfigured() || !authUserId) return;
+    const supabase = createSupabaseBrowserClient();
+    const handle = window.setTimeout(() => {
+      void upsertPresentationAgendaRemote(supabase, authUserId, state.deckTitle, state.presentationDueDate);
+    }, 700);
+    return () => window.clearTimeout(handle);
+  }, [hydrated, authUserId, state.deckTitle, state.presentationDueDate]);
 
   useEffect(() => {
     if (!running) return;

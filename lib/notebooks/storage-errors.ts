@@ -14,3 +14,22 @@ export function formatNotebookCloudError(message: string): string {
   }
   return m;
 }
+
+/** Mensajes claros cuando faltan tablas del calendario / agenda en Supabase. */
+export function formatAgendaCloudError(message: string): string {
+  const low = message.trim().toLowerCase();
+  if (
+    low.includes("user_exams") ||
+    low.includes("user_exam_attempts") ||
+    low.includes("student_works") ||
+    low.includes("user_presentation_agenda")
+  ) {
+    return (
+      "Faltan tablas de agenda en Supabase (exámenes, intentos, trabajos o exposición). " +
+      "En el SQL Editor ejecuta `supabase/migrations/20260426140000_agenda_supabase.sql` " +
+      "y vuelve a intentar. Detalle técnico: " +
+      message.trim()
+    );
+  }
+  return formatNotebookCloudError(message);
+}

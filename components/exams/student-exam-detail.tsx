@@ -1,14 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getExamById, createAttempt, listAttemptsForExam, gradeAttempt } from "@/lib/storage/exams-storage";
+import { formatAgendaCloudError } from "@/lib/notebooks/storage-errors";
+import type { Exam, ExamAttempt } from "@/lib/schemas/exams";
+import {
+  createAttempt,
+  getExamById,
+  gradeAttempt,
+  listAttemptsForExam,
+} from "@/lib/storage/exams-storage";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import {
+  fetchAttemptsForExam,
+  fetchExamById,
+  insertAttemptRemote,
+  updateAttemptFeedbackRemote,
+} from "@/lib/supabase/agenda-db";
 
 function buildDemoFeedback() {
   return {
@@ -21,24 +37,89 @@ function buildDemoFeedback() {
 }
 
 export function StudentExamDetail({ examId }: { examId: string }) {
-  const { profile, hydrated } = useKampus();
+  const { profile, hydrated, authUserId } = useKampus();
   const studentLabel = profile.university?.trim() ? `estudiante@${profile.university.trim()}` : "estudiante-demo";
+  const useCloud = Boolean(isSupabaseConfigured() && authUserId);
+  const attemptsDescription = useCloud
+    ? "Historial guardado en tu cuenta (Supabase)."
+    : "Historial local (se guarda en tu navegador).";
 
-  const exam = useMemo(() => getExamById(examId), [examId]);
+  const [exam, setExam] = useState<Exam | null>(null);
+  const [loadingExam, setLoadingExam] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const [attempts, setAttempts] = useState<ExamAttempt[]>([]);
+  const [loadingAttempts, setLoadingAttempts] = useState(false);
+
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submittedId, setSubmittedId] = useState<string | null>(null);
-  const [refresh, setRefresh] = useState(0);
+  const [submitBusy, setSubmitBusy] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const attempts = useMemo(() => {
-    void refresh;
-    return listAttemptsForExam(examId, studentLabel);
-  }, [examId, studentLabel, refresh]);
+  useEffect(() => {
+    if (!hydrated) return;
+    let cancelled = false;
+    (async () => {
+      setLoadingExam(true);
+      setLoadError(null);
+      try {
+        if (useCloud) {
+          const supabase = createSupabaseBrowserClient();
+          const e = await fetchExamById(supabase, authUserId!, examId);
+          if (!cancelled) setExam(e);
+        } else {
+          if (!cancelled) setExam(getExamById(examId));
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Error al cargar el examen.";
+        if (!cancelled) setLoadError(formatAgendaCloudError(msg));
+      } finally {
+        if (!cancelled) setLoadingExam(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [examId, hydrated, useCloud, authUserId]);
+
+  const loadAttempts = useCallback(async () => {
+    if (!exam) return;
+    setLoadingAttempts(true);
+    try {
+      if (useCloud) {
+        const supabase = createSupabaseBrowserClient();
+        const list = await fetchAttemptsForExam(supabase, authUserId!, exam.id, studentLabel);
+        setAttempts(list);
+      } else {
+        setAttempts(listAttemptsForExam(exam.id, studentLabel));
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "No se pudieron cargar los intentos.";
+      setLoadError(formatAgendaCloudError(msg));
+    } finally {
+      setLoadingAttempts(false);
+    }
+  }, [exam, useCloud, authUserId, studentLabel]);
+
+  useEffect(() => {
+    void loadAttempts();
+  }, [loadAttempts]);
 
   if (!hydrated) return <div className="text-sm text-slate-400">Cargando…</div>;
-  if (!exam) {
+
+  if (loadingExam) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-slate-400">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Cargando examen…
+      </div>
+    );
+  }
+
+  if (loadError && !exam) {
     return (
       <div className="space-y-4">
-        <PageHeader eyebrow="Evaluación" title="Examen no encontrado" description="Puede que haya cambiado el demo o se haya borrado el examen." />
+        <PageHeader eyebrow="Evaluación" title="No se pudo cargar" description={loadError} />
         <Link href="/exams/student">
           <Button variant="secondary">Volver</Button>
         </Link>
@@ -46,15 +127,45 @@ export function StudentExamDetail({ examId }: { examId: string }) {
     );
   }
 
-  const submit = () => {
+  if (!exam) {
+    return (
+      <div className="space-y-4">
+        <PageHeader eyebrow="Evaluación" title="Examen no encontrado" description="Puede que haya cambiado el id o no tengas acceso." />
+        <Link href="/exams/student">
+          <Button variant="secondary">Volver</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  const submit = async () => {
     const current = exam;
     if (!current || current.status !== "open") return;
-    const next = createAttempt({ examId: current.id, studentLabel, answers });
-    setSubmittedId(next.id);
-    // Demo: “calificamos” de inmediato para que el alumno vea feedback.
-    gradeAttempt(next.id, buildDemoFeedback());
-    setAnswers({});
-    setRefresh((v) => v + 1);
+    setSubmitBusy(true);
+    setSubmitError(null);
+    try {
+      const feedback = buildDemoFeedback();
+      if (useCloud) {
+        const supabase = createSupabaseBrowserClient();
+        const next = await insertAttemptRemote(supabase, authUserId!, {
+          examId: current.id,
+          studentLabel,
+          answers,
+        });
+        setSubmittedId(next.id);
+        await updateAttemptFeedbackRemote(supabase, authUserId!, next.id, feedback);
+      } else {
+        const next = createAttempt({ examId: current.id, studentLabel, answers });
+        setSubmittedId(next.id);
+        gradeAttempt(next.id, feedback);
+      }
+      setAnswers({});
+      await loadAttempts();
+    } catch (e) {
+      setSubmitError(formatAgendaCloudError(e instanceof Error ? e.message : "Error al enviar."));
+    } finally {
+      setSubmitBusy(false);
+    }
   };
 
   const canSubmit = exam.questions.every((q) => (answers[q.id] ?? "").trim().length > 3);
@@ -96,11 +207,19 @@ export function StudentExamDetail({ examId }: { examId: string }) {
             </label>
           ))}
 
-          <Button type="button" disabled={!canSubmit || exam.status !== "open"} onClick={submit}>
+          {submitError ? <p className="text-sm text-rose-300">{submitError}</p> : null}
+
+          <Button
+            type="button"
+            disabled={!canSubmit || exam.status !== "open" || submitBusy}
+            onClick={() => void submit()}
+            className="gap-2"
+          >
+            {submitBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Enviar
           </Button>
           {exam.status !== "open" ? (
-            <p className="text-xs text-slate-400">Este examen está cerrado (demo). No se aceptan nuevos intentos.</p>
+            <p className="text-xs text-slate-400">Este examen está cerrado. No se aceptan nuevos intentos.</p>
           ) : null}
         </div>
       </Card>
@@ -108,10 +227,15 @@ export function StudentExamDetail({ examId }: { examId: string }) {
       <Card>
         <CardHeader>
           <CardTitle>Tus intentos</CardTitle>
-          <CardDescription>Historial local (se guarda en tu navegador).</CardDescription>
+          <CardDescription>{attemptsDescription}</CardDescription>
         </CardHeader>
         <div className="space-y-3 px-5 pb-5">
-          {attempts.length === 0 ? (
+          {loadingAttempts ? (
+            <div className="flex items-center gap-2 text-sm text-slate-400">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Cargando intentos…
+            </div>
+          ) : attempts.length === 0 ? (
             <div className="text-sm text-slate-400">Aún no enviaste ningún intento.</div>
           ) : (
             attempts.map((a) => (
@@ -158,4 +282,3 @@ export function StudentExamDetail({ examId }: { examId: string }) {
     </div>
   );
 }
-

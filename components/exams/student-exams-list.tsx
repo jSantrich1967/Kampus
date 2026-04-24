@@ -1,29 +1,55 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatAgendaCloudError } from "@/lib/notebooks/storage-errors";
 import { seedDemoExamsIfEmpty, loadExams } from "@/lib/storage/exams-storage";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { ensureDemoExamsRemote, fetchUserExams } from "@/lib/supabase/agenda-db";
+import type { Exam } from "@/lib/schemas/exams";
 
 export function StudentExamsList() {
-  const { profile, hydrated } = useKampus();
-  const [refresh, setRefresh] = useState(0);
+  const { profile, hydrated, authUserId } = useKampus();
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const useCloud = Boolean(isSupabaseConfigured() && authUserId);
+
+  const load = useCallback(async () => {
+    if (!hydrated) return;
+    setLoading(true);
+    setError(null);
+    try {
+      if (useCloud) {
+        const supabase = createSupabaseBrowserClient();
+        await ensureDemoExamsRemote(supabase, authUserId!, profile.subjects[0]);
+        const list = await fetchUserExams(supabase, authUserId!);
+        setExams(list.filter((e) => e.status !== "draft"));
+      } else {
+        seedDemoExamsIfEmpty(profile.subjects[0]);
+        setExams(loadExams().filter((e) => e.status !== "draft"));
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "No se pudieron cargar los exámenes.";
+      setError(formatAgendaCloudError(msg));
+      setExams([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [hydrated, useCloud, authUserId, profile.subjects]);
 
   useEffect(() => {
-    if (!hydrated) return;
-    seedDemoExamsIfEmpty(profile.subjects[0]);
-    setRefresh((v) => v + 1);
-  }, [hydrated, profile.subjects]);
-
-  const exams = useMemo(() => {
-    void refresh;
-    return loadExams().filter((e) => e.status !== "draft");
-  }, [refresh]);
+    void load();
+  }, [load]);
 
   if (!hydrated) return <div className="text-sm text-slate-400">Cargando…</div>;
 
@@ -32,7 +58,11 @@ export function StudentExamsList() {
       <PageHeader
         eyebrow="Evaluación"
         title="Exámenes"
-        description="Tus exámenes abiertos, intentos y feedback publicado."
+        description={
+          useCloud
+            ? "Tus exámenes e intentos se guardan en tu cuenta de Supabase."
+            : "Tus exámenes abiertos, intentos y feedback (modo local en el navegador si no hay sesión o Supabase)."
+        }
         actions={
           <div className="flex flex-wrap gap-2">
             <Link href="/exams/calendar">
@@ -44,6 +74,25 @@ export function StudentExamsList() {
           </div>
         }
       />
+
+      {isSupabaseConfigured() && !authUserId ? (
+        <p className="text-sm text-slate-400">
+          Inicia sesión para cargar tus exámenes desde la nube. Sin sesión, verás el modo demo local en este dispositivo.
+        </p>
+      ) : null}
+
+      {error ? <p className="text-sm text-rose-300">{error}</p> : null}
+
+      {loading ? (
+        <div className="flex items-center gap-2 text-sm text-slate-400">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Cargando exámenes…
+        </div>
+      ) : null}
+
+      {!loading && exams.length === 0 ? (
+        <p className="text-sm text-slate-500">No hay exámenes abiertos todavía.</p>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2">
         {exams.map((exam) => (
@@ -70,4 +119,3 @@ export function StudentExamsList() {
     </div>
   );
 }
-

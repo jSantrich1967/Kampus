@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
-import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Loader2, Trash2 } from "lucide-react";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
@@ -11,9 +11,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { buildAgendaEvents, monthMatrix, type AgendaEvent } from "@/lib/calendar/agenda-events";
 import { cn } from "@/lib/cn";
-import { loadPresentation } from "@/lib/storage/presentation-storage";
+import { formatAgendaCloudError } from "@/lib/notebooks/storage-errors";
+import type { Exam } from "@/lib/schemas/exams";
+import type { StudentWork } from "@/lib/schemas/student-work";
 import { seedDemoExamsIfEmpty, loadExams } from "@/lib/storage/exams-storage";
+import { loadPresentation } from "@/lib/storage/presentation-storage";
 import { addStudentWork, loadStudentWorks, removeStudentWork } from "@/lib/storage/student-work-storage";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import {
+  deleteStudentWorkRemote,
+  ensureDemoExamsRemote,
+  fetchPresentationAgendaRemote,
+  fetchStudentWorksRemote,
+  fetchUserExams,
+  insertStudentWorkRemote,
+} from "@/lib/supabase/agenda-db";
 
 const WEEKDAYS_ES = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
@@ -37,35 +50,87 @@ function eventsOnDay(events: AgendaEvent[], year: number, monthIndex0: number, d
 }
 
 export function AcademicCalendarHub() {
-  const { profile, hydrated } = useKampus();
+  const { profile, hydrated, authUserId } = useKampus();
+  const useCloud = Boolean(isSupabaseConfigured() && authUserId);
+
   const [cursor, setCursor] = useState(() => {
     const n = new Date();
     return new Date(n.getFullYear(), n.getMonth(), 1);
   });
   const [tick, setTick] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const firstCalendarLoad = useRef(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [works, setWorks] = useState<StudentWork[]>([]);
+  const [presTitle, setPresTitle] = useState("");
+  const [presDue, setPresDue] = useState<string | undefined>(undefined);
+
   const [workTitle, setWorkTitle] = useState("");
   const [workSubject, setWorkSubject] = useState("");
   const [workDue, setWorkDue] = useState("");
   const [workNotes, setWorkNotes] = useState("");
 
-  useEffect(() => {
-    if (!hydrated) return;
-    seedDemoExamsIfEmpty(profile.subjects[0]);
-    setTick((t) => t + 1);
-  }, [hydrated, profile.subjects]);
-
   const refresh = useCallback(() => setTick((t) => t + 1), []);
 
-  const events = useMemo(() => {
-    void tick;
-    const pres = loadPresentation();
-    return buildAgendaEvents({
-      exams: loadExams(),
-      presentationTitle: pres.deckTitle,
-      presentationDueDate: pres.presentationDueDate,
-      works: loadStudentWorks(),
-    });
-  }, [tick]);
+  const loadAgenda = useCallback(async () => {
+    if (!hydrated) return;
+    const showSpinner = firstCalendarLoad.current;
+    if (showSpinner) setLoading(true);
+    setLoadError(null);
+    try {
+      if (useCloud) {
+        const supabase = createSupabaseBrowserClient();
+        await ensureDemoExamsRemote(supabase, authUserId!, profile.subjects[0]);
+        const [examList, workList, remoteAgenda] = await Promise.all([
+          fetchUserExams(supabase, authUserId!),
+          fetchStudentWorksRemote(supabase, authUserId!),
+          fetchPresentationAgendaRemote(supabase, authUserId!),
+        ]);
+        setExams(examList);
+        setWorks(workList);
+        const local = loadPresentation();
+        if (remoteAgenda) {
+          setPresTitle(remoteAgenda.deckTitle.trim() ? remoteAgenda.deckTitle : local.deckTitle);
+          setPresDue(remoteAgenda.presentationDueDate ?? local.presentationDueDate);
+        } else {
+          setPresTitle(local.deckTitle);
+          setPresDue(local.presentationDueDate);
+        }
+      } else {
+        seedDemoExamsIfEmpty(profile.subjects[0]);
+        setExams(loadExams());
+        setWorks(loadStudentWorks());
+        const loc = loadPresentation();
+        setPresTitle(loc.deckTitle);
+        setPresDue(loc.presentationDueDate);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "No se pudo cargar el calendario.";
+      setLoadError(formatAgendaCloudError(msg));
+    } finally {
+      if (showSpinner) {
+        setLoading(false);
+        firstCalendarLoad.current = false;
+      }
+    }
+  }, [hydrated, useCloud, authUserId, profile.subjects]);
+
+  useEffect(() => {
+    void loadAgenda();
+  }, [loadAgenda, tick]);
+
+  const events = useMemo(
+    () =>
+      buildAgendaEvents({
+        exams,
+        presentationTitle: presTitle,
+        presentationDueDate: presDue,
+        works,
+      }),
+    [exams, presTitle, presDue, works],
+  );
 
   const y = cursor.getFullYear();
   const m0 = cursor.getMonth();
@@ -78,15 +143,10 @@ export function AcademicCalendarHub() {
     return events.filter((e) => e.date >= today).slice(0, 12);
   }, [events]);
 
-  const works = useMemo(() => {
-    void tick;
-    return loadStudentWorks();
-  }, [tick]);
-
-  const unscheduledExams = useMemo(() => {
-    void tick;
-    return loadExams().filter((e) => e.status !== "draft" && !e.dueDate);
-  }, [tick]);
+  const unscheduledExams = useMemo(
+    () => exams.filter((e) => e.status !== "draft" && !e.dueDate),
+    [exams],
+  );
 
   function prevMonth() {
     setCursor(new Date(y, m0 - 1, 1));
@@ -96,19 +156,43 @@ export function AcademicCalendarHub() {
     setCursor(new Date(y, m0 + 1, 1));
   }
 
-  function submitWork(e: FormEvent) {
+  async function submitWork(e: FormEvent) {
     e.preventDefault();
     if (!workTitle.trim() || !workDue) return;
-    addStudentWork({
+    const row = {
       title: workTitle.trim(),
       subject: workSubject.trim() || profile.subjects[0] || "General",
       dueDate: workDue,
       notes: workNotes.trim(),
-    });
-    setWorkTitle("");
-    setWorkDue("");
-    setWorkNotes("");
-    refresh();
+    };
+    try {
+      if (useCloud) {
+        const supabase = createSupabaseBrowserClient();
+        await insertStudentWorkRemote(supabase, authUserId!, row);
+      } else {
+        addStudentWork(row);
+      }
+      setWorkTitle("");
+      setWorkDue("");
+      setWorkNotes("");
+      refresh();
+    } catch (err) {
+      setLoadError(formatAgendaCloudError(err instanceof Error ? err.message : "Error al guardar."));
+    }
+  }
+
+  async function removeWork(id: string) {
+    try {
+      if (useCloud) {
+        const supabase = createSupabaseBrowserClient();
+        await deleteStudentWorkRemote(supabase, authUserId!, id);
+      } else {
+        removeStudentWork(id);
+      }
+      refresh();
+    } catch (err) {
+      setLoadError(formatAgendaCloudError(err instanceof Error ? err.message : "Error al eliminar."));
+    }
   }
 
   useEffect(() => {
@@ -118,12 +202,20 @@ export function AcademicCalendarHub() {
 
   if (!hydrated) return <div className="text-sm text-slate-400">Cargando…</div>;
 
+  const workStorageHint = useCloud
+    ? "Se guardan en tu cuenta (Supabase) y se muestran en el calendario en cualquier dispositivo donde inicies sesión."
+    : "Quedan guardados en este dispositivo (local). Con sesión y Supabase configurado, pasan a la nube automáticamente.";
+
+  const pageDescription = useCloud
+    ? "Exámenes, fecha de exposición y trabajos se sincronizan con Supabase cuando inicias sesión."
+    : "Un mismo calendario para Mis exámenes (con fecha de entrega), Mis exposiciones (fecha en el planificador) y Mis trabajos e investigaciones. Sin sesión, los datos de exámenes y trabajos quedan en el navegador.";
+
   return (
     <div className="space-y-8">
       <PageHeader
         eyebrow="Evaluación"
         title="Mi calendario académico"
-        description="Un mismo calendario para Mis exámenes (con fecha de entrega), Mis exposiciones (fecha que indiques en el planificador) y Mis trabajos e investigaciones (los añades aquí)."
+        description={pageDescription}
         actions={
           <div className="flex flex-wrap gap-2">
             <Link href="/exams/student">
@@ -136,12 +228,21 @@ export function AcademicCalendarHub() {
                 Mis exposiciones
               </Button>
             </Link>
-            <Button type="button" variant="ghost" size="sm" onClick={refresh}>
+            <Button type="button" variant="ghost" size="sm" onClick={refresh} disabled={loading}>
               Actualizar
             </Button>
           </div>
         }
       />
+
+      {loadError ? <p className="text-sm text-rose-300">{loadError}</p> : null}
+
+      {loading ? (
+        <div className="flex items-center gap-2 text-sm text-slate-400">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Sincronizando calendario…
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -250,12 +351,9 @@ export function AcademicCalendarHub() {
         <Card>
           <CardHeader>
             <CardTitle>Mis trabajos e investigaciones</CardTitle>
-            <CardDescription>
-              Quedan guardados en este dispositivo (local). Úsalos para ensayos, papers, laboratorios o investigaciones con
-              fecha límite.
-            </CardDescription>
+            <CardDescription>{workStorageHint}</CardDescription>
           </CardHeader>
-          <form className="space-y-3 px-6 pb-4" onSubmit={submitWork}>
+          <form className="space-y-3 px-6 pb-4" onSubmit={(e) => void submitWork(e)}>
             <label className="block space-y-1 text-xs">
               <span className="text-slate-500">Título</span>
               <input
@@ -319,10 +417,7 @@ export function AcademicCalendarHub() {
                     variant="ghost"
                     className="shrink-0 text-rose-300 hover:text-rose-200"
                     aria-label="Eliminar trabajo"
-                    onClick={() => {
-                      removeStudentWork(w.id);
-                      refresh();
-                    }}
+                    onClick={() => void removeWork(w.id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
