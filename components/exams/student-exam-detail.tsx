@@ -25,16 +25,7 @@ import {
   insertAttemptRemote,
   updateAttemptFeedbackRemote,
 } from "@/lib/supabase/agenda-db";
-
-function buildDemoFeedback() {
-  return {
-    score: 78,
-    summary: "Buen entendimiento general. Falta precisión en una definición y más pasos en el razonamiento.",
-    strengths: ["Explicas la intuición con claridad", "Conectas el concepto con un caso real"],
-    improvements: ["Añade una definición formal breve", "Muestra al menos un paso intermedio en tu argumento"],
-    createdAt: new Date().toISOString(),
-  };
-}
+import { buildDemoGradingFeedback } from "@/lib/exams/demo-feedback-from-answers";
 
 export function StudentExamDetail({ examId }: { examId: string }) {
   const { profile, hydrated, authUserId } = useKampus();
@@ -144,7 +135,7 @@ export function StudentExamDetail({ examId }: { examId: string }) {
     setSubmitBusy(true);
     setSubmitError(null);
     try {
-      const feedback = buildDemoFeedback();
+      const feedback = buildDemoGradingFeedback(current, answers);
       if (useCloud) {
         const supabase = createSupabaseBrowserClient();
         const next = await insertAttemptRemote(supabase, authUserId!, {
@@ -189,7 +180,11 @@ export function StudentExamDetail({ examId }: { examId: string }) {
       <Card>
         <CardHeader>
           <CardTitle>Enviar intento</CardTitle>
-          <CardDescription>Responde en tus palabras. En el demo, el feedback se genera automáticamente.</CardDescription>
+          <CardDescription>
+            Responde en tus palabras. En este demo la nota y el texto se ajustan según la{" "}
+            <strong>extensión y si la respuesta parece vacía o genérica</strong> — no sustituye la corrección real de un
+            profesor ni una IA que evalúe el contenido tema por tema.
+          </CardDescription>
         </CardHeader>
 
         <div className="space-y-4 px-5 pb-5">
