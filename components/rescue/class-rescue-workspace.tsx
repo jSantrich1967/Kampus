@@ -1,9 +1,9 @@
 "use client";
 
-import { FileAudio, FileImage, FileText, Link2, Sparkles, Wand2 } from "lucide-react";
+import { FileAudio, FileImage, FileText, Link2, Loader2, Sparkles, Wand2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { ShareLinkButton } from "@/components/growth/share-link-button";
 import { PageHeader } from "@/components/layout/page-header";
@@ -17,6 +17,7 @@ import type { RescuePack } from "@/lib/class-rescue";
 import { cn } from "@/lib/cn";
 import { combineNotebookExtractedTextForPack } from "@/lib/notebooks/document-tags";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
+import { buildNotebookTagOptions, type NotebookTagRow } from "@/lib/notebooks/notebook-filter-options";
 import { subjectToPathSegment } from "@/lib/notebooks/paths";
 import { buildRescueSourceDocumentBody, buildRescueTagNotesSection } from "@/lib/notebooks/rescue-pack-plain-text";
 import { saveRescueNotebookSource } from "@/lib/notebooks/save-rescue-source-document";
@@ -43,6 +44,7 @@ export function ClassRescueWorkspace() {
   const router = useRouter();
   const { profile, authUserId } = useKampus();
   const searchParams = useSearchParams();
+  const filterListId = useId().replace(/:/g, "");
 
   const [subjectHint, setSubjectHint] = useState(profile.subjects[0] ?? "");
   const [link, setLink] = useState("");
@@ -68,8 +70,42 @@ export function ClassRescueWorkspace() {
   const [kitPracticeExercises, setKitPracticeExercises] = useState("");
   const [saveKitBusy, setSaveKitBusy] = useState(false);
   const [saveKitMessage, setSaveKitMessage] = useState<string | null>(null);
+  const [notebookTagRows, setNotebookTagRows] = useState<NotebookTagRow[]>([]);
+  const [notebookTagsLoading, setNotebookTagsLoading] = useState(false);
 
   const premium = profile.plan === "premium";
+
+  const notebookTagOptions = useMemo(
+    () => buildNotebookTagOptions(notebookTagRows, profile.subjects, subjectHint),
+    [notebookTagRows, profile.subjects, subjectHint],
+  );
+
+  useEffect(() => {
+    if (!authUserId || !isSupabaseConfigured()) {
+      setNotebookTagRows([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      setNotebookTagsLoading(true);
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from("notebook_documents")
+          .select("subject,topic,lesson_point,practice_exercises")
+          .eq("user_id", authUserId);
+        if (error) throw error;
+        if (!cancelled) setNotebookTagRows((data as NotebookTagRow[]) ?? []);
+      } catch {
+        if (!cancelled) setNotebookTagRows([]);
+      } finally {
+        if (!cancelled) setNotebookTagsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId]);
 
   const hasSaveableRescueSource = useMemo(
     () => Boolean(buildRescueSourceDocumentBody(extractedText, notes, link).trim()),
@@ -368,23 +404,33 @@ export function ClassRescueWorkspace() {
           <CardTitle>Material y filtros del cuaderno</CardTitle>
           <CardDescription>
             Indica <strong>Materia foco</strong> y las mismas <strong>etiquetas</strong> que en Mis cuadernos (Tema, Punto,
-            Ejercicios): actúan como filtros y guían el kit de estudios. Si pulsas «Guardar material de entrada»,
-            en el cuaderno solo se guarda lo que <strong>entraste</strong> (texto extraído, apuntes, enlace), no el kit
-            generado por la IA. Puedes subir archivos locales, elegir un archivo de Mis cuadernos, o abrir{" "}
-            <code className="rounded bg-white/10 px-1 py-0.5 text-[11px]">/study/library/rescue?notebook=econometria</code> para cargar{" "}
-            <strong>todo</strong> el cuaderno.
+            Ejercicios). Con sesión y Supabase, las listas desplegables se rellenan con lo que ya guardaste en tus hojas
+            (puedes seguir escribiendo a mano). Si pulsas «Guardar material de entrada», en el cuaderno solo se guarda lo
+            que <strong>entraste</strong> (texto extraído, apuntes, enlace), no el kit generado por la IA. También puedes
+            subir archivos locales, elegir un archivo abajo, o abrir{" "}
+            <code className="rounded bg-white/10 px-1 py-0.5 text-[11px]">/study/library/rescue?notebook=econometria</code>{" "}
+            para cargar <strong>todo</strong> el cuaderno.
           </CardDescription>
         </CardHeader>
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-2 text-sm">
-            <span className="text-slate-300">Materia foco</span>
+            <span className="text-slate-300">Materia foco (cuaderno)</span>
             <input
               className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 outline-none ring-indigo-400/40 focus:ring"
+              list={`${filterListId}-subject`}
               value={subjectHint}
               onChange={(e) => setSubjectHint(e.target.value)}
-              placeholder="Ej. Física II"
+              placeholder="Escribe o elige de tus cuadernos…"
             />
+            <datalist id={`${filterListId}-subject`}>
+              {notebookTagOptions.subjects.map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
+            <p className="text-[11px] leading-snug text-slate-500">
+              Define qué cuaderno usas; las sugerencias de Tema / Punto / Ejercicios se acotan a las hojas de esta materia.
+            </p>
           </label>
 
           <div className="space-y-2 text-sm">
@@ -417,41 +463,70 @@ export function ClassRescueWorkspace() {
           </div>
 
           <div className="rounded-xl border border-white/10 bg-slate-950/40 p-4 md:col-span-2">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Etiquetas del cuaderno (filtros del kit de estudios)
-            </p>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Etiquetas del cuaderno (filtros de estudio)
+              </p>
+              {notebookTagsLoading ? (
+                <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Leyendo tus hojas…
+                </span>
+              ) : authUserId && isSupabaseConfigured() ? (
+                <span className="text-[11px] text-slate-600">Sugerencias desde Mis cuadernos</span>
+              ) : null}
+            </div>
             <p className="mb-3 text-[11px] text-slate-500">
               La <strong className="text-slate-400">Materia foco</strong> define en qué cuaderno aparecerá si pulsas
               «Guardar material en el cuaderno». <strong className="text-slate-400">Tema</strong>, <strong className="text-slate-400">Punto</strong> y{" "}
-              <strong className="text-slate-400">Ejercicios prácticos</strong> se guardan en esa hoja y sirven para filtrar el kit de estudio en el lector.
+              <strong className="text-slate-400">Ejercicios prácticos</strong> coinciden con las etiquetas de tus archivos:
+              elige de la lista o escribe texto libre.
             </p>
             <div className="grid gap-3 md:grid-cols-3">
               <label className="space-y-1 text-xs">
                 <span className="text-slate-500">Tema</span>
                 <input
                   className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
+                  list={`${filterListId}-topic`}
                   value={kitTopic}
                   onChange={(e) => setKitTopic(e.target.value)}
-                  placeholder="Ej. Números complejos"
+                  placeholder="Escribe o elige…"
                 />
+                <datalist id={`${filterListId}-topic`}>
+                  {notebookTagOptions.topics.map((t) => (
+                    <option key={t} value={t} />
+                  ))}
+                </datalist>
               </label>
               <label className="space-y-1 text-xs">
                 <span className="text-slate-500">Punto</span>
                 <input
                   className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
+                  list={`${filterListId}-punto`}
                   value={kitLessonPoint}
                   onChange={(e) => setKitLessonPoint(e.target.value)}
-                  placeholder="Ej. 2.1 Forma polar"
+                  placeholder="Escribe o elige…"
                 />
+                <datalist id={`${filterListId}-punto`}>
+                  {notebookTagOptions.lessonPoints.map((t) => (
+                    <option key={t} value={t} />
+                  ))}
+                </datalist>
               </label>
               <label className="space-y-1 text-xs">
                 <span className="text-slate-500">Ejercicios prácticos</span>
                 <input
                   className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
+                  list={`${filterListId}-ej`}
                   value={kitPracticeExercises}
                   onChange={(e) => setKitPracticeExercises(e.target.value)}
-                  placeholder="Ej. 1–12 pág. 45"
+                  placeholder="Escribe o elige…"
                 />
+                <datalist id={`${filterListId}-ej`}>
+                  {notebookTagOptions.practiceExercises.map((t) => (
+                    <option key={t} value={t} />
+                  ))}
+                </datalist>
               </label>
             </div>
           </div>
