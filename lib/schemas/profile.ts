@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const roleSchema = z.enum(["student", "teacher", "institution"]);
+export const roleSchema = z.enum(["student", "teacher", "institution", "learner"]);
 
 export const examInputSchema = z.object({
   subject: z.string().min(1),
@@ -11,7 +11,7 @@ export const profileSchema = z.object({
   onboardingFinished: z.boolean(),
   plan: z.enum(["free", "premium"]).default("free"),
   role: roleSchema,
-  university: z.string().min(1),
+  university: z.string().default(""),
   major: z.string().min(1),
   semester: z.string().min(1),
   subjects: z.array(z.string().min(1)).min(1),

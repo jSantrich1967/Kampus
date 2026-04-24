@@ -7,7 +7,7 @@ export const onboardingCopy: Record<
     heroTitle: string;
     heroSubtitle: string;
     progress: (current: number, total: number) => string;
-    roles: { student: string; teacher: string; institution: string };
+    roles: { student: string; teacher: string; institution: string; learner: string };
     fields: {
       university: string;
       major: string;
@@ -38,6 +38,7 @@ export const onboardingCopy: Record<
       student: "Estudiante",
       teacher: "Docente",
       institution: "Institución",
+      learner: "Autodidacta",
     },
     fields: {
       university: "Institución (opcional)",

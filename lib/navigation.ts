@@ -38,34 +38,34 @@ export const navigationGroups: NavGroup[] = [
   {
     id: "command",
     items: [
-      { href: "/today", key: "today", icon: LayoutDashboard, roles: ["student", "teacher", "institution"] },
+      { href: "/today", key: "today", icon: LayoutDashboard, roles: ["student", "teacher", "institution", "learner"] },
       { href: "/pass-mode", key: "passMode", icon: Compass, roles: ["student"], premium: true },
     ],
   },
   {
     id: "learn",
     items: [
-      { href: "/rescue", key: "rescue", icon: Sparkles, roles: ["student", "teacher"] },
-      { href: "/study/flashcards", key: "flashcards", icon: Layers3, roles: ["student", "teacher"] },
-      { href: "/study/library", key: "library", icon: Library, roles: ["student", "teacher"] },
+      { href: "/rescue", key: "rescue", icon: Sparkles, roles: ["student", "teacher", "learner"] },
+      { href: "/study/flashcards", key: "flashcards", icon: Layers3, roles: ["student", "teacher", "learner"] },
+      { href: "/study/library", key: "library", icon: Library, roles: ["student", "teacher", "learner"] },
     ],
   },
   {
     id: "evaluate",
     items: [
-      { href: "/exams", key: "exams", icon: CalendarDays, roles: ["student", "teacher"] },
-      { href: "/risk", key: "risk", icon: Radar, roles: ["student", "teacher", "institution"] },
+      { href: "/exams", key: "exams", icon: CalendarDays, roles: ["student", "teacher", "learner"] },
+      { href: "/risk", key: "risk", icon: Radar, roles: ["student", "teacher", "institution", "learner"] },
     ],
   },
   {
     id: "together",
-    items: [{ href: "/community", key: "community", icon: Users, roles: ["student", "teacher"] }],
+    items: [{ href: "/community", key: "community", icon: Users, roles: ["student", "teacher", "learner"] }],
   },
   {
     id: "work",
     items: [
-      { href: "/collaborate/rooms", key: "rooms", icon: Video, roles: ["student", "teacher"] },
-      { href: "/collaborate/presentations", key: "presentations", icon: Presentation, roles: ["student", "teacher"] },
+      { href: "/collaborate/rooms", key: "rooms", icon: Video, roles: ["student", "teacher", "learner"] },
+      { href: "/collaborate/presentations", key: "presentations", icon: Presentation, roles: ["student", "teacher", "learner"] },
     ],
   },
   {
@@ -78,7 +78,7 @@ export const navigationGroups: NavGroup[] = [
   },
   {
     id: "system",
-    items: [{ href: "/settings", key: "settings", icon: Settings, roles: ["student", "teacher", "institution"] }],
+    items: [{ href: "/settings", key: "settings", icon: Settings, roles: ["student", "teacher", "institution", "learner"] }],
   },
 ];
 

@@ -153,6 +153,7 @@ export function OnboardingFlow() {
                   [
                     ["student", t.roles.student],
                     ["teacher", t.roles.teacher],
+                    ["learner", t.roles.learner],
                     ["institution", t.roles.institution],
                   ] as const
                 ).map(([value, label]) => (
@@ -173,6 +174,8 @@ export function OnboardingFlow() {
                         ? "Plan diario, rescate y práctica."
                         : value === "teacher"
                           ? "Corrección y feedback más rápido."
+                          : value === "learner"
+                            ? "Aprende por tu cuenta con enfoque y hábito."
                           : "Riesgo de cohorte y visibilidad."}
                     </div>
                   </button>
