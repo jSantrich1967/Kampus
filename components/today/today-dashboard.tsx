@@ -83,7 +83,7 @@ export function TodayDashboard() {
                 <Button className="w-full sm:w-auto">{t.passCta}</Button>
               </Link>
             ) : null}
-            <Link href="/rescue">
+            <Link href="/study/rescue">
               <Button variant="secondary" className="w-full sm:w-auto">
                 {t.rescueCta}
               </Button>

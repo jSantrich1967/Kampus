@@ -73,7 +73,7 @@ export function LibraryHub() {
               Ver radar
             </Button>
           </Link>
-          <Link href="/rescue">
+          <Link href="/study/rescue">
             <Button size="sm" variant="ghost">
               Abrir rescate
             </Button>

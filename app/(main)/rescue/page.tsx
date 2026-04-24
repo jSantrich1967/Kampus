@@ -1,16 +1,21 @@
-import type { Metadata } from "next";
-import { Suspense } from "react";
+import { redirect } from "next/navigation";
 
-import { ClassRescueWorkspace } from "@/components/rescue/class-rescue-workspace";
-
-export const metadata: Metadata = {
-  title: "Rescate de clase",
-};
-
-export default function RescuePage() {
-  return (
-    <Suspense fallback={<div className="text-sm text-slate-400">Cargando…</div>}>
-      <ClassRescueWorkspace />
-    </Suspense>
-  );
+/**
+ * Legacy URL: share links and bookmarks may still use `/rescue`.
+ * Canonical route lives under Estudiar → cuadernos: `/study/rescue`.
+ */
+export default async function LegacyRescueRedirect({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(sp)) {
+    if (v === undefined) continue;
+    if (Array.isArray(v)) v.forEach((x) => q.append(k, x));
+    else q.set(k, v);
+  }
+  const suffix = q.toString();
+  redirect(suffix ? `/study/rescue?${suffix}` : "/study/rescue");
 }

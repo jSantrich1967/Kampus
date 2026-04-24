@@ -285,9 +285,9 @@ export function ClassRescueWorkspace() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Rescate de clase"
-        title="Recupera la clase en minutos."
-        description="Conecta con Mis cuadernos: puedes traer un archivo o todo un cuaderno por materia, y generar el kit aquí."
+        eyebrow="Cuadernos"
+        title="Rescate de clase"
+        description="Recupera clases perdidas con tu material: subida local, archivos de Mis cuadernos o todo un cuaderno por materia para generar el kit."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone={premium ? "success" : "neutral"}>{premium ? "Premium" : "Gratis"}</Badge>
@@ -295,7 +295,7 @@ export function ClassRescueWorkspace() {
               Mis cuadernos
             </Button>
             <ShareLinkButton
-              pathname="/rescue"
+              pathname="/study/rescue"
               campaign="rescue_pack"
               extra={{ subject: subjectHint.trim() || undefined }}
               refHandle={profile.university || "kampus"}
@@ -311,7 +311,7 @@ export function ClassRescueWorkspace() {
           <CardTitle>Entrada de rescate</CardTitle>
           <CardDescription>
             Puedes subir archivos locales, elegir uno de Mis cuadernos, o abrir un enlace tipo{" "}
-            <code className="rounded bg-white/10 px-1 py-0.5 text-[11px]">/rescue?notebook=econometria</code> para cargar{" "}
+            <code className="rounded bg-white/10 px-1 py-0.5 text-[11px]">/study/rescue?notebook=econometria</code> para cargar{" "}
             <strong>todo</strong> el cuaderno de esa materia. La IA usa el texto extraído; la materia foco solo ayuda a
             etiquetar.
           </CardDescription>
@@ -499,7 +499,7 @@ export function ClassRescueWorkspace() {
           headerActions={
             <>
               <ShareLinkButton
-                pathname="/rescue"
+                pathname="/study/rescue"
                 campaign="rescue_pack"
                 extra={{ subject: subjectHint.trim() || undefined, kit: pack.subjectLine.slice(0, 40) }}
                 refHandle={profile.university || "kampus"}

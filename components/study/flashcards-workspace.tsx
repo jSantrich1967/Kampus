@@ -49,7 +49,7 @@ export function FlashcardsWorkspace() {
               {es ? "Alinear con Modo aprobar" : "Align with Pass Mode"}
             </Button>
           </Link>
-          <Link href="/rescue">
+          <Link href="/study/rescue">
             <Button size="sm" variant="ghost">
               {es ? "Generar tarjetas desde rescate" : "Generate from rescue"}
             </Button>

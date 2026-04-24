@@ -125,7 +125,7 @@ export function CommunityHub() {
               copiedLabel={es ? "Copiado" : "Copied"}
             />
             <ShareLinkButton
-              pathname="/rescue"
+              pathname="/study/rescue"
               campaign="rescue_pack"
               refHandle={profile.university || "kampus"}
               label={es ? "Compartir rescate" : "Share rescue"}

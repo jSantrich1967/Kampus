@@ -245,7 +245,7 @@ export function NotebookStudyKitPanel({ pages, currentPage, subjectLabel, subjec
               {packBusy ? "Generando…" : "Generar kit de estudio"}
             </Button>
             <Link
-              href={`/rescue?subject=${encodeURIComponent(subjectLabel)}&notebook=${encodeURIComponent(subjectSlug)}`}
+              href={`/study/rescue?subject=${encodeURIComponent(subjectLabel)}&notebook=${encodeURIComponent(subjectSlug)}`}
               className="text-xs text-slate-400 underline-offset-2 hover:text-slate-200 hover:underline"
             >
               Abrir en Rescate de clase (más opciones)

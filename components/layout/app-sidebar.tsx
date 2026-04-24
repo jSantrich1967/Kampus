@@ -8,7 +8,7 @@ import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { navCopy } from "@/lib/i18n/nav";
-import { filterNavForRole } from "@/lib/navigation";
+import { filterNavForRole, type NavItem } from "@/lib/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cn } from "@/lib/cn";
@@ -33,6 +33,13 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           : "Institución";
   const groups = filterNavForRole(profile.role);
 
+  function pathMatchesNavItem(item: NavItem, pathname: string): boolean {
+    if (pathname === item.href || pathname.startsWith(`${item.href}/`)) return true;
+    if (item.key === "library" && pathname.startsWith("/study/notebook")) return true;
+    if (item.subItems?.some((s) => pathname === s.href || pathname.startsWith(`${s.href}/`))) return true;
+    return false;
+  }
+
   return (
     <div className="flex h-full flex-col">
       <div className="px-5 pb-6 pt-8">
@@ -56,26 +63,54 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             </div>
             <div className="space-y-1">
               {group.items.map((item) => {
-                const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const active = pathMatchesNavItem(item, pathname);
+                const childActive = item.subItems?.some((s) => pathname === s.href || pathname.startsWith(`${s.href}/`)) ?? false;
+                const parentOnlyActive = active && !childActive;
                 const Icon = item.icon;
                 return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onNavigate}
-                    className={cn(
-                      "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition",
-                      active
-                        ? "bg-white/10 text-white shadow-inner shadow-indigo-500/20 ring-1 ring-indigo-400/25"
-                        : "text-slate-300 hover:bg-white/5 hover:text-white",
-                    )}
-                  >
-                    <Icon className="h-4 w-4 shrink-0 opacity-80" />
-                    <span className="flex-1">{t.items[item.key]}</span>
-                    {item.premium && profile.plan === "free" ? (
-                      <span className="text-[10px] font-semibold uppercase text-amber-200/90">{t.badges.premium}</span>
-                    ) : null}
-                  </Link>
+                  <div key={item.href} className="space-y-0.5">
+                    <Link
+                      href={item.href}
+                      onClick={onNavigate}
+                      className={cn(
+                        "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition",
+                        parentOnlyActive || (active && !item.subItems?.length)
+                          ? "bg-white/10 text-white shadow-inner shadow-indigo-500/20 ring-1 ring-indigo-400/25"
+                          : childActive
+                            ? "text-slate-200 ring-1 ring-white/10 bg-white/[0.04]"
+                            : "text-slate-300 hover:bg-white/5 hover:text-white",
+                      )}
+                    >
+                      <Icon className="h-4 w-4 shrink-0 opacity-80" />
+                      <span className="flex-1">{t.items[item.key]}</span>
+                      {item.premium && profile.plan === "free" ? (
+                        <span className="text-[10px] font-semibold uppercase text-amber-200/90">{t.badges.premium}</span>
+                      ) : null}
+                    </Link>
+                    {item.subItems?.map((sub) => {
+                      const subActive = pathname === sub.href || pathname.startsWith(`${sub.href}/`);
+                      const SubIcon = sub.icon;
+                      return (
+                        <Link
+                          key={sub.href}
+                          href={sub.href}
+                          onClick={onNavigate}
+                          className={cn(
+                            "flex items-center gap-2 rounded-lg py-1.5 pl-9 pr-3 text-[13px] transition",
+                            subActive
+                              ? "bg-indigo-500/20 text-white ring-1 ring-indigo-400/30"
+                              : "text-slate-400 hover:bg-white/5 hover:text-slate-100",
+                          )}
+                        >
+                          <SubIcon className="h-3.5 w-3.5 shrink-0 opacity-80" />
+                          <span className="flex-1">{t.items[sub.key]}</span>
+                          {sub.premium && profile.plan === "free" ? (
+                            <span className="text-[9px] font-semibold uppercase text-amber-200/90">{t.badges.premium}</span>
+                          ) : null}
+                        </Link>
+                      );
+                    })}
+                  </div>
                 );
               })}
             </div>
