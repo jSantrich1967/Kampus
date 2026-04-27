@@ -24,6 +24,8 @@ import {
   type CommunityContext,
 } from "@/lib/community-mock";
 import { loadSavedNoteIds, saveSavedNoteIds } from "@/lib/storage/community-saved-storage";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cn } from "@/lib/cn";
 
 const contexts: { id: CommunityContext; es: string; en: string }[] = [
@@ -50,12 +52,26 @@ function heatTone(heat: "quiet" | "active" | "hot") {
 export function CommunityHub() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { profile, locale } = useKampus();
+  const { profile, locale, authUserId } = useKampus();
   const es = locale === "es";
 
   const [context, setContext] = useState<CommunityContext>("subject");
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
+
+  const [postBody, setPostBody] = useState("");
+  const [postBusy, setPostBusy] = useState(false);
+  const [postError, setPostError] = useState<string | null>(null);
+  const [posts, setPosts] = useState<
+    { id: string; channel_id: string; body: string; created_at: string; user_id: string }[]
+  >([]);
+
+  const [answerDrafts, setAnswerDrafts] = useState<Record<string, string>>({});
+  const [answerBusyId, setAnswerBusyId] = useState<string | null>(null);
+  const [answerError, setAnswerError] = useState<string | null>(null);
+  const [answersByQuestion, setAnswersByQuestion] = useState<
+    Record<string, { id: string; question_id: string; body: string; created_at: string; user_id: string }[]>
+  >({});
 
   useEffect(() => {
     setSavedIds(loadSavedNoteIds());
@@ -90,6 +106,116 @@ export function CommunityHub() {
       setSelectedChannelId(null);
     }
   }, [channels, selectedChannelId]);
+
+  // Default channel: first recommended channel in current context.
+  useEffect(() => {
+    if (selectedChannelId) return;
+    if (channels.length === 0) return;
+    setSelectedChannelId(channels[0]!.id);
+  }, [channels, selectedChannelId]);
+
+  useEffect(() => {
+    if (!authUserId || !isSupabaseConfigured()) {
+      setPosts([]);
+      setAnswersByQuestion({});
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const supabase = createSupabaseBrowserClient();
+
+        const { data: pData, error: pErr } = await supabase
+          .from("community_posts")
+          .select("id,channel_id,body,created_at,user_id")
+          .order("created_at", { ascending: false })
+          .limit(50);
+        if (pErr) throw pErr;
+
+        const { data: aData, error: aErr } = await supabase
+          .from("community_question_answers")
+          .select("id,question_id,body,created_at,user_id")
+          .order("created_at", { ascending: false })
+          .limit(80);
+        if (aErr) throw aErr;
+
+        if (cancelled) return;
+        setPosts((pData as typeof posts) ?? []);
+        const grouped: typeof answersByQuestion = {};
+        ((aData as { id: string; question_id: string; body: string; created_at: string; user_id: string }[]) ?? []).forEach(
+          (row) => {
+            if (!grouped[row.question_id]) grouped[row.question_id] = [];
+            grouped[row.question_id]!.push(row);
+          },
+        );
+        setAnswersByQuestion(grouped);
+      } catch (e) {
+        console.error("[CommunityHub] load community content", e);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId]);
+
+  async function submitPost() {
+    if (!authUserId) return;
+    if (!isSupabaseConfigured()) return;
+    const body = postBody.trim();
+    if (!body) return;
+    if (!selectedChannelId) {
+      setPostError(es ? "Elige un canal." : "Select a channel.");
+      return;
+    }
+    setPostBusy(true);
+    setPostError(null);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error } = await supabase
+        .from("community_posts")
+        .insert({ user_id: authUserId, channel_id: selectedChannelId, body })
+        .select("id,channel_id,body,created_at,user_id")
+        .single();
+      if (error) throw error;
+      setPosts((prev) => [data as (typeof posts)[number], ...prev]);
+      setPostBody("");
+    } catch (e) {
+      const msg = e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : null;
+      setPostError(msg || (es ? "No se pudo publicar." : "Could not post."));
+    } finally {
+      setPostBusy(false);
+    }
+  }
+
+  async function submitAnswer(questionId: string) {
+    if (!authUserId) return;
+    if (!isSupabaseConfigured()) return;
+    const body = (answerDrafts[questionId] ?? "").trim();
+    if (!body) return;
+    setAnswerBusyId(questionId);
+    setAnswerError(null);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error } = await supabase
+        .from("community_question_answers")
+        .insert({ user_id: authUserId, question_id: questionId, body })
+        .select("id,question_id,body,created_at,user_id")
+        .single();
+      if (error) throw error;
+      setAnswersByQuestion((prev) => ({
+        ...prev,
+        [questionId]: [data as (typeof answersByQuestion)[string][number], ...(prev[questionId] ?? [])],
+      }));
+      setAnswerDrafts((prev) => ({ ...prev, [questionId]: "" }));
+    } catch (e) {
+      const msg = e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : null;
+      setAnswerError(msg || (es ? "No se pudo responder." : "Could not answer."));
+    } finally {
+      setAnswerBusyId(null);
+    }
+  }
 
   function clearChannelLink() {
     setSelectedChannelId(null);
@@ -246,6 +372,77 @@ export function CommunityHub() {
         </div>
       </Card>
 
+      <Card className="border-indigo-400/25 bg-indigo-500/[0.06]">
+        <CardHeader>
+          <CardTitle>{es ? "Publicar en comunidad" : "Post to community"}</CardTitle>
+          <CardDescription>
+            {es
+              ? "Escribe un post corto en el canal seleccionado. Requiere iniciar sesión."
+              : "Write a short post in the selected channel. Requires login."}
+          </CardDescription>
+        </CardHeader>
+        <div className="space-y-3 px-6 pb-6">
+          {!authUserId ? (
+            <p className="text-sm text-slate-400">{es ? "Inicia sesión para publicar." : "Sign in to post."}</p>
+          ) : !isSupabaseConfigured() ? (
+            <p className="text-sm text-slate-400">{es ? "Configura Supabase para publicar." : "Configure Supabase to post."}</p>
+          ) : (
+            <>
+              <div className="text-xs text-slate-500">
+                {es ? "Canal:" : "Channel:"}{" "}
+                <span className="text-slate-200">{selectedChannelId ?? (es ? "—" : "—")}</span>
+              </div>
+              <textarea
+                className="min-h-[90px] w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-slate-200 outline-none ring-indigo-400/40 focus:ring"
+                placeholder={es ? "Escribe tu comentario (máx. 1200 caracteres)…" : "Write your post (max 1200 chars)…"}
+                value={postBody}
+                onChange={(e) => setPostBody(e.target.value)}
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="button" size="sm" className="gap-2" disabled={postBusy || !postBody.trim()} onClick={() => void submitPost()}>
+                  {postBusy ? (es ? "Publicando…" : "Posting…") : es ? "Publicar" : "Post"}
+                </Button>
+                <Button type="button" size="sm" variant="ghost" disabled={postBusy} onClick={() => setPostBody("")}>
+                  {es ? "Limpiar" : "Clear"}
+                </Button>
+                {postError ? <span className="text-xs text-rose-300">{postError}</span> : null}
+              </div>
+            </>
+          )}
+        </div>
+      </Card>
+
+      {authUserId && isSupabaseConfigured() && selectedChannelId ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>{es ? "Posts recientes del canal" : "Recent channel posts"}</CardTitle>
+            <CardDescription>
+              {es ? "Lo último publicado en este canal (demo MVP)." : "Latest posts in this channel (MVP demo)."}
+            </CardDescription>
+          </CardHeader>
+          <div className="space-y-3 px-6 pb-6">
+            {posts.filter((p) => p.channel_id === selectedChannelId).length === 0 ? (
+              <p className="text-sm text-slate-400">{es ? "Aún no hay posts. Sé el primero." : "No posts yet. Be the first."}</p>
+            ) : (
+              posts
+                .filter((p) => p.channel_id === selectedChannelId)
+                .slice(0, 12)
+                .map((p) => (
+                  <div key={p.id} className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                    <div className="text-[11px] text-slate-500">
+                      {es ? "Publicado" : "Posted"}{" "}
+                      <span suppressHydrationWarning>
+                        {new Date(p.created_at).toLocaleString("es", { dateStyle: "medium", timeStyle: "short" })}
+                      </span>
+                    </div>
+                    <p className="mt-2 whitespace-pre-wrap text-sm text-slate-100">{p.body}</p>
+                  </div>
+                ))
+            )}
+          </div>
+        </Card>
+      ) : null}
+
       <Card>
         <CardHeader>
           <CardTitle>{es ? "Explicaciones entre pares" : "Peer explanations"}</CardTitle>
@@ -322,12 +519,56 @@ export function CommunityHub() {
                 <li key={q.id} className="rounded-2xl border border-white/10 bg-slate-950/40 p-3">
                   <div className="text-sm text-slate-100">{q.question}</div>
                   <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-400">
-                    <span>{q.votes} votes</span>
-                    <span>~{q.answersApprox} peer answers</span>
+                    <span>
+                      {q.votes} {es ? "votos" : "votes"}
+                    </span>
+                    <span>
+                      ~{(answersByQuestion[q.id]?.length ?? 0) || q.answersApprox} {es ? "respuestas" : "answers"}
+                    </span>
                     <Link href="/pass-mode" className="text-indigo-200 hover:text-white">
                       {es ? "Convertir en plan →" : "Turn into plan →"}
                     </Link>
                   </div>
+
+                  {authUserId && isSupabaseConfigured() ? (
+                    <div className="mt-3 space-y-2">
+                      <textarea
+                        className="min-h-[70px] w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
+                        placeholder={es ? "Escribe una respuesta…" : "Write an answer…"}
+                        value={answerDrafts[q.id] ?? ""}
+                        onChange={(e) => setAnswerDrafts((prev) => ({ ...prev, [q.id]: e.target.value }))}
+                      />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={answerBusyId === q.id || !(answerDrafts[q.id] ?? "").trim()}
+                          onClick={() => void submitAnswer(q.id)}
+                        >
+                          {answerBusyId === q.id ? (es ? "Enviando…" : "Sending…") : es ? "Responder" : "Answer"}
+                        </Button>
+                        {answerError ? <span className="text-xs text-rose-300">{answerError}</span> : null}
+                      </div>
+
+                      {(answersByQuestion[q.id] ?? []).length > 0 ? (
+                        <div className="space-y-2">
+                          {(answersByQuestion[q.id] ?? []).slice(0, 3).map((a) => (
+                            <div key={a.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                              <div className="text-[11px] text-slate-500">
+                                {es ? "Respuesta" : "Answer"}{" "}
+                                <span suppressHydrationWarning>
+                                  {new Date(a.created_at).toLocaleString("es", { dateStyle: "medium", timeStyle: "short" })}
+                                </span>
+                              </div>
+                              <p className="mt-2 whitespace-pre-wrap text-sm text-slate-100">{a.body}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-xs text-slate-500">{es ? "Inicia sesión para responder." : "Sign in to answer."}</p>
+                  )}
                 </li>
               ))}
             </ul>
