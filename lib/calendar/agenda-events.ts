@@ -40,9 +40,9 @@ export function buildAgendaEvents(params: {
       id: "presentation:deck",
       kind: "presentation",
       date: pd,
-      title: params.presentationTitle.trim() || "Exposición grupal",
+      title: params.presentationTitle.trim() || "Mis exposiciones",
       subject: "Exposición",
-      href: "/collaborate/presentations",
+      href: "/collaborate/exposiciones",
     });
   }
 
@@ -53,7 +53,7 @@ export function buildAgendaEvents(params: {
       date: w.dueDate,
       title: w.title,
       subject: w.subject,
-      href: "/exams/calendar",
+      href: "/collaborate/investigaciones",
     });
   }
 

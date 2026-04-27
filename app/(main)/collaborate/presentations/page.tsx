@@ -1,9 +1,6 @@
-import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
-import { PresentationPlanner } from "@/components/collaborate/presentation-planner";
-
-export const metadata: Metadata = { title: "Exposición grupal" };
-
-export default function PresentationsPage() {
-  return <PresentationPlanner />;
+/** URL antigua: enlaces y calendario pueden seguir apuntando aquí. */
+export default function PresentationsRedirectPage() {
+  redirect("/collaborate/exposiciones");
 }

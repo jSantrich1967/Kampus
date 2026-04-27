@@ -44,7 +44,7 @@ export function VirtualClassroomSession({ sessionId }: Props) {
   }
 
   const seatsLeft = Math.max(0, session.capacity - session.enrolled);
-  const presHref = `/collaborate/presentations?from=aula&session=${encodeURIComponent(session.id)}`;
+  const presHref = `/collaborate/exposiciones?from=aula&session=${encodeURIComponent(session.id)}`;
 
   return (
     <div className="space-y-6">

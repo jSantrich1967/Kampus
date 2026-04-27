@@ -209,7 +209,7 @@ export function AcademicCalendarHub() {
 
   const pageDescription = useCloud
     ? "Exámenes, fecha de exposición y trabajos se sincronizan con Supabase cuando inicias sesión."
-    : "Un mismo calendario para Mis exámenes (con fecha de entrega), Mis exposiciones (fecha en el planificador) y Mis trabajos e investigaciones. Sin sesión, los datos de exámenes y trabajos quedan en el navegador.";
+    : "Un mismo calendario para Mis exámenes (con fecha de entrega), Mis exposiciones (fecha en Colaboración) y Mis investigaciones. Sin sesión, los datos de exámenes y trabajos quedan en el navegador.";
 
   return (
     <div className="space-y-8">
@@ -224,9 +224,14 @@ export function AcademicCalendarHub() {
                 Mis exámenes
               </Button>
             </Link>
-            <Link href="/collaborate/presentations">
+            <Link href="/collaborate/exposiciones">
               <Button variant="secondary" size="sm">
                 Mis exposiciones
+              </Button>
+            </Link>
+            <Link href="/collaborate/investigaciones">
+              <Button variant="secondary" size="sm">
+                Mis investigaciones
               </Button>
             </Link>
             <Button type="button" variant="ghost" size="sm" onClick={refresh} disabled={loading}>

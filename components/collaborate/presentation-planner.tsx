@@ -149,7 +149,7 @@ export function PresentationPlanner() {
       <div>
         <div className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-200/80">Collaboration</div>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white md:text-4xl">
-          {es ? "Planificador de exposición grupal" : "Group presentation planner"}
+          {es ? "Mis exposiciones" : "My presentations"}
         </h1>
         <p className="mt-2 max-w-3xl text-base text-slate-300">
           {es
@@ -158,7 +158,7 @@ export function PresentationPlanner() {
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <ShareLinkButton
-            pathname="/collaborate/presentations"
+            pathname="/collaborate/exposiciones"
             campaign="presentation_team"
             extra={{ deck: state.deckTitle }}
             refHandle={profile.university || "kampus"}

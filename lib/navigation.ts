@@ -7,6 +7,7 @@ import {
   Layers3,
   LayoutDashboard,
   Library,
+  Microscope,
   Presentation,
   Radar,
   School,
@@ -65,7 +66,8 @@ export const navigationGroups: NavGroup[] = [
     id: "work",
     items: [
       { href: "/collaborate/aula-virtual", key: "rooms", icon: Video, roles: ["student", "teacher", "learner"] },
-      { href: "/collaborate/presentations", key: "presentations", icon: Presentation, roles: ["student", "teacher", "learner"] },
+      { href: "/collaborate/exposiciones", key: "myPresentations", icon: Presentation, roles: ["student", "teacher", "learner"] },
+      { href: "/collaborate/investigaciones", key: "myResearch", icon: Microscope, roles: ["student", "teacher", "learner"] },
     ],
   },
   {
