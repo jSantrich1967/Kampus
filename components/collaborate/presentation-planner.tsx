@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Check, Clock, Mic2, Plus, RefreshCw, Trash2, Video, Users } from "lucide-react";
+import { Check, Clock, Loader2, Mic2, Plus, RefreshCw, Sparkles, Trash2, Video, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { ShareLinkButton } from "@/components/growth/share-link-button";
@@ -19,6 +19,7 @@ import {
 } from "@/lib/storage/presentation-storage";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import type { PresentationTutorFeedback } from "@/lib/schemas/presentation-tutor";
 import { fetchPresentationAgendaRemote, upsertPresentationAgendaRemote } from "@/lib/supabase/agenda-db";
 
 function uid() {
@@ -36,6 +37,10 @@ export function PresentationPlanner() {
   const [running, setRunning] = useState(false);
   const [teleIndex, setTeleIndex] = useState(0);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [tutorNotes, setTutorNotes] = useState("");
+  const [tutorLoading, setTutorLoading] = useState(false);
+  const [tutorError, setTutorError] = useState<string | null>(null);
+  const [tutorFeedback, setTutorFeedback] = useState<PresentationTutorFeedback | null>(null);
 
   /** Si abren el enlace de convocatoria, alinean el mismo código de sesión en su dispositivo. */
   useEffect(() => {
@@ -155,6 +160,46 @@ export function PresentationPlanner() {
 
   const mm = String(Math.floor(rehearsalSeconds / 60)).padStart(2, "0");
   const ss = String(rehearsalSeconds % 60).padStart(2, "0");
+
+  const sectionsSummary = useMemo(
+    () =>
+      state.sections
+        .map((s) => {
+          const who = memberById.get(s.ownerId)?.name ?? "?";
+          return `## ${s.title} (${who}, ${s.minutes} min)\n${s.script}`;
+        })
+        .join("\n\n"),
+    [memberById, state.sections],
+  );
+
+  async function requestTutorFeedback() {
+    setTutorLoading(true);
+    setTutorError(null);
+    try {
+      const res = await fetch("/api/presentation/tutor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deckTitle: state.deckTitle,
+          rehearsalNotes: tutorNotes,
+          masterScript: state.masterScript,
+          sectionsSummary,
+          juryNotes: state.juryNotes,
+          probableQuestions: state.probableQuestions,
+        }),
+      });
+      const json = (await res.json()) as { feedback?: PresentationTutorFeedback; error?: string };
+      if (!res.ok) {
+        setTutorError(json.error ?? (es ? "No se pudo obtener la calificación." : "Could not get feedback."));
+        return;
+      }
+      if (json.feedback) setTutorFeedback(json.feedback);
+    } catch {
+      setTutorError(es ? "Error de red. Inténtalo otra vez." : "Network error. Try again.");
+    } finally {
+      setTutorLoading(false);
+    }
+  }
 
   if (!hydrated) {
     return <div className="text-sm text-slate-400">{es ? "Cargando…" : "Loading…"}</div>;
@@ -534,6 +579,76 @@ export function PresentationPlanner() {
           </div>
         </Card>
       </div>
+
+      <Card className="border-emerald-400/20 bg-emerald-500/[0.05]">
+        <CardHeader>
+          <CardTitle className="inline-flex items-center gap-2 text-emerald-50">
+            <Sparkles className="h-5 w-5 text-emerald-300" />
+            {es ? "Tutor calificador (IA)" : "AI grading tutor"}
+          </CardTitle>
+          <CardDescription className="text-emerald-100/75">
+            {es
+              ? "Pega notas del ensayo, una transcripción breve o lo que salió mal/bien. El tutor usa también tus guiones y preguntas del jurado. Requiere OPENAI_API_KEY en el servidor."
+              : "Paste rehearsal notes or a short transcript. The tutor also uses your scripts and mock jury. Requires OPENAI_API_KEY on the server."}
+          </CardDescription>
+        </CardHeader>
+        <div className="space-y-4 px-5 pb-5">
+          <label className="block space-y-1 text-xs text-slate-400">
+            {es ? "Notas del ensayo / transcripción (obligatorio para calificar)" : "Rehearsal notes / transcript (required)"}
+            <textarea
+              className="min-h-32 w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-slate-100"
+              value={tutorNotes}
+              onChange={(e) => setTutorNotes(e.target.value)}
+              placeholder={
+                es
+                  ? "Ej.: «Se nos acabó el tiempo en la sección 2», «Confundimos dos gráficas», «Nos preguntaron por X y no supimos responder»…"
+                  : "What happened in the rehearsal, timing issues, Q&A gaps…"
+              }
+            />
+          </label>
+          <Button type="button" className="gap-2" disabled={tutorLoading} onClick={() => void requestTutorFeedback()}>
+            {tutorLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {tutorLoading ? (es ? "Calificando…" : "Grading…") : es ? "Pedir calificación y consejos" : "Get grade and tips"}
+          </Button>
+          {tutorError ? <p className="text-sm text-rose-300">{tutorError}</p> : null}
+          {tutorFeedback ? (
+            <div className="space-y-4 rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-sm text-slate-200">
+              <div className="text-base font-semibold text-white">{tutorFeedback.overallScoreLabel}</div>
+              <div>
+                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-300/90">
+                  {es ? "Lo que salió bien" : "What went well"}
+                </div>
+                <ul className="list-disc space-y-1 pl-5">
+                  {tutorFeedback.strengths.map((x, i) => (
+                    <li key={`s-${i}`}>{x}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-200/90">
+                  {es ? "A mejorar" : "To improve"}
+                </div>
+                <ul className="list-disc space-y-1 pl-5">
+                  {tutorFeedback.toImprove.map((x, i) => (
+                    <li key={`i-${i}`}>{x}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-indigo-200/90">
+                  {es ? "Cómo seguir" : "Next steps"}
+                </div>
+                <ul className="list-disc space-y-1 pl-5">
+                  {tutorFeedback.concreteTips.map((x, i) => (
+                    <li key={`t-${i}`}>{x}</li>
+                  ))}
+                </ul>
+              </div>
+              <p className="rounded-lg border border-white/5 bg-white/[0.03] px-3 py-2 text-slate-300">{tutorFeedback.closingEncouragement}</p>
+            </div>
+          ) : null}
+        </div>
+      </Card>
     </div>
   );
 }
