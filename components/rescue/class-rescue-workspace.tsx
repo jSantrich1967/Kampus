@@ -74,6 +74,8 @@ export function ClassRescueWorkspace() {
   const [kitPracticeExercises, setKitPracticeExercises] = useState("");
   const [saveKitBusy, setSaveKitBusy] = useState(false);
   const [saveKitMessage, setSaveKitMessage] = useState<string | null>(null);
+  const [saveFlashcardsBusy, setSaveFlashcardsBusy] = useState(false);
+  const [saveFlashcardsMessage, setSaveFlashcardsMessage] = useState<string | null>(null);
   const [notebookTagRows, setNotebookTagRows] = useState<NotebookTagRow[]>([]);
   const [notebookTagsLoading, setNotebookTagsLoading] = useState(false);
   const [notebookTagsLoadError, setNotebookTagsLoadError] = useState<string | null>(null);
@@ -492,6 +494,55 @@ export function ClassRescueWorkspace() {
     }
   }
 
+  function buildFlashcardsNotebookBody(p: RescuePack) {
+    const subject = subjectHint.trim() || "General";
+    const header = [
+      `Tarjetas del kit de estudios`,
+      ``,
+      `Materia: ${subject}`,
+      kitTopic.trim() ? `Tema: ${kitTopic.trim()}` : null,
+      kitLessonPoint.trim() ? `Punto: ${kitLessonPoint.trim()}` : null,
+      kitPracticeExercises.trim() ? `Ejercicios: ${kitPracticeExercises.trim()}` : null,
+      ``,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    const body = p.flashcards
+      .map((c, idx) => `#${idx + 1}\nQ: ${c.front}\nA: ${c.back}\n`)
+      .join("\n");
+    return `${header}\n${body}`.trim();
+  }
+
+  async function saveFlashcardsToNotebook() {
+    if (!authUserId) return;
+    if (!isSupabaseConfigured()) {
+      setSaveFlashcardsMessage("Configura Supabase para guardar en Mis cuadernos.");
+      return;
+    }
+    if (!pack) {
+      setSaveFlashcardsMessage("Primero genera un kit para poder guardar tarjetas.");
+      return;
+    }
+    setSaveFlashcardsBusy(true);
+    setSaveFlashcardsMessage(null);
+    try {
+      const sourceText = buildFlashcardsNotebookBody(pack);
+      await saveRescueNotebookSource({
+        authUserId,
+        subject: subjectHint.trim() || "General",
+        topic: kitTopic,
+        lesson_point: kitLessonPoint,
+        practice_exercises: kitPracticeExercises,
+        sourceText,
+      });
+      setSaveFlashcardsMessage(`Guardadas las tarjetas en el cuaderno «${subjectHint.trim() || "General"}».`);
+    } catch (e) {
+      setSaveFlashcardsMessage(e instanceof Error ? e.message : "No se pudieron guardar las tarjetas.");
+    } finally {
+      setSaveFlashcardsBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-8">
       <PageHeader
@@ -875,6 +926,15 @@ export function ClassRescueWorkspace() {
                 label="Compartir kit de estudios"
                 copiedLabel="Copiado"
               />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={saveFlashcardsBusy || !authUserId || !isSupabaseConfigured()}
+                onClick={() => void saveFlashcardsToNotebook()}
+              >
+                {saveFlashcardsBusy ? "Guardando tarjetas…" : "Guardar tarjetas en el cuaderno"}
+              </Button>
               <Link href="/pass-mode">
                 <Button variant="secondary" size="sm">
                   Llevar esto a Modo aprobar
@@ -937,6 +997,7 @@ export function ClassRescueWorkspace() {
                 </Button>
               </div>
               {saveKitMessage ? <p className="text-sm text-emerald-200/90">{saveKitMessage}</p> : null}
+              {saveFlashcardsMessage ? <p className="text-sm text-emerald-200/90">{saveFlashcardsMessage}</p> : null}
             </>
           )}
         </div>
