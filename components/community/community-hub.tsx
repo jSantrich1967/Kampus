@@ -77,12 +77,12 @@ export function CommunityHub() {
     }
   }, [searchParams, profile]);
 
-  const channels = useMemo(() => buildChannels(profile, context), [profile, context]);
-  const notes = useMemo(() => buildTopNotes(profile), [profile]);
-  const questions = useMemo(() => buildCommonQuestions(profile), [profile]);
-  const threads = useMemo(() => buildTrendingThreads(profile), [profile]);
-  const peers = useMemo(() => buildPeerExplanations(profile), [profile]);
-  const alerts = useMemo(() => buildClassAlerts(profile), [profile]);
+  const channels = useMemo(() => buildChannels(profile, context, locale), [profile, context, locale]);
+  const notes = useMemo(() => buildTopNotes(profile, locale), [profile, locale]);
+  const questions = useMemo(() => buildCommonQuestions(profile, locale), [profile, locale]);
+  const threads = useMemo(() => buildTrendingThreads(profile, locale), [profile, locale]);
+  const peers = useMemo(() => buildPeerExplanations(profile, locale), [profile, locale]);
+  const alerts = useMemo(() => buildClassAlerts(profile, locale), [profile, locale]);
 
   useEffect(() => {
     if (!selectedChannelId) return;
