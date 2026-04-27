@@ -11,12 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 import type { RescuePack } from "@/lib/class-rescue";
-import {
-  combineNotebookExtractedTextForPack,
-  documentMatchesTagFilters,
-  filterDocumentsByTags,
-  type NotebookTagFilters,
-} from "@/lib/notebooks/document-tags";
+import { combineNotebookExtractedTextForPack } from "@/lib/notebooks/document-tags";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 import { postRescuePack } from "@/lib/rescue/post-rescue-pack";
 
@@ -44,29 +39,12 @@ export function NotebookStudyKitPanel({ pages, currentPage, subjectLabel, subjec
   const [packBusy, setPackBusy] = useState(false);
   const [packError, setPackError] = useState<string | null>(null);
 
-  const [filterTopic, setFilterTopic] = useState("");
-  const [filterLessonPoint, setFilterLessonPoint] = useState("");
-  const [filterPractice, setFilterPractice] = useState("");
-
-  const tagFilters: NotebookTagFilters = useMemo(
-    () => ({
-      topic: filterTopic,
-      lessonPoint: filterLessonPoint,
-      practiceExercises: filterPractice,
-    }),
-    [filterTopic, filterLessonPoint, filterPractice],
-  );
-
-  const filtersActive = Boolean(filterTopic.trim() || filterLessonPoint.trim() || filterPractice.trim());
-
   const kitDocs = useMemo(() => {
     if (scope === "page") {
-      if (!filtersActive) return [currentPage];
-      return documentMatchesTagFilters(currentPage, tagFilters) ? [currentPage] : [];
+      return [currentPage];
     }
-    if (!filtersActive) return pages;
-    return filterDocumentsByTags(pages, tagFilters);
-  }, [scope, pages, currentPage, tagFilters, filtersActive]);
+    return pages;
+  }, [scope, pages, currentPage]);
 
   const total = pages.length;
 
@@ -75,11 +53,6 @@ export function NotebookStudyKitPanel({ pages, currentPage, subjectLabel, subjec
     setPack(null);
     setPackError(null);
   }, [currentPage.id, scope]);
-
-  useEffect(() => {
-    setPack(null);
-    setPackError(null);
-  }, [filterTopic, filterLessonPoint, filterPractice, scope]);
 
   const { extractedFileText, sourceLabel, uploadedFileCount, sourceKind, fallbackSeed } = useMemo(() => {
     if (kitDocs.length === 0) {
@@ -103,18 +76,14 @@ export function NotebookStudyKitPanel({ pages, currentPage, subjectLabel, subjec
       };
     }
     const combined = combineNotebookExtractedTextForPack(kitDocs);
-    const label =
-      filtersActive && kitDocs.length < pages.length
-        ? `Cuaderno filtrado (${kitDocs.length} de ${pages.length} archivos)`
-        : `Cuaderno (${kitDocs.length} archivos)`;
     return {
       extractedFileText: combined,
-      sourceLabel: label,
+      sourceLabel: `Cuaderno (${kitDocs.length} archivos)`,
       uploadedFileCount: kitDocs.length,
       sourceKind: "notes" as const,
       fallbackSeed: combined,
     };
-  }, [scope, kitDocs, pages.length, filtersActive]);
+  }, [scope, kitDocs]);
 
   async function generateKit() {
     if (kitDocs.length === 0) return;
@@ -153,9 +122,8 @@ export function NotebookStudyKitPanel({ pages, currentPage, subjectLabel, subjec
             Kit de estudio
           </CardTitle>
           <CardDescription>
-            Al subir archivos en Mis cuadernos puedes indicar Tema, Punto y Ejercicios prácticos. Aquí filtras qué hojas
-            entran al kit: solo se usa el texto extraído de los archivos que coincidan con todos los campos que
-            rellenes (búsqueda por texto contenido).
+            Genera un kit rápido desde esta hoja o desde todo el cuaderno. Para filtros avanzados por Tema / Punto /
+            Ejercicios, usa «más opciones».
           </CardDescription>
         </CardHeader>
         <div className="space-y-4 px-6 pb-6">
@@ -190,54 +158,9 @@ export function NotebookStudyKitPanel({ pages, currentPage, subjectLabel, subjec
             </button>
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-slate-950/50 p-4">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Filtro para el kit</p>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <label className="space-y-1 text-xs">
-                <span className="text-slate-500">Tema (contiene)</span>
-                <input
-                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-1.5 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
-                  value={filterTopic}
-                  onChange={(e) => setFilterTopic(e.target.value)}
-                  placeholder="Ej. integrales"
-                />
-              </label>
-              <label className="space-y-1 text-xs">
-                <span className="text-slate-500">Punto (contiene)</span>
-                <input
-                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-1.5 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
-                  value={filterLessonPoint}
-                  onChange={(e) => setFilterLessonPoint(e.target.value)}
-                  placeholder="Ej. Tema 3"
-                />
-              </label>
-              <label className="space-y-1 text-xs">
-                <span className="text-slate-500">Ejercicios (contiene)</span>
-                <input
-                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-1.5 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
-                  value={filterPractice}
-                  onChange={(e) => setFilterPractice(e.target.value)}
-                  placeholder="Ej. serie A"
-                />
-              </label>
-            </div>
-            <p className="mt-2 text-[11px] text-slate-500">
-              Vacío = no filtrar en esa columna. Con «Solo esta hoja», la hoja actual debe coincidir con los filtros
-              para poder generar.
-            </p>
-          </div>
-
-          {noMatches ? (
-            <p className="text-sm text-amber-200/90">
-              Ningún archivo coincide con el filtro. Ajusta Tema / Punto / Ejercicios o vacía los campos para usar todo
-              el cuaderno.
-            </p>
-          ) : (
-            <p className="text-xs text-slate-500">
-              Se usarán <strong className="text-slate-300">{kitDocs.length}</strong> archivo
-              {kitDocs.length === 1 ? "" : "s"} en este kit.
-            </p>
-          )}
+          <p className="text-xs text-slate-500">
+            Se usarán <strong className="text-slate-300">{kitDocs.length}</strong> archivo{kitDocs.length === 1 ? "" : "s"} en este kit.
+          </p>
 
           <div className="flex flex-wrap items-center gap-3">
             <Button type="button" className="gap-2" onClick={() => void generateKit()} disabled={packBusy || noMatches}>
