@@ -527,6 +527,7 @@ export function NotebookLibraryPanel() {
                                   aria-label={`Eliminar ${doc.filename}`}
                                 >
                                   <Trash2 className="h-4 w-4" />
+                                  <span className="ml-1 hidden sm:inline">Eliminar</span>
                                 </Button>
                               </div>
                             </div>
