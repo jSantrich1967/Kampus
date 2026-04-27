@@ -616,7 +616,7 @@ export function ClassRescueWorkspace() {
                 <span>No se pudieron cargar las etiquetas desde la nube: {notebookTagsLoadError}</span>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   className="h-7 border-amber-400/40 bg-transparent text-[11px] text-amber-50 hover:bg-amber-500/20"
                   onClick={() => setTagFetchNonce((n) => n + 1)}
