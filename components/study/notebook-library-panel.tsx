@@ -105,6 +105,12 @@ export function NotebookLibraryPanel() {
       setError("Supabase no está configurado.");
       return;
     }
+    // Beginners UX: make sure the user sees these fields exist.
+    // We require at least one of Tema / Punto so filtros in el kit tengan sentido.
+    if (!uploadTopic.trim() && !uploadLessonPoint.trim()) {
+      setError("Antes de subir, escribe al menos un Tema o un Punto (arriba).");
+      return;
+    }
     setUploading(true);
     setError(null);
     const supabase = createSupabaseBrowserClient();
@@ -306,6 +312,10 @@ export function NotebookLibraryPanel() {
             La <strong className="text-slate-400">Materia</strong> es el cuaderno (arriba). Aquí puedes detallar{" "}
             <strong className="text-slate-400">Tema</strong>, <strong className="text-slate-400">Punto</strong> y{" "}
             <strong className="text-slate-400">Ejercicios prácticos</strong> para filtrar el kit de estudio en el lector.
+          </p>
+          <p className="mb-3 text-[11px] text-slate-600">
+            Consejo: escribe al menos <strong className="text-slate-400">Tema</strong> o <strong className="text-slate-400">Punto</strong> antes
+            de subir, así luego te aparecerán en los desplegables del kit de estudios.
           </p>
           <div className="grid gap-3 md:grid-cols-3">
             <label className="space-y-1 text-xs">
