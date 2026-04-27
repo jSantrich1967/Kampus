@@ -1,14 +1,17 @@
 "use client";
 
-import { Clock, Mic2, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Check, Clock, Mic2, Plus, RefreshCw, Trash2, Video, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { ShareLinkButton } from "@/components/growth/share-link-button";
 import { useKampus } from "@/components/kampus/kampus-provider";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   defaultPresentationState,
+  generateTeamSessionCode,
   loadPresentation,
   savePresentation,
   type PresentationSection,
@@ -25,12 +28,25 @@ function uid() {
 export function PresentationPlanner() {
   const { locale, profile, authUserId } = useKampus();
   const es = locale === "es";
+  const searchParams = useSearchParams();
 
   const [hydrated, setHydrated] = useState(false);
   const [state, setState] = useState<PresentationState>(defaultPresentationState);
   const [rehearsalSeconds, setRehearsalSeconds] = useState(0);
   const [running, setRunning] = useState(false);
   const [teleIndex, setTeleIndex] = useState(0);
+  const [codeCopied, setCodeCopied] = useState(false);
+
+  /** Si abren el enlace de convocatoria, alinean el mismo código de sesión en su dispositivo. */
+  useEffect(() => {
+    const raw = searchParams.get("equipo")?.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") ?? "";
+    if (raw.length < 6) return;
+    const equipo = raw.slice(0, 8);
+    setState((prev) => {
+      if (prev.teamSessionCode === equipo) return prev;
+      return { ...prev, teamSessionCode: equipo };
+    });
+  }, [searchParams]);
 
   useEffect(() => {
     let cancelled = false;
@@ -153,20 +169,100 @@ export function PresentationPlanner() {
         </h1>
         <p className="mt-2 max-w-3xl text-base text-slate-300">
           {es
-            ? "Roles, guiones, teleprompter, ensayo con cronómetro y banco de preguntas — pensado para equipos reales."
-            : "Roles, scripts, teleprompter, timed rehearsal, and a question bank — built for real teams."}
+            ? "Pon nombre a la sesión, comparte el enlace y el código para que todos confluyan aquí; en Aula virtual pueden verse y hablar en vivo mientras ensayan."
+            : "Name the session, share the link and code so everyone lands here; use Virtual classroom for live video while you rehearse."}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <ShareLinkButton
             pathname="/collaborate/exposiciones"
             campaign="presentation_team"
-            extra={{ deck: state.deckTitle }}
+            extra={{ deck: state.deckTitle, equipo: state.teamSessionCode }}
             refHandle={profile.university || "kampus"}
-            label={es ? "Invitar al equipo" : "Invite team"}
+            label={es ? "Copiar enlace de convocatoria" : "Copy invite link"}
             copiedLabel={es ? "Copiado" : "Copied"}
           />
+          <Link href="/collaborate/aula-virtual" className={buttonClasses({ variant: "secondary", size: "sm", className: "gap-2" })}>
+            <Video className="h-4 w-4" />
+            {es ? "Aula virtual (vivo)" : "Virtual classroom (live)"}
+          </Link>
         </div>
       </div>
+
+      <Card className="border-indigo-400/25 bg-indigo-500/[0.06]">
+        <CardHeader>
+          <CardTitle className="inline-flex items-center gap-2 text-indigo-50">
+            <Users className="h-5 w-5 text-indigo-200" />
+            {es ? "Convocatoria: misma sección para todos" : "Rally: one shared space"}
+          </CardTitle>
+          <CardDescription className="text-indigo-100/80">
+            {es
+              ? "El nombre del deck es cómo se llama esta sección para el grupo. El código y el enlace sirven para que cada quien abra Mis exposiciones alineado contigo; el guion sigue siendo local en cada dispositivo hasta que tengamos sync en nube."
+              : "The deck title is how you refer to this session. The code and link help everyone open the same Mis exposiciones entry; scripts stay local per device until cloud sync exists."}
+          </CardDescription>
+        </CardHeader>
+        <div className="space-y-4 px-5 pb-5">
+          <div>
+            <div className="text-xs font-medium uppercase tracking-wide text-indigo-200/90">
+              {es ? "Código de encuentro" : "Meet-up code"}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <span className="rounded-xl border border-white/15 bg-slate-950/60 px-4 py-2 font-mono text-2xl font-semibold tracking-[0.2em] text-white">
+                {state.teamSessionCode || "—"}
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="gap-2"
+                disabled={!state.teamSessionCode}
+                onClick={() => {
+                  if (!state.teamSessionCode) return;
+                  void navigator.clipboard.writeText(state.teamSessionCode);
+                  setCodeCopied(true);
+                  window.setTimeout(() => setCodeCopied(false), 2000);
+                }}
+              >
+                {codeCopied ? <Check className="h-4 w-4 text-emerald-300" /> : null}
+                {codeCopied ? (es ? "Copiado" : "Copied") : es ? "Copiar código" : "Copy code"}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="gap-1 text-indigo-200 hover:text-white"
+                onClick={() => {
+                  setState((p) => ({ ...p, teamSessionCode: generateTeamSessionCode() }));
+                  setCodeCopied(false);
+                }}
+              >
+                <RefreshCw className="h-4 w-4" />
+                {es ? "Nuevo código" : "New code"}
+              </Button>
+            </div>
+          </div>
+          <p className="text-sm text-slate-300">
+            {es ? (
+              <>
+                Pide al equipo que use el <strong className="text-white">mismo nombre de deck</strong> abajo y, si abren
+                por enlace, que el código coincida. Para interactuar en vivo (voz/vídeo), entren a{" "}
+                <Link href="/collaborate/aula-virtual" className="text-indigo-200 underline-offset-2 hover:underline">
+                  Aula virtual
+                </Link>
+                .
+              </>
+            ) : (
+              <>
+                Ask everyone to use the <strong className="text-white">same deck title</strong> below and matching code
+                if they use the invite link. For live interaction, join{" "}
+                <Link href="/collaborate/aula-virtual" className="text-indigo-200 underline-offset-2 hover:underline">
+                  Virtual classroom
+                </Link>
+                .
+              </>
+            )}
+          </p>
+        </div>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -206,7 +302,11 @@ export function PresentationPlanner() {
           <CardHeader className="flex flex-row items-center justify-between gap-3">
             <div>
               <CardTitle>{es ? "Equipo y roles" : "Team & roles"}</CardTitle>
-              <CardDescription>{es ? "Quién dueña cada sección." : "Who owns each section."}</CardDescription>
+              <CardDescription>
+                {es
+                  ? "Mismas personas que en la convocatoria: nombres y roles para asignar secciones y teleprompter."
+                  : "Same people as in the rally: names and roles to assign sections and teleprompter."}
+              </CardDescription>
             </div>
             <Button type="button" size="sm" variant="secondary" onClick={addMember} className="gap-1">
               <Plus className="h-4 w-4" />

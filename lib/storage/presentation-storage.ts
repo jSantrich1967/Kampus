@@ -11,6 +11,8 @@ export type PresentationSection = {
 
 export type PresentationState = {
   deckTitle: string;
+  /** Código corto compartido (convocatoria) para que el equipo confluya en la misma “sala” lógica. */
+  teamSessionCode: string;
   /** YYYY-MM-DD — aparece en Mi calendario académico como exposición. */
   presentationDueDate?: string;
   members: PresentationMember[];
@@ -22,8 +24,26 @@ export type PresentationState = {
   teleprompterLineHeight: number;
 };
 
+export function generateTeamSessionCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let out = "";
+  for (let i = 0; i < 8; i++) out += chars[Math.floor(Math.random() * chars.length)]!;
+  return out;
+}
+
+function normalizeTeamSessionCode(raw: string | undefined): string {
+  const cleaned = (raw ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (cleaned.length >= 6) return cleaned.slice(0, 8);
+  return generateTeamSessionCode();
+}
+
+export function ensurePresentationTeamCode(state: PresentationState): PresentationState {
+  return { ...state, teamSessionCode: normalizeTeamSessionCode(state.teamSessionCode) };
+}
+
 export const defaultPresentationState: PresentationState = {
   deckTitle: "Team presentation",
+  teamSessionCode: "",
   members: [
     { id: "m1", name: "You", role: "Lead + opener" },
     { id: "m2", name: "Teammate A", role: "Methods" },
@@ -46,15 +66,18 @@ export const defaultPresentationState: PresentationState = {
 };
 
 export function loadPresentation(): PresentationState {
-  if (typeof window === "undefined") return defaultPresentationState;
+  /** Evita códigos aleatorios en SSR (hydration). */
+  if (typeof window === "undefined") {
+    return { ...defaultPresentationState, teamSessionCode: "" };
+  }
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultPresentationState;
+    if (!raw) return ensurePresentationTeamCode(defaultPresentationState);
     const parsed = JSON.parse(raw) as PresentationState;
-    if (!parsed || typeof parsed !== "object") return defaultPresentationState;
-    return { ...defaultPresentationState, ...parsed };
+    if (!parsed || typeof parsed !== "object") return ensurePresentationTeamCode(defaultPresentationState);
+    return ensurePresentationTeamCode({ ...defaultPresentationState, ...parsed });
   } catch {
-    return defaultPresentationState;
+    return ensurePresentationTeamCode(defaultPresentationState);
   }
 }
 
