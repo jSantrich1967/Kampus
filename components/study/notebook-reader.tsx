@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { PageHeader } from "@/components/layout/page-header";
 import { NotebookStudyKitPanel } from "@/components/study/notebook-study-kit-panel";
+import { getNotebookSubjectCover } from "@/components/study/notebook-subject-cover";
 import { getNotebookSubjectIcon } from "@/components/study/notebook-subject-icon";
 import { Button } from "@/components/ui/button";
 import { initialsFromSubject, notebookCoverGradient } from "@/lib/notebooks/cover-styles";
@@ -32,6 +33,16 @@ export function NotebookReader({ subjectSlug }: Props) {
     pages[0]?.subject ?? (subjectSlug && subjectSlug.length > 0 ? subjectSlug.replace(/_/g, " ") : "Cuaderno");
 
   const { background, spine } = useMemo(() => notebookCoverGradient(subjectLabel), [subjectLabel]);
+  const cover = useMemo(() => getNotebookSubjectCover(subjectLabel), [subjectLabel]);
+  const headerStyle = useMemo(() => {
+    if (!cover) return { background };
+    return {
+      background,
+      backgroundImage: `linear-gradient(145deg, rgba(0,0,0,0.28), rgba(0,0,0,0.55)), url(${cover.src})`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+    } as const;
+  }, [background, cover]);
 
   const load = useCallback(async () => {
     if (!isSupabaseConfigured() || !authUserId) {
@@ -180,7 +191,7 @@ export function NotebookReader({ subjectSlug }: Props) {
                 <div className="flex min-w-0 flex-1 flex-col">
                   <div
                     className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3"
-                    style={{ background }}
+                    style={headerStyle}
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 bg-black/30 text-sm font-bold text-white">

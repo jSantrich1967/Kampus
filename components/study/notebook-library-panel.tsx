@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
+import { getNotebookSubjectCover } from "@/components/study/notebook-subject-cover";
 import { getNotebookSubjectIcon } from "@/components/study/notebook-subject-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -386,6 +387,7 @@ export function NotebookLibraryPanel() {
               const expanded = expandedSubject === subjectName;
               const lastTouch = pages[0]?.created_at;
               const pageCount = pages.length;
+              const cover = getNotebookSubjectCover(subjectName);
 
               return (
                 <div
@@ -402,7 +404,12 @@ export function NotebookLibraryPanel() {
                     {/* Portada (ya no es un solo botón: el enlace del cuaderno es visible aquí) */}
                     <div
                       className="relative min-h-[11rem] pl-5 pr-12 pt-5 pb-5"
-                      style={{ background }}
+                      style={{
+                        background,
+                        backgroundImage: cover ? `linear-gradient(145deg, rgba(0,0,0,0.28), rgba(0,0,0,0.55)), url(${cover.src})` : undefined,
+                        backgroundSize: cover ? "cover" : undefined,
+                        backgroundPosition: cover ? "center" : undefined,
+                      }}
                     >
                       <div
                         className="pointer-events-none absolute inset-0 opacity-[0.12]"
