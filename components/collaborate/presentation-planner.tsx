@@ -171,7 +171,9 @@ export function PresentationPlanner() {
       <Card>
         <CardHeader>
           <CardTitle>{es ? "Título del deck" : "Deck title"}</CardTitle>
-          <CardDescription>{es ? "Comparte este nombre en tu sala de estudio." : "Share this name in your study room."}</CardDescription>
+          <CardDescription>
+            {es ? "Comparte este nombre en tu aula virtual." : "Share this name in your virtual classroom."}
+          </CardDescription>
         </CardHeader>
         <input
           className="mx-5 mb-5 w-[calc(100%-2.5rem)] rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm outline-none ring-indigo-400/40 focus:ring"

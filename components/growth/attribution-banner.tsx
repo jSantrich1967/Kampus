@@ -44,7 +44,7 @@ export function AttributionBanner() {
       case "community_invite":
         return "Llegaste desde una invitación a la comunidad";
       case "study_room":
-        return "Llegaste desde una sala de estudio";
+        return "Llegaste desde la aula virtual";
       case "presentation_team":
         return "Llegaste desde un equipo de exposición";
       case "academic_radar":

@@ -64,7 +64,7 @@ export const navigationGroups: NavGroup[] = [
   {
     id: "work",
     items: [
-      { href: "/collaborate/rooms", key: "rooms", icon: Video, roles: ["student", "teacher", "learner"] },
+      { href: "/collaborate/aula-virtual", key: "rooms", icon: Video, roles: ["student", "teacher", "learner"] },
       { href: "/collaborate/presentations", key: "presentations", icon: Presentation, roles: ["student", "teacher", "learner"] },
     ],
   },

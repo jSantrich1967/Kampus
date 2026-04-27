@@ -359,7 +359,7 @@ export function CommunityHub() {
                     <Users className="h-3.5 w-3.5" /> ~{ch.membersApprox}
                   </span>
                   <Link
-                    href="/collaborate/rooms"
+                    href="/collaborate/aula-virtual"
                     className="text-indigo-200 hover:text-white"
                     onClick={(e) => e.stopPropagation()}
                   >

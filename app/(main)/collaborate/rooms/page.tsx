@@ -1,9 +1,6 @@
-import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
-import { StudyRoomPanel } from "@/components/collaborate/study-room-panel";
-
-export const metadata: Metadata = { title: "Salas de estudio" };
-
-export default function RoomsPage() {
-  return <StudyRoomPanel />;
+/** Old URL: bookmarks and links still work. */
+export default function RoomsPageRedirect() {
+  redirect("/collaborate/aula-virtual");
 }

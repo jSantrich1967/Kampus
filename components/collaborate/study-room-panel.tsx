@@ -59,7 +59,7 @@ export function StudyRoomPanel() {
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <ShareLinkButton
-            pathname="/collaborate/rooms"
+            pathname="/collaborate/aula-virtual"
             campaign="study_room"
             extra={{ room: "demo", title: state.title }}
             refHandle={profile.university || "kampus"}

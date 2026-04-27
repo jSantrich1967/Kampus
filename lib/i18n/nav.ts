@@ -22,7 +22,7 @@ export const navCopy = {
       agendaCalendar: "Mi calendario",
       risk: "Radar académico",
       community: "Comunidad",
-      rooms: "Salas de estudio",
+      rooms: "Aula virtual",
       presentations: "Exposición grupal",
       teaching: "Copiloto docente",
       institution: "Panel institucional",
