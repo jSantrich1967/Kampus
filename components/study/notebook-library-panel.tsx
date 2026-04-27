@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
+import { getNotebookSubjectIcon } from "@/components/study/notebook-subject-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -427,7 +428,18 @@ export function NotebookLibraryPanel() {
                           className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-black/30 text-lg font-bold tracking-tight text-white shadow-inner backdrop-blur-sm"
                           aria-hidden
                         >
-                          {initials}
+                          <div className="relative flex items-center justify-center">
+                            <span className="relative z-10">{initials}</span>
+                            {(() => {
+                              const { Icon, label } = getNotebookSubjectIcon(subjectName);
+                              return (
+                                <Icon
+                                  className="absolute -right-2 -top-2 h-6 w-6 text-white/35"
+                                  aria-label={label}
+                                />
+                              );
+                            })()}
+                          </div>
                         </div>
                         <div className="min-w-0 flex-1 pt-0.5">
                           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/50">Cuaderno</p>

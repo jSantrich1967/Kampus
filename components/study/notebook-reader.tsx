@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { PageHeader } from "@/components/layout/page-header";
 import { NotebookStudyKitPanel } from "@/components/study/notebook-study-kit-panel";
+import { getNotebookSubjectIcon } from "@/components/study/notebook-subject-icon";
 import { Button } from "@/components/ui/button";
 import { initialsFromSubject, notebookCoverGradient } from "@/lib/notebooks/cover-styles";
 import { subjectToPathSegment } from "@/lib/notebooks/paths";
@@ -183,7 +184,13 @@ export function NotebookReader({ subjectSlug }: Props) {
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 bg-black/30 text-sm font-bold text-white">
-                        {initialsFromSubject(subjectLabel)}
+                        <div className="relative flex items-center justify-center">
+                          <span className="relative z-10">{initialsFromSubject(subjectLabel)}</span>
+                          {(() => {
+                            const { Icon, label } = getNotebookSubjectIcon(subjectLabel);
+                            return <Icon className="absolute -right-1.5 -top-1.5 h-5 w-5 text-white/40" aria-label={label} />;
+                          })()}
+                        </div>
                       </div>
                       <div>
                         <p className="text-xs uppercase tracking-wide text-white/60">Clase / sesión</p>
