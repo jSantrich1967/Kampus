@@ -46,11 +46,14 @@ export function PresentationPlanner() {
   const liveStreamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
+  const audioRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<BlobPart[]>([]);
 
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
+  const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null);
   const [transcribing, setTranscribing] = useState(false);
 
   /** Si abren el enlace de convocatoria, alinean el mismo código de sesión en su dispositivo. */
@@ -125,6 +128,7 @@ export function PresentationPlanner() {
       if (recordedUrl) URL.revokeObjectURL(recordedUrl);
       setRecordedUrl(null);
       setRecordedBlob(null);
+      setRecordedAudioBlob(null);
 
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       liveStreamRef.current = stream;
@@ -138,6 +142,7 @@ export function PresentationPlanner() {
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       recorderRef.current = recorder;
       chunksRef.current = [];
+      audioChunksRef.current = [];
 
       recorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
@@ -150,7 +155,23 @@ export function PresentationPlanner() {
         setRecordedUrl(url);
       };
 
+      // Separate audio-only recorder to keep uploads small and reduce network failures.
+      const audioStream = new MediaStream(stream.getAudioTracks());
+      const audioMimeCandidates = ["audio/webm;codecs=opus", "audio/webm"];
+      const audioMimeType = audioMimeCandidates.find((t) => MediaRecorder.isTypeSupported(t)) ?? "";
+      const audioRecorder = new MediaRecorder(audioStream, audioMimeType ? { mimeType: audioMimeType } : undefined);
+      audioRecorderRef.current = audioRecorder;
+
+      audioRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      audioRecorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: audioRecorder.mimeType || "audio/webm" });
+        setRecordedAudioBlob(blob);
+      };
+
       recorder.start();
+      audioRecorder.start();
       setRecording(true);
     } catch (e) {
       setCameraError(es ? "No se pudo acceder a cámara/micrófono." : "Could not access camera/mic.");
@@ -162,20 +183,25 @@ export function PresentationPlanner() {
     try {
       recorderRef.current?.stop();
     } catch {}
+    try {
+      audioRecorderRef.current?.stop();
+    } catch {}
     setRecording(false);
     recorderRef.current = null;
+    audioRecorderRef.current = null;
     if (liveVideoRef.current) liveVideoRef.current.srcObject = null;
     liveStreamRef.current?.getTracks().forEach((t) => t.stop());
     liveStreamRef.current = null;
   }
 
   async function transcribeAndGrade() {
-    if (!recordedBlob) return;
+    const blob = recordedAudioBlob ?? recordedBlob;
+    if (!blob) return;
     setTranscribing(true);
     setTutorError(null);
     try {
       const fd = new FormData();
-      fd.append("file", recordedBlob, "rehearsal.webm");
+      fd.append("file", blob, recordedAudioBlob ? "rehearsal-audio.webm" : "rehearsal.webm");
       const res = await fetch("/api/presentation/transcribe", { method: "POST", body: fd });
       const json = (await res.json()) as { transcript?: string; error?: string };
       if (!res.ok) {
@@ -200,6 +226,9 @@ export function PresentationPlanner() {
     return () => {
       try {
         recorderRef.current?.stop();
+      } catch {}
+      try {
+        audioRecorderRef.current?.stop();
       } catch {}
       liveStreamRef.current?.getTracks().forEach((t) => t.stop());
       if (recordedUrl) URL.revokeObjectURL(recordedUrl);
@@ -778,8 +807,8 @@ export function PresentationPlanner() {
               </div>
               <p className="text-[11px] text-slate-500">
                 {es
-                  ? "Privacidad: el video se queda en tu navegador; solo se envía el archivo al servidor cuando presionas “Transcribir y calificar”."
-                  : "Privacy: the video stays in your browser; it’s only uploaded when you press “Transcribe & grade”."}
+                  ? "Privacidad: el video se queda en tu navegador. Para calificar, se sube solo el audio (más liviano) cuando presionas “Transcribir y calificar”."
+                  : "Privacy: the video stays in your browser. For grading, we upload only the audio (lighter) when you press “Transcribe & grade”."}
               </p>
             </div>
           </div>
