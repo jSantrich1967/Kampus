@@ -3,7 +3,6 @@ import {
   Building2,
   Calendar,
   CalendarDays,
-  Compass,
   Layers3,
   LayoutDashboard,
   Library,
@@ -12,6 +11,9 @@ import {
   Radar,
   School,
   Settings,
+  Stethoscope,
+  NotebookPen,
+  Trophy,
   Users,
   Video,
 } from "lucide-react";
@@ -28,7 +30,7 @@ export type NavItem = {
 };
 
 export type NavGroup = {
-  id: "command" | "learn" | "evaluate" | "together" | "work" | "teach" | "org" | "system";
+  id: "command" | "learn" | "evaluate" | "together" | "work" | "wellbeing" | "teach" | "org" | "system";
   items: NavItem[];
 };
 
@@ -40,7 +42,6 @@ export const navigationGroups: NavGroup[] = [
     id: "command",
     items: [
       { href: "/today", key: "today", icon: LayoutDashboard, roles: ["student", "teacher", "institution", "learner"] },
-      { href: "/pass-mode", key: "passMode", icon: Compass, roles: ["student"], premium: true },
     ],
   },
   {
@@ -56,6 +57,7 @@ export const navigationGroups: NavGroup[] = [
       { href: "/exams", key: "exams", icon: CalendarDays, roles: ["student", "teacher", "learner"] },
       { href: "/exams/calendar", key: "agendaCalendar", icon: Calendar, roles: ["student", "teacher", "learner"] },
       { href: "/risk", key: "risk", icon: Radar, roles: ["student", "teacher", "institution", "learner"] },
+      { href: "/pass-mode", key: "passMode", icon: Trophy, roles: ["student"], premium: true },
     ],
   },
   {
@@ -68,6 +70,13 @@ export const navigationGroups: NavGroup[] = [
       { href: "/collaborate/aula-virtual", key: "rooms", icon: Video, roles: ["student", "teacher", "learner"] },
       { href: "/collaborate/exposiciones", key: "myPresentations", icon: Presentation, roles: ["student", "teacher", "learner"] },
       { href: "/collaborate/investigaciones", key: "myResearch", icon: Microscope, roles: ["student", "teacher", "learner"] },
+    ],
+  },
+  {
+    id: "wellbeing",
+    items: [
+      { href: "/wellbeing/psychologist", key: "psychologist", icon: Stethoscope, roles: ["student", "teacher", "learner"] },
+      { href: "/wellbeing/diary", key: "diary", icon: NotebookPen, roles: ["student", "teacher", "learner"] },
     ],
   },
   {

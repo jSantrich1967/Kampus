@@ -4,10 +4,11 @@ export const navCopy = {
   es: {
     groups: {
       command: "Hoy",
-      learn: "Cuadernos y estudio",
+      learn: "Estudio",
       evaluate: "Evaluación",
       together: "Juntos",
       work: "Colaboración",
+      wellbeing: "Bienestar",
       teach: "Docencia",
       org: "Institución",
       system: "Sistema",
@@ -25,6 +26,8 @@ export const navCopy = {
       rooms: "Aula virtual",
       myPresentations: "Mis exposiciones",
       myResearch: "Mis investigaciones",
+      psychologist: "Psicólogo",
+      diary: "Mi Diario",
       teaching: "Copiloto docente",
       institution: "Panel institucional",
       settings: "Ajustes",
