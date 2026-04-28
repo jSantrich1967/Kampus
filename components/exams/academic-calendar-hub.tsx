@@ -82,7 +82,9 @@ export function AcademicCalendarHub() {
   const [works, setWorks] = useState<StudentWork[]>([]);
   const [classes, setClasses] = useState<ClassScheduleRow[]>([]);
   const [cancellations, setCancellations] = useState<ClassCancellation[]>([]);
-  const [classDocsByKey, setClassDocsByKey] = useState<Record<string, { count: number; filenames: string[] }>>({});
+  const [classDocsByKey, setClassDocsByKey] = useState<
+    Record<string, { count: number; filenames: string[]; topic?: string | null; lesson_point?: string | null }>
+  >({});
   const [presTitle, setPresTitle] = useState("");
   const [presDue, setPresDue] = useState<string | undefined>(undefined);
 
@@ -108,6 +110,15 @@ export function AcademicCalendarHub() {
   const [kitTitle, setKitTitle] = useState<string>("");
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
+
+  function materialHint(mat: { topic?: string | null; lesson_point?: string | null } | null): string {
+    if (!mat) return "";
+    const point = (mat.lesson_point ?? "").trim();
+    if (point) return `Punto: ${point}`;
+    const topic = (mat.topic ?? "").trim();
+    if (topic) return `Tema: ${topic}`;
+    return "";
+  }
 
   function isoFromDate(d: Date): string {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -296,7 +307,7 @@ export function AcademicCalendarHub() {
         const supabase = createSupabaseBrowserClient();
         const { data, error } = await supabase
           .from("notebook_documents")
-          .select("schedule_id,class_date,filename,user_id")
+          .select("schedule_id,class_date,filename,user_id,topic,lesson_point")
           .eq("user_id", authUserId)
           .gte("class_date", firstIso)
           .lte("class_date", lastIso)
@@ -304,16 +315,22 @@ export function AcademicCalendarHub() {
           .order("created_at", { ascending: false })
           .limit(500);
         if (error) throw error;
-        const rows = (data ?? []) as Pick<NotebookDocumentRow, "schedule_id" | "class_date" | "filename" | "user_id">[];
-        const next: Record<string, { count: number; filenames: string[] }> = {};
+        const rows = (data ?? []) as Pick<
+          NotebookDocumentRow,
+          "schedule_id" | "class_date" | "filename" | "user_id" | "topic" | "lesson_point"
+        >[];
+        const next: Record<string, { count: number; filenames: string[]; topic?: string | null; lesson_point?: string | null }> = {};
         for (const r of rows) {
           const sid = r.schedule_id ?? "";
           const cd = r.class_date ?? "";
           if (!sid || !cd) continue;
           const key = `${sid}:${cd}`;
-          if (!next[key]) next[key] = { count: 0, filenames: [] };
+          if (!next[key]) next[key] = { count: 0, filenames: [], topic: null, lesson_point: null };
           next[key]!.count += 1;
           if (next[key]!.filenames.length < 3) next[key]!.filenames.push(r.filename);
+          // rows are created_at desc, so first non-empty is the latest hint
+          if (!next[key]!.lesson_point && (r.lesson_point ?? "").trim()) next[key]!.lesson_point = r.lesson_point ?? null;
+          if (!next[key]!.topic && (r.topic ?? "").trim()) next[key]!.topic = r.topic ?? null;
         }
         if (!cancelled) setClassDocsByKey(next);
       } catch {
@@ -589,7 +606,8 @@ export function AcademicCalendarHub() {
                     const isClass = ev.kind === "class" && ev.id.startsWith("class:");
                     const key = isClass ? `${ev.id.split(":")[1]}:${ev.date}` : "";
                     const mat = key ? classDocsByKey[key] : null;
-                    const suffix = mat?.count ? ` · +${mat.count}` : "";
+                    const hint = materialHint(mat);
+                    const suffix = mat?.count ? ` · +${mat.count}${hint ? ` · ${hint}` : ""}` : hint ? ` · ${hint}` : "";
                     return (
                     <Link
                       key={ev.id}
