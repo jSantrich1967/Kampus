@@ -6,6 +6,7 @@ import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } fro
 
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
+import { RescuePackDisplay } from "@/components/rescue/rescue-pack-display";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +19,9 @@ import type { StudentWork } from "@/lib/schemas/student-work";
 import type { ClassCancellation, ClassScheduleRow } from "@/lib/schemas/class-schedule";
 import { subjectToPathSegment } from "@/lib/notebooks/paths";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
+import { combineNotebookExtractedTextForPack } from "@/lib/notebooks/document-tags";
+import { postRescuePack } from "@/lib/rescue/post-rescue-pack";
+import type { RescuePack } from "@/lib/class-rescue";
 import { seedDemoExamsIfEmpty, loadExams } from "@/lib/storage/exams-storage";
 import { loadPresentation } from "@/lib/storage/presentation-storage";
 import { addStudentWork, loadStudentWorks, removeStudentWork } from "@/lib/storage/student-work-storage";
@@ -98,7 +102,74 @@ export function AcademicCalendarHub() {
   const [cancelDate, setCancelDate] = useState("");
   const [cancelReason, setCancelReason] = useState("");
 
+  const [kitBusy, setKitBusy] = useState(false);
+  const [kitError, setKitError] = useState<string | null>(null);
+  const [kitPack, setKitPack] = useState<RescuePack | null>(null);
+  const [kitTitle, setKitTitle] = useState<string>("");
+
   const refresh = useCallback(() => setTick((t) => t + 1), []);
+
+  function isoFromDate(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
+  /** Monday=0..Sunday=6, returns next occurrence date (today included). */
+  function nextIsoForWeekday(weekdayMon0: number): string {
+    const now = new Date();
+    const todayMon0 = (now.getDay() + 6) % 7;
+    const delta = (weekdayMon0 - todayMon0 + 7) % 7;
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + delta);
+    return isoFromDate(d);
+  }
+
+  async function generateKitForClass(scheduleId: string, classDate: string, subject: string) {
+    if (!useCloud || !authUserId) {
+      setKitError("Para generar el kit desde material del cuaderno, inicia sesión (usa Supabase).");
+      return;
+    }
+    setKitBusy(true);
+    setKitError(null);
+    setKitPack(null);
+    setKitTitle(`${subject} · ${classDate}`);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error } = await supabase
+        .from("notebook_documents")
+        .select("*")
+        .eq("user_id", authUserId)
+        .eq("schedule_id", scheduleId)
+        .eq("class_date", classDate)
+        .order("created_at", { ascending: false })
+        .limit(40);
+      if (error) throw error;
+      const docs = (data as NotebookDocumentRow[]) ?? [];
+      if (docs.length === 0) {
+        setKitError("No hay material subido para esa clase/fecha todavía. Usa “Subir apuntes” primero.");
+        return;
+      }
+      const extractedFileText = combineNotebookExtractedTextForPack(docs);
+      const { pack, packError } = await postRescuePack(
+        {
+          subjectHint: subject,
+          sourceLabel: `Clase ${classDate} (${docs.length} archivo${docs.length === 1 ? "" : "s"})`,
+          sourceKind: "notes",
+          extractedFileText,
+          notes: "",
+          link: "",
+          uploadedFileCount: docs.length,
+          seedText: "",
+        },
+        { seedText: extractedFileText, subjectHint: subject, sourceLabel: "Cuaderno", sourceKind: "notes" },
+      );
+      setKitPack(pack);
+      setKitError(packError);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "No se pudo generar el kit.";
+      setKitError(formatAgendaCloudError(msg));
+    } finally {
+      setKitBusy(false);
+    }
+  }
 
   const loadAgenda = useCallback(async () => {
     if (!hydrated) return;
@@ -567,6 +638,21 @@ export function AcademicCalendarHub() {
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <Badge tone={kindTone(ev.kind)}>{kindLabel(ev.kind)}</Badge>
+                    {ev.kind === "class" && ev.id.startsWith("class:") ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => {
+                          const parts = ev.id.split(":");
+                          const scheduleId = parts[1] ?? "";
+                          if (!scheduleId) return;
+                          void generateKitForClass(scheduleId, ev.date, ev.subject);
+                        }}
+                      >
+                        Kit
+                      </Button>
+                    ) : null}
                     <Link href={ev.href} className="text-xs text-indigo-200 hover:underline">
                       Abrir
                     </Link>
@@ -759,6 +845,13 @@ export function AcademicCalendarHub() {
                       >
                         Subir apuntes de hoy
                       </Link>
+                      <button
+                        type="button"
+                        className="text-indigo-200 hover:underline"
+                        onClick={() => void generateKitForClass(c.id, nextIsoForWeekday(c.weekday), c.subject)}
+                      >
+                        Kit (próxima clase)
+                      </button>
                     </div>
                   </div>
                   <Button
@@ -856,6 +949,26 @@ export function AcademicCalendarHub() {
           </ul>
         </Card>
       </div>
+
+      {kitBusy || kitError || kitPack ? (
+        <Card className="border-indigo-400/20 bg-indigo-500/[0.06]">
+          <CardHeader>
+            <CardTitle>{kitTitle ? `Kit de estudio · ${kitTitle}` : "Kit de estudio"}</CardTitle>
+            <CardDescription>
+              {useCloud ? "Generado desde el material subido para esa clase/fecha." : "Requiere sesión para usar material del cuaderno."}
+            </CardDescription>
+          </CardHeader>
+          <div className="space-y-3 px-6 pb-6">
+            {kitBusy ? (
+              <div className="flex items-center gap-2 text-sm text-slate-400">
+                <Loader2 className="h-4 w-4 animate-spin" /> Generando kit…
+              </div>
+            ) : null}
+            {kitError ? <p className="text-sm text-rose-300">{kitError}</p> : null}
+          </div>
+          {kitPack ? <RescuePackDisplay pack={kitPack} premium={profile.plan === "premium"} /> : null}
+        </Card>
+      ) : null}
 
       {unscheduledExams.length > 0 ? (
         <Card className="border-amber-400/20 bg-amber-500/[0.06]">
