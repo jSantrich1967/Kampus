@@ -6,6 +6,7 @@ import { presentationTutorFeedbackSchema } from "@/lib/schemas/presentation-tuto
 export const runtime = "nodejs";
 
 const requestSchema = z.object({
+  level: z.enum(["school", "university"]).default("university"),
   deckTitle: z.string().max(200).default(""),
   rehearsalNotes: z.string().max(12000).default(""),
   masterScript: z.string().max(8000).default(""),
@@ -147,12 +148,19 @@ export async function POST(req: Request) {
       "Responde SOLO con un JSON válido (sin markdown, sin texto fuera del objeto).",
       "Último carácter debe ser `}`.",
       "No inventes hechos que no aparezcan en el material del alumno; si falta contexto, dilo en tips generales de presentación oral.",
-      "Sé concreto: referencia ritmo, claridad, estructura, manejo del tiempo y respuesta a preguntas si hay datos.",
+      "Sé específico: cada punto debe citar evidencia breve (frases exactas) tomada de la transcripción/notas o del guion.",
+      "Evita frases genéricas tipo 'mejorar claridad' sin explicar QUÉ y CÓMO.",
     ].join(" ");
 
     const keys = Object.keys(presentationTutorFeedbackSchema.shape).join(", ");
+    const levelLabel = body.level === "school" ? "colegio" : "universidad";
+    const strictness =
+      body.level === "school"
+        ? "Enfoque COLEGIO: explica con tono pedagógico, pasos simples, sin suponer metodología avanzada. Evalúa con exigencia moderada."
+        : "Enfoque UNIVERSIDAD: exige precisión, tesis clara, evidencia, y manejo de preguntas. Señala fallos con claridad y propone mejoras medibles.";
 
     const user = [
+      `Nivel: ${levelLabel}. ${strictness}`,
       `Título / deck: ${body.deckTitle.trim() || "(sin título)"}`,
       "",
       "--- Notas o transcripción del ensayo (prioridad) ---",
@@ -171,7 +179,10 @@ export async function POST(req: Request) {
       clip(body.juryNotes, 2000),
       "",
       `Devuelve un JSON con EXACTAMENTE estas llaves: ${keys}.`,
-      "- overallScoreLabel: una frase corta (puede incluir algo tipo 7/10 si tiene sentido).",
+      "- level: 'school' o 'university' según el nivel pedido.",
+      "- overallScore10: entero 0–10 (0 muy mal, 10 excelente).",
+      "- overallScoreLabel: una frase corta con el puntaje, p. ej. '7/10 — buena estructura, falta cierre'.",
+      "- rubric: 4–7 ítems con category, score10, notes y evidenceQuotes (1–3 citas cortas).",
       "- strengths: 3–6 bullets de lo bien hecho.",
       "- toImprove: 3–6 bullets de qué falló o está débil.",
       "- concreteTips: 4–8 acciones concretas para la siguiente corrida.",

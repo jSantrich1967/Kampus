@@ -41,6 +41,7 @@ export function PresentationPlanner() {
   const [tutorLoading, setTutorLoading] = useState(false);
   const [tutorError, setTutorError] = useState<string | null>(null);
   const [tutorFeedback, setTutorFeedback] = useState<PresentationTutorFeedback | null>(null);
+  const [tutorLevel, setTutorLevel] = useState<"school" | "university">("university");
 
   const liveVideoRef = useRef<HTMLVideoElement | null>(null);
   const liveStreamRef = useRef<MediaStream | null>(null);
@@ -347,6 +348,7 @@ export function PresentationPlanner() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          level: tutorLevel,
           deckTitle: state.deckTitle,
           rehearsalNotes: tutorNotes,
           masterScript: state.masterScript,
@@ -861,6 +863,17 @@ export function PresentationPlanner() {
         </CardHeader>
         <div className="space-y-4 px-5 pb-5">
           <label className="block space-y-1 text-xs text-slate-400">
+            {es ? "Nivel de exigencia" : "Strictness level"}
+            <select
+              className="w-full max-w-xs rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 outline-none ring-emerald-400/30 focus:ring"
+              value={tutorLevel}
+              onChange={(e) => setTutorLevel(e.target.value as "school" | "university")}
+            >
+              <option value="school">{es ? "Colegio (más pedagógico)" : "School (more guided)"}</option>
+              <option value="university">{es ? "Universidad (más exigente)" : "University (more strict)"}</option>
+            </select>
+          </label>
+          <label className="block space-y-1 text-xs text-slate-400">
             {es ? "Notas del ensayo / transcripción (obligatorio para calificar)" : "Rehearsal notes / transcript (required)"}
             <textarea
               className="min-h-32 w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-slate-100"
@@ -881,6 +894,24 @@ export function PresentationPlanner() {
           {tutorFeedback ? (
             <div className="space-y-4 rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-sm text-slate-200">
               <div className="text-base font-semibold text-white">{tutorFeedback.overallScoreLabel}</div>
+              <div className="grid gap-3 md:grid-cols-2">
+                {tutorFeedback.rubric.map((r, i) => (
+                  <div key={`r-${i}`} className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <div className="font-semibold text-slate-100">{r.category}</div>
+                      <div className="text-xs text-slate-400">{r.score10}/10</div>
+                    </div>
+                    <div className="mt-1 text-xs text-slate-300">{r.notes}</div>
+                    {r.evidenceQuotes?.length ? (
+                      <ul className="mt-2 list-disc space-y-1 pl-5 text-[11px] text-slate-400">
+                        {r.evidenceQuotes.map((q, qi) => (
+                          <li key={`q-${i}-${qi}`}>{q}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
               <div>
                 <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-300/90">
                   {es ? "Lo que salió bien" : "What went well"}
