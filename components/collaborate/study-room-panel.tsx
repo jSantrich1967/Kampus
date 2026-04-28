@@ -48,7 +48,7 @@ export function StudyRoomPanel() {
   return (
     <div className="space-y-8">
       <div>
-        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-200/80">Collaboration</div>
+        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-200/80">Colaboración</div>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white md:text-4xl">
           {es ? "Sala de estudio" : "Study room"}
         </h1>

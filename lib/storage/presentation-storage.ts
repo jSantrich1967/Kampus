@@ -42,25 +42,25 @@ export function ensurePresentationTeamCode(state: PresentationState): Presentati
 }
 
 export const defaultPresentationState: PresentationState = {
-  deckTitle: "Team presentation",
+  deckTitle: "Mi exposición",
   teamSessionCode: "",
   members: [
-    { id: "m1", name: "You", role: "Lead + opener" },
-    { id: "m2", name: "Teammate A", role: "Methods" },
-    { id: "m3", name: "Teammate B", role: "Results + Q&A" },
+    { id: "m1", name: "Yo", role: "Líder + apertura" },
+    { id: "m2", name: "Compañero A", role: "Métodos" },
+    { id: "m3", name: "Compañero B", role: "Resultados + preguntas" },
   ],
   sections: [
-    { id: "s1", title: "Hook + problem", ownerId: "m1", minutes: 2, script: "Why this matters in one sentence…" },
-    { id: "s2", title: "Approach", ownerId: "m2", minutes: 3, script: "How we tackled it…" },
-    { id: "s3", title: "Results", ownerId: "m3", minutes: 4, script: "What we learned…" },
+    { id: "s1", title: "Inicio + problema", ownerId: "m1", minutes: 2, script: "Por qué esto importa, en una frase…" },
+    { id: "s2", title: "Enfoque", ownerId: "m2", minutes: 3, script: "Cómo lo abordamos…" },
+    { id: "s3", title: "Resultados", ownerId: "m3", minutes: 4, script: "Qué aprendimos…" },
   ],
-  masterScript: "Full run-through script. Keep transitions explicit.",
+  masterScript: "Guión completo de corrida. Mantén transiciones claras.",
   probableQuestions: [
-    "What is the main limitation of your approach?",
-    "How would this scale with twice the data?",
-    "Why should we believe the key metric?",
+    "¿Cuál es la principal limitación de su enfoque?",
+    "¿Cómo escalaría esto con el doble de datos?",
+    "¿Por qué deberíamos confiar en la métrica clave?",
   ],
-  juryNotes: "Mock jury: watch pacing on slide 4; tighten jargon in section 2.",
+  juryNotes: "Jurado simulado: cuiden el ritmo en la diapositiva 4; bajen jerga en la sección 2.",
   teleprompterFontPx: 28,
   teleprompterLineHeight: 1.35,
 };
