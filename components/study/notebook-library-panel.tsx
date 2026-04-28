@@ -94,6 +94,12 @@ export function NotebookLibraryPanel() {
     return subject.trim() || profile.subjects[0] || "General";
   }, [newNotebookSubject, profile.subjects, subject]);
 
+  const canUploadMaterial = useMemo(() => {
+    // Hide the upload UI until the user has at least one notebook,
+    // except when coming from the calendar (deep link with class metadata).
+    return notebooks.length > 0 || docs.length > 0 || Boolean(uploadScheduleId) || Boolean(uploadClassDate);
+  }, [docs.length, notebooks.length, uploadClassDate, uploadScheduleId]);
+
   /** Cuadernos por materia (incluye vacíos creados en user_notebooks). */
   const notebooksBySubject = useMemo(() => {
     const pagesBySubject = new Map<string, NotebookDocumentRow[]>();
@@ -410,95 +416,103 @@ export function NotebookLibraryPanel() {
           </div>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2">
-          <label className="space-y-1 text-sm">
-            <span className="text-slate-400">Subir material al cuaderno</span>
-            <select
-              className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none ring-indigo-400/40 focus:ring"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-            >
-              {(profile.subjects.length ? profile.subjects : ["General"]).map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="space-y-1 text-sm">
-            <span className="text-slate-400">Otra materia (opcional)</span>
-            <input
-              className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none ring-indigo-400/40 focus:ring"
-              value={customSubject}
-              onChange={(e) => setCustomSubject(e.target.value)}
-              placeholder="Ej. Econometría II"
-            />
-          </label>
-        </div>
+        {canUploadMaterial ? (
+          <>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="space-y-1 text-sm">
+                <span className="text-slate-400">Subir material al cuaderno</span>
+                <select
+                  className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none ring-indigo-400/40 focus:ring"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                >
+                  {(profile.subjects.length ? profile.subjects : ["General"]).map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="text-slate-400">Otra materia (opcional)</span>
+                <input
+                  className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none ring-indigo-400/40 focus:ring"
+                  value={customSubject}
+                  onChange={(e) => setCustomSubject(e.target.value)}
+                  placeholder="Ej. Econometría II"
+                />
+              </label>
+            </div>
 
-        <div className="rounded-xl border border-white/10 bg-slate-950/40 p-4">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Etiquetas del material (opcional · se aplican a la próxima subida)
-          </p>
-          <p className="mb-3 text-[11px] text-slate-500">
-            La <strong className="text-slate-400">Materia</strong> es el cuaderno (arriba). Aquí puedes detallar{" "}
-            <strong className="text-slate-400">Tema</strong>, <strong className="text-slate-400">Punto</strong> y{" "}
-            <strong className="text-slate-400">Ejercicios prácticos</strong> para filtrar el kit de estudio en el lector.
-          </p>
-          <p className="mb-3 text-[11px] text-slate-600">
-            Consejo: escribe al menos <strong className="text-slate-400">Tema</strong> o <strong className="text-slate-400">Punto</strong> antes
-            de subir, así luego te aparecerán en los desplegables del kit de estudios.
-          </p>
-          <div className="grid gap-3 md:grid-cols-3">
-            <label className="space-y-1 text-xs">
-              <span className="text-slate-500">Tema</span>
-              <input
-                className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
-                value={uploadTopic}
-                onChange={(e) => setUploadTopic(e.target.value)}
-                placeholder="Ej. Números complejos"
-              />
-            </label>
-            <label className="space-y-1 text-xs">
-              <span className="text-slate-500">Punto</span>
-              <input
-                className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
-                value={uploadLessonPoint}
-                onChange={(e) => setUploadLessonPoint(e.target.value)}
-                placeholder="Ej. 2.1 Forma polar"
-              />
-            </label>
-            <label className="space-y-1 text-xs">
-              <span className="text-slate-500">Ejercicios prácticos</span>
-              <input
-                className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
-                value={uploadPracticeExercises}
-                onChange={(e) => setUploadPracticeExercises(e.target.value)}
-                placeholder="Ej. 1–12 pág. 45"
-              />
-            </label>
+            <div className="rounded-xl border border-white/10 bg-slate-950/40 p-4">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Etiquetas del material (opcional · se aplican a la próxima subida)
+              </p>
+              <p className="mb-3 text-[11px] text-slate-500">
+                La <strong className="text-slate-400">Materia</strong> es el cuaderno (arriba). Aquí puedes detallar{" "}
+                <strong className="text-slate-400">Tema</strong>, <strong className="text-slate-400">Punto</strong> y{" "}
+                <strong className="text-slate-400">Ejercicios prácticos</strong> para filtrar el kit de estudio en el lector.
+              </p>
+              <p className="mb-3 text-[11px] text-slate-600">
+                Consejo: escribe al menos <strong className="text-slate-400">Tema</strong> o <strong className="text-slate-400">Punto</strong> antes
+                de subir, así luego te aparecerán en los desplegables del kit de estudios.
+              </p>
+              <div className="grid gap-3 md:grid-cols-3">
+                <label className="space-y-1 text-xs">
+                  <span className="text-slate-500">Tema</span>
+                  <input
+                    className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
+                    value={uploadTopic}
+                    onChange={(e) => setUploadTopic(e.target.value)}
+                    placeholder="Ej. Números complejos"
+                  />
+                </label>
+                <label className="space-y-1 text-xs">
+                  <span className="text-slate-500">Punto</span>
+                  <input
+                    className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
+                    value={uploadLessonPoint}
+                    onChange={(e) => setUploadLessonPoint(e.target.value)}
+                    placeholder="Ej. 2.1 Forma polar"
+                  />
+                </label>
+                <label className="space-y-1 text-xs">
+                  <span className="text-slate-500">Ejercicios prácticos</span>
+                  <input
+                    className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
+                    value={uploadPracticeExercises}
+                    onChange={(e) => setUploadPracticeExercises(e.target.value)}
+                    placeholder="Ej. 1–12 pág. 45"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-indigo-500/20 px-4 py-2 text-sm font-medium text-indigo-100 ring-1 ring-indigo-400/30 hover:bg-indigo-500/30">
+                <Upload className="h-4 w-4" />
+                {uploading ? "Subiendo…" : "Subir archivos"}
+                <input
+                  type="file"
+                  className="hidden"
+                  multiple
+                  accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md,application/pdf,image/*,text/plain,text/markdown"
+                  disabled={uploading}
+                  onChange={(e) => void uploadFiles(e.target.files)}
+                />
+              </label>
+              <Button type="button" variant="secondary" size="sm" onClick={() => void loadDocs()} disabled={loading}>
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Actualizar lista
+              </Button>
+              <Badge tone="neutral">Subiendo al cuaderno: {effectiveSubject}</Badge>
+            </div>
+          </>
+        ) : (
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-400">
+            Primero crea tu primer cuaderno arriba. Cuando exista, aquí se habilita la subida de material para tus clases.
           </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-indigo-500/20 px-4 py-2 text-sm font-medium text-indigo-100 ring-1 ring-indigo-400/30 hover:bg-indigo-500/30">
-            <Upload className="h-4 w-4" />
-            {uploading ? "Subiendo…" : "Subir archivos"}
-            <input
-              type="file"
-              className="hidden"
-              multiple
-              accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md,application/pdf,image/*,text/plain,text/markdown"
-              disabled={uploading}
-              onChange={(e) => void uploadFiles(e.target.files)}
-            />
-          </label>
-          <Button type="button" variant="secondary" size="sm" onClick={() => void loadDocs()} disabled={loading}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Actualizar lista
-          </Button>
-          <Badge tone="neutral">Subiendo al cuaderno: {effectiveSubject}</Badge>
-        </div>
+        )}
 
         {error ? <p className="text-sm text-rose-300">{error}</p> : null}
 
