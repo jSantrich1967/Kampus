@@ -439,7 +439,9 @@ export function PresentationPlanner() {
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <div>
             <CardTitle>{es ? "Secciones (guion por bloque)" : "Sections (script blocks)"}</CardTitle>
-            <CardDescription>{es ? "Asigna dueño y minutos — esto alimenta el teleprompter." : "Assign owner + minutes — feeds the teleprompter."}</CardDescription>
+            <CardDescription>
+              {es ? "Asigna expositor y minutos — esto alimenta el teleprompter." : "Assign presenter + minutes — feeds the teleprompter."}
+            </CardDescription>
           </div>
           <Button type="button" size="sm" variant="secondary" onClick={addSection} className="gap-1">
             <Plus className="h-4 w-4" />
@@ -459,7 +461,7 @@ export function PresentationPlanner() {
                   />
                 </label>
                 <label className="space-y-1 text-xs text-slate-400">
-                  {es ? "Dueño" : "Owner"}
+                  {es ? "Expositor" : "Presenter"}
                   <select
                     className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-2 py-2 text-sm text-white"
                     value={s.ownerId}
