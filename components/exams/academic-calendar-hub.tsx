@@ -163,13 +163,16 @@ export function AcademicCalendarHub() {
       const iso = `${year}-${String(monthIndex0 + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
       for (const c of classes) {
         if (c.weekday !== weekdayMon0) continue;
+        const uploadHref = `/study/library?subject=${encodeURIComponent(c.subject)}&topic=${encodeURIComponent(
+          "Clase",
+        )}&lesson=${encodeURIComponent(`${iso} ${c.startTime}–${c.endTime}`)}&expand=1`;
         out.push({
           id: `class:${c.id}:${iso}`,
           kind: "class",
           date: iso,
           title: `${c.startTime} · ${c.subject}`,
           subject: c.subject,
-          href: `/study/notebook/${subjectToPathSegment(c.subject)}`,
+          href: uploadHref,
         });
       }
     }
@@ -559,9 +562,19 @@ export function AcademicCalendarHub() {
                     <div className="text-xs text-slate-500">
                       {[c.location, c.professorName].filter(Boolean).join(" · ") || "Sin detalles"}
                     </div>
-                    <Link href={`/study/notebook/${subjectToPathSegment(c.subject)}`} className="text-xs text-indigo-200 hover:underline">
-                      Abrir cuaderno
-                    </Link>
+                    <div className="mt-1 flex flex-wrap gap-3 text-xs">
+                      <Link href={`/study/notebook/${subjectToPathSegment(c.subject)}`} className="text-indigo-200 hover:underline">
+                        Ver cuaderno
+                      </Link>
+                      <Link
+                        href={`/study/library?subject=${encodeURIComponent(c.subject)}&topic=${encodeURIComponent(
+                          "Clase",
+                        )}&lesson=${encodeURIComponent(`Hoy ${c.startTime}–${c.endTime}`)}&expand=1`}
+                        className="text-indigo-200 hover:underline"
+                      >
+                        Subir apuntes de hoy
+                      </Link>
+                    </div>
                   </div>
                   <Button
                     type="button"

@@ -2,6 +2,7 @@
 
 import { BookMarked, BookOpen, ChevronDown, Loader2, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
@@ -22,6 +23,7 @@ const MAX_BYTES = 50 * 1024 * 1024; // aligned with bucket limit in migration (5
 
 export function NotebookLibraryPanel() {
   const { profile, authUserId } = useKampus();
+  const searchParams = useSearchParams();
   const [subject, setSubject] = useState(profile.subjects[0] ?? "");
   const [customSubject, setCustomSubject] = useState("");
   const [docs, setDocs] = useState<NotebookDocumentRow[]>([]);
@@ -45,6 +47,31 @@ export function NotebookLibraryPanel() {
     const first = profile.subjects[0];
     if (first && !subject.trim()) setSubject(first);
   }, [profile.subjects, customSubject, subject]);
+
+  // Deep link from calendar: /study/library?subject=...&topic=...&lesson=...&practice=...
+  useEffect(() => {
+    const subj = (searchParams.get("subject") ?? "").trim();
+    const topic = (searchParams.get("topic") ?? "").trim();
+    const lesson = (searchParams.get("lesson") ?? "").trim();
+    const practice = (searchParams.get("practice") ?? "").trim();
+    const expand = (searchParams.get("expand") ?? "").trim();
+
+    if (subj) {
+      // Prefer setting a known subject from profile; else use custom.
+      if (profile.subjects.includes(subj)) {
+        setCustomSubject("");
+        setSubject(subj);
+      } else {
+        setCustomSubject(subj);
+      }
+      setExpandedSubject(subj);
+    }
+    if (topic) setUploadTopic(topic);
+    if (lesson) setUploadLessonPoint(lesson);
+    if (practice) setUploadPracticeExercises(practice);
+    if (expand && subj) setExpandedSubject(subj);
+    // Only re-run when params/profile list changes.
+  }, [searchParams, profile.subjects]);
 
   const effectiveSubject = useMemo(() => {
     const c = customSubject.trim();
