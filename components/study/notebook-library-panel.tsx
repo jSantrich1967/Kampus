@@ -102,20 +102,6 @@ export function NotebookLibraryPanel() {
     return notebooks.length > 0 || docs.length > 0 || Boolean(uploadScheduleId) || Boolean(uploadClassDate);
   }, [docs.length, notebooks.length, uploadClassDate, uploadScheduleId]);
 
-  const createdNotebooks = useMemo(() => notebooksBySubject.filter((n) => n.exists), [notebooksBySubject]);
-
-  useEffect(() => {
-    if (kitSubject.trim()) return;
-    const first = createdNotebooks[0]?.subject ?? "";
-    if (first) setKitSubject(first);
-  }, [createdNotebooks, kitSubject]);
-
-  const kitHref = useMemo(() => {
-    const s = kitSubject.trim();
-    if (!s) return "/study/library/rescue";
-    return `/study/library/rescue?notebook=${subjectToPathSegment(s)}&subject=${encodeURIComponent(s)}`;
-  }, [kitSubject]);
-
   /** Cuadernos por materia (incluye vacíos creados en user_notebooks). */
   const notebooksBySubject = useMemo(() => {
     const pagesBySubject = new Map<string, NotebookDocumentRow[]>();
@@ -150,6 +136,20 @@ export function NotebookLibraryPanel() {
       pages: pagesBySubject.get(subjectKey) ?? [],
     }));
   }, [docs, notebooks, profile.subjects]);
+
+  const createdNotebooks = useMemo(() => notebooksBySubject.filter((n) => n.exists), [notebooksBySubject]);
+
+  useEffect(() => {
+    if (kitSubject.trim()) return;
+    const first = createdNotebooks[0]?.subject ?? "";
+    if (first) setKitSubject(first);
+  }, [createdNotebooks, kitSubject]);
+
+  const kitHref = useMemo(() => {
+    const s = kitSubject.trim();
+    if (!s) return "/study/library/rescue";
+    return `/study/library/rescue?notebook=${subjectToPathSegment(s)}&subject=${encodeURIComponent(s)}`;
+  }, [kitSubject]);
 
   const loadDocs = useCallback(async () => {
     if (!isSupabaseConfigured() || !authUserId) return;
