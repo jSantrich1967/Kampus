@@ -652,6 +652,14 @@ export function AcademicCalendarHub() {
                     <div className="truncate font-medium text-white">{ev.title}</div>
                     <div className="text-xs text-slate-500">
                       {ev.date} · {ev.subject}
+                      {ev.kind === "class" && ev.id.startsWith("class:") ? (
+                        (() => {
+                          const scheduleId = ev.id.split(":")[1] ?? "";
+                          const key = scheduleId ? `${scheduleId}:${ev.date}` : "";
+                          const hint = key ? materialHint(classDocsByKey[key] ?? null) : "";
+                          return hint ? <span className="text-slate-400"> · {hint}</span> : null;
+                        })()
+                      ) : null}
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
