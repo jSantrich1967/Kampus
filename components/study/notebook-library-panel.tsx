@@ -36,6 +36,8 @@ export function NotebookLibraryPanel() {
   const [uploadTopic, setUploadTopic] = useState("");
   const [uploadLessonPoint, setUploadLessonPoint] = useState("");
   const [uploadPracticeExercises, setUploadPracticeExercises] = useState("");
+  const [uploadScheduleId, setUploadScheduleId] = useState<string | null>(null);
+  const [uploadClassDate, setUploadClassDate] = useState<string | null>(null);
   const [editingDocId, setEditingDocId] = useState<string | null>(null);
   const [editTopic, setEditTopic] = useState("");
   const [editLessonPoint, setEditLessonPoint] = useState("");
@@ -55,6 +57,8 @@ export function NotebookLibraryPanel() {
     const lesson = (searchParams.get("lesson") ?? "").trim();
     const practice = (searchParams.get("practice") ?? "").trim();
     const expand = (searchParams.get("expand") ?? "").trim();
+    const scheduleId = (searchParams.get("scheduleId") ?? "").trim();
+    const classDate = (searchParams.get("classDate") ?? "").trim();
 
     if (subj) {
       // Prefer setting a known subject from profile; else use custom.
@@ -70,6 +74,8 @@ export function NotebookLibraryPanel() {
     if (lesson) setUploadLessonPoint(lesson);
     if (practice) setUploadPracticeExercises(practice);
     if (expand && subj) setExpandedSubject(subj);
+    if (scheduleId) setUploadScheduleId(scheduleId);
+    if (classDate) setUploadClassDate(classDate);
     // Only re-run when params/profile list changes.
   }, [searchParams, profile.subjects]);
 
@@ -180,6 +186,8 @@ export function NotebookLibraryPanel() {
           topic: uploadTopic.trim(),
           lesson_point: uploadLessonPoint.trim(),
           practice_exercises: uploadPracticeExercises.trim(),
+          schedule_id: uploadScheduleId,
+          class_date: uploadClassDate,
           storage_path: storagePath,
           filename: file.name,
           mime_type: file.type || "application/octet-stream",

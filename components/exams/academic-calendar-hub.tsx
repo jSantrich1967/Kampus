@@ -17,6 +17,7 @@ import type { Exam } from "@/lib/schemas/exams";
 import type { StudentWork } from "@/lib/schemas/student-work";
 import type { ClassCancellation, ClassScheduleRow } from "@/lib/schemas/class-schedule";
 import { subjectToPathSegment } from "@/lib/notebooks/paths";
+import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 import { seedDemoExamsIfEmpty, loadExams } from "@/lib/storage/exams-storage";
 import { loadPresentation } from "@/lib/storage/presentation-storage";
 import { addStudentWork, loadStudentWorks, removeStudentWork } from "@/lib/storage/student-work-storage";
@@ -77,6 +78,7 @@ export function AcademicCalendarHub() {
   const [works, setWorks] = useState<StudentWork[]>([]);
   const [classes, setClasses] = useState<ClassScheduleRow[]>([]);
   const [cancellations, setCancellations] = useState<ClassCancellation[]>([]);
+  const [classDocsByKey, setClassDocsByKey] = useState<Record<string, { count: number; filenames: string[] }>>({});
   const [presTitle, setPresTitle] = useState("");
   const [presDue, setPresDue] = useState<string | undefined>(undefined);
 
@@ -177,7 +179,9 @@ export function AcademicCalendarHub() {
         const cancelled = cancellations.find((x) => x.scheduleId === c.id && x.classDate === iso) ?? null;
         const uploadHref = `/study/library?subject=${encodeURIComponent(c.subject)}&topic=${encodeURIComponent(
           "Clase",
-        )}&lesson=${encodeURIComponent(`${iso} ${c.startTime}–${c.endTime}`)}&expand=1`;
+        )}&lesson=${encodeURIComponent(`${iso} ${c.startTime}–${c.endTime}`)}&scheduleId=${encodeURIComponent(
+          c.id,
+        )}&classDate=${encodeURIComponent(iso)}&expand=1`;
         out.push({
           id: `class:${c.id}:${iso}`,
           kind: "class",
@@ -201,6 +205,55 @@ export function AcademicCalendarHub() {
   const matrix = useMemo(() => monthMatrix(y, m0), [y, m0]);
 
   const monthTitle = cursor.toLocaleString("es-ES", { month: "long", year: "numeric" });
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!useCloud || !authUserId) {
+      setClassDocsByKey({});
+      return;
+    }
+    const year = cursor.getFullYear();
+    const monthIndex0 = cursor.getMonth();
+    const firstIso = `${year}-${String(monthIndex0 + 1).padStart(2, "0")}-01`;
+    const lastIso = `${year}-${String(monthIndex0 + 1).padStart(2, "0")}-${String(
+      new Date(year, monthIndex0 + 1, 0).getDate(),
+    ).padStart(2, "0")}`;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from("notebook_documents")
+          .select("schedule_id,class_date,filename,user_id")
+          .eq("user_id", authUserId)
+          .gte("class_date", firstIso)
+          .lte("class_date", lastIso)
+          .not("schedule_id", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(500);
+        if (error) throw error;
+        const rows = (data ?? []) as Pick<NotebookDocumentRow, "schedule_id" | "class_date" | "filename" | "user_id">[];
+        const next: Record<string, { count: number; filenames: string[] }> = {};
+        for (const r of rows) {
+          const sid = r.schedule_id ?? "";
+          const cd = r.class_date ?? "";
+          if (!sid || !cd) continue;
+          const key = `${sid}:${cd}`;
+          if (!next[key]) next[key] = { count: 0, filenames: [] };
+          next[key]!.count += 1;
+          if (next[key]!.filenames.length < 3) next[key]!.filenames.push(r.filename);
+        }
+        if (!cancelled) setClassDocsByKey(next);
+      } catch {
+        if (!cancelled) setClassDocsByKey({});
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, useCloud, authUserId, cursor]);
 
   const upcoming = useMemo(() => {
     const today = localIsoDate();
@@ -461,7 +514,12 @@ export function AcademicCalendarHub() {
               >
                 <div className={cn("text-xs font-semibold", isToday ? "text-indigo-200" : "text-slate-400")}>{day}</div>
                 <div className="mt-1 space-y-0.5">
-                  {dayEvents.slice(0, 3).map((ev) => (
+                  {dayEvents.slice(0, 3).map((ev) => {
+                    const isClass = ev.kind === "class" && ev.id.startsWith("class:");
+                    const key = isClass ? `${ev.id.split(":")[1]}:${ev.date}` : "";
+                    const mat = key ? classDocsByKey[key] : null;
+                    const suffix = mat?.count ? ` · +${mat.count}` : "";
+                    return (
                     <Link
                       key={ev.id}
                       href={ev.href}
@@ -475,8 +533,10 @@ export function AcademicCalendarHub() {
                       title={`${kindLabel(ev.kind)}: ${ev.title}${ev.note ? ` · ${ev.note}` : ""}`}
                     >
                       {ev.title}
+                      {suffix}
                     </Link>
-                  ))}
+                    );
+                  })}
                   {dayEvents.length > 3 ? (
                     <div className="text-[10px] text-slate-500">+{dayEvents.length - 3} más</div>
                   ) : null}
@@ -692,7 +752,9 @@ export function AcademicCalendarHub() {
                       <Link
                         href={`/study/library?subject=${encodeURIComponent(c.subject)}&topic=${encodeURIComponent(
                           "Clase",
-                        )}&lesson=${encodeURIComponent(`Hoy ${c.startTime}–${c.endTime}`)}&expand=1`}
+                        )}&lesson=${encodeURIComponent(`Hoy ${c.startTime}–${c.endTime}`)}&scheduleId=${encodeURIComponent(
+                          c.id,
+                        )}&classDate=${encodeURIComponent(localIsoDate())}&expand=1`}
                         className="text-indigo-200 hover:underline"
                       >
                         Subir apuntes de hoy

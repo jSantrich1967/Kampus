@@ -8,6 +8,10 @@ export type NotebookDocumentRow = {
   lesson_point?: string;
   /** Ejercicios prácticos o referencia (opcional). */
   practice_exercises?: string;
+  /** Cuando el documento se sube desde el calendario, se enlaza a la clase del horario (opcional). */
+  schedule_id?: string | null;
+  /** Fecha YYYY-MM-DD de la clase (opcional). */
+  class_date?: string | null;
   storage_path: string;
   filename: string;
   mime_type: string;
