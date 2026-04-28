@@ -45,6 +45,7 @@ export function NotebookLibraryPanel() {
   const [editPractice, setEditPractice] = useState("");
   const [savingTags, setSavingTags] = useState(false);
   const [creatingNotebook, setCreatingNotebook] = useState(false);
+  const [newNotebookSubject, setNewNotebookSubject] = useState("");
 
   useEffect(() => {
     if (customSubject.trim()) return;
@@ -86,6 +87,12 @@ export function NotebookLibraryPanel() {
     if (c) return c;
     return subject.trim() || "General";
   }, [customSubject, subject]);
+
+  const effectiveNewNotebookSubject = useMemo(() => {
+    const s = newNotebookSubject.trim();
+    if (s) return s;
+    return subject.trim() || profile.subjects[0] || "General";
+  }, [newNotebookSubject, profile.subjects, subject]);
 
   /** Cuadernos por materia (incluye vacíos creados en user_notebooks). */
   const notebooksBySubject = useMemo(() => {
@@ -236,6 +243,7 @@ export function NotebookLibraryPanel() {
       const { error: insErr } = await supabase.from("user_notebooks").upsert({ user_id: authUserId, subject: s });
       if (insErr) throw insErr;
       setExpandedSubject(s);
+      setNewNotebookSubject("");
       await loadDocs();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "No se pudo crear el cuaderno.";
@@ -351,9 +359,60 @@ export function NotebookLibraryPanel() {
       </CardHeader>
 
       <div className="space-y-4 px-6 pb-6">
+        <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Crear cuaderno</p>
+          <p className="mb-3 text-[11px] text-slate-500">
+            Un <strong className="text-slate-400">cuaderno</strong> es una materia/asignatura (aunque esté vacío). Luego, cada día subes la clase como
+            material dentro de ese cuaderno.
+          </p>
+
+          <div className="grid gap-3 md:grid-cols-3">
+            <label className="space-y-1 text-sm md:col-span-1">
+              <span className="text-slate-400">Sugerencias (tu perfil)</span>
+              <select
+                className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none ring-indigo-400/40 focus:ring"
+                value={subject}
+                onChange={(e) => {
+                  setSubject(e.target.value);
+                  setNewNotebookSubject("");
+                }}
+              >
+                {(profile.subjects.length ? profile.subjects : ["General"]).map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="space-y-1 text-sm md:col-span-2">
+              <span className="text-slate-400">Nombre de la materia</span>
+              <input
+                className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none ring-indigo-400/40 focus:ring"
+                value={newNotebookSubject}
+                onChange={(e) => setNewNotebookSubject(e.target.value)}
+                placeholder="Ej. Álgebra lineal"
+              />
+            </label>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={creatingNotebook}
+              onClick={() => void createNotebook(effectiveNewNotebookSubject)}
+            >
+              <Plus className="h-4 w-4" />
+              {creatingNotebook ? "Creando…" : "Crear cuaderno"}
+            </Button>
+            <Badge tone="neutral">Se creará: {effectiveNewNotebookSubject}</Badge>
+          </div>
+        </div>
+
         <div className="grid gap-3 md:grid-cols-2">
           <label className="space-y-1 text-sm">
-            <span className="text-slate-400">Materia (desde tu perfil)</span>
+            <span className="text-slate-400">Subir material al cuaderno</span>
             <select
               className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none ring-indigo-400/40 focus:ring"
               value={subject}
@@ -369,7 +428,7 @@ export function NotebookLibraryPanel() {
           <label className="space-y-1 text-sm">
             <span className="text-slate-400">Otra materia (opcional)</span>
             <input
-              className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 outline-none ring-indigo-400/40 focus:ring"
+              className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none ring-indigo-400/40 focus:ring"
               value={customSubject}
               onChange={(e) => setCustomSubject(e.target.value)}
               placeholder="Ej. Econometría II"
