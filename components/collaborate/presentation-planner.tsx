@@ -89,6 +89,20 @@ export function PresentationPlanner() {
     };
   }, [authUserId]);
 
+  function resetDemoToDefaults() {
+    // Los defaults cambiaron a español, pero el usuario puede tener un estado viejo en localStorage.
+    // Esto fuerza un “reset” para que vea la UI limpia sin abrir DevTools.
+    const next: PresentationState = { ...defaultPresentationState, teamSessionCode: generateTeamSessionCode() };
+    setState(next);
+    savePresentation(next);
+    setTutorNotes("");
+    setTutorFeedback(null);
+    setTutorError(null);
+    setTeleIndex(0);
+    setRunning(false);
+    setRehearsalSeconds(0);
+  }
+
   useEffect(() => {
     if (!hydrated) return;
     savePresentation(state);
@@ -230,6 +244,9 @@ export function PresentationPlanner() {
             <Video className="h-4 w-4" />
             {es ? "Aula virtual (vivo)" : "Virtual classroom (live)"}
           </Link>
+          <Button type="button" size="sm" variant="ghost" onClick={resetDemoToDefaults}>
+            {es ? "Restablecer demo" : "Reset demo"}
+          </Button>
         </div>
       </div>
 
