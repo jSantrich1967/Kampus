@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { authCopy } from "@/lib/i18n/auth";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -24,6 +25,7 @@ export default function SettingsPage() {
   const showAuthBypassBanner = shouldShowAuthBypassWarning();
   const [authBypassDismissed, setAuthBypassDismissed] = useState(false);
   const [authBypassHydrated, setAuthBypassHydrated] = useState(false);
+  const [subjectDraft, setSubjectDraft] = useState("");
 
   useEffect(() => {
     setAuthBypassDismissed(loadAuthBypassBannerDismissed());
@@ -32,6 +34,9 @@ export default function SettingsPage() {
 
   const showAuthBypassUi =
     showAuthBypassBanner && authBypassHydrated && !authBypassDismissed;
+
+  const subjects = profile.subjects ?? [];
+  const canRemoveSubject = subjects.length > 1;
 
   return (
     <div className="space-y-6">
@@ -132,6 +137,77 @@ export default function SettingsPage() {
           >
             ES
           </Button>
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Materias</CardTitle>
+          <CardDescription>
+            Agrega o elimina materias del perfil. Esto controla las sugerencias que ves en “Mis cuadernos”, calendario y formularios.
+          </CardDescription>
+        </CardHeader>
+
+        <div className="space-y-3 px-6 pb-6">
+          <div className="flex flex-wrap gap-2">
+            {subjects.map((s) => (
+              <Badge key={s} tone="neutral" className="inline-flex items-center gap-2">
+                <span className="max-w-[16rem] truncate">{s}</span>
+                <button
+                  type="button"
+                  className="rounded-md bg-white/10 px-1.5 py-0.5 text-[11px] text-slate-200 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={!canRemoveSubject}
+                  aria-label={`Eliminar materia ${s}`}
+                  onClick={() => {
+                    if (!canRemoveSubject) return;
+                    setProfile({
+                      ...profile,
+                      subjects: subjects.filter((x) => x !== s),
+                      upcomingExams: (profile.upcomingExams ?? []).filter((e) => e.subject !== s),
+                    });
+                  }}
+                >
+                  Quitar
+                </button>
+              </Badge>
+            ))}
+          </div>
+
+          {!canRemoveSubject ? (
+            <p className="text-xs text-slate-500">Debes conservar al menos 1 materia en el perfil.</p>
+          ) : null}
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <label className="flex-1 space-y-1 text-sm">
+              <span className="text-slate-400">Agregar materia</span>
+              <input
+                className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none ring-indigo-400/40 focus:ring"
+                value={subjectDraft}
+                onChange={(e) => setSubjectDraft(e.target.value)}
+                placeholder="Ej. Econometría"
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  const next = subjectDraft.trim();
+                  if (!next) return;
+                  e.preventDefault();
+                  setProfile({ ...profile, subjects: Array.from(new Set([...subjects, next])) });
+                  setSubjectDraft("");
+                }}
+              />
+            </label>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                const next = subjectDraft.trim();
+                if (!next) return;
+                setProfile({ ...profile, subjects: Array.from(new Set([...subjects, next])) });
+                setSubjectDraft("");
+              }}
+            >
+              Agregar
+            </Button>
+          </div>
         </div>
       </Card>
 
