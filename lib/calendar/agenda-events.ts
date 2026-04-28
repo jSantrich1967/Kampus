@@ -1,7 +1,7 @@
 import type { Exam } from "@/lib/schemas/exams";
 import type { StudentWork } from "@/lib/schemas/student-work";
 
-export type AgendaKind = "exam" | "presentation" | "work";
+export type AgendaKind = "exam" | "presentation" | "work" | "class";
 
 export type AgendaEvent = {
   id: string;

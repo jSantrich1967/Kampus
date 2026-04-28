@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { demoExamDueDatesSameMonth } from "@/lib/calendar/local-iso-date";
 import { examFeedbackSchema, examQuestionSchema, type Exam, type ExamAttempt, type ExamFeedback } from "@/lib/schemas/exams";
+import { classScheduleListSchema, type ClassScheduleRow } from "@/lib/schemas/class-schedule";
 import type { StudentWork } from "@/lib/schemas/student-work";
 import { formatAgendaCloudError } from "@/lib/notebooks/storage-errors";
 
@@ -41,6 +42,16 @@ type AgendaRow = {
   user_id: string;
   deck_title: string;
   presentation_due_date: string | null;
+};
+
+type ClassScheduleDbRow = {
+  id: string;
+  weekday: number;
+  start_time: string;
+  end_time: string;
+  subject: string;
+  location: string | null;
+  professor_name: string | null;
 };
 
 function mapExamRow(row: UserExamRow): Exam {
@@ -228,6 +239,62 @@ export async function insertStudentWorkRemote(
 
 export async function deleteStudentWorkRemote(client: SupabaseClient, userId: string, workId: string): Promise<void> {
   const { error } = await client.from("student_works").delete().eq("id", workId).eq("user_id", userId);
+  if (error) throw new Error(formatAgendaCloudError(error.message));
+}
+
+export async function fetchClassScheduleRemote(client: SupabaseClient, userId: string): Promise<ClassScheduleRow[]> {
+  const { data, error } = await client
+    .from("user_class_schedule")
+    .select("id,weekday,start_time,end_time,subject,location,professor_name")
+    .eq("user_id", userId)
+    .order("weekday", { ascending: true })
+    .order("start_time", { ascending: true });
+  if (error) throw new Error(formatAgendaCloudError(error.message));
+  const rows = ((data ?? []) as ClassScheduleDbRow[]).map((r) => ({
+    id: r.id,
+    weekday: r.weekday,
+    startTime: (r.start_time ?? "").slice(0, 5),
+    endTime: (r.end_time ?? "").slice(0, 5),
+    subject: r.subject ?? "Clase",
+    location: r.location ?? "",
+    professorName: r.professor_name ?? "",
+  }));
+  return classScheduleListSchema.parse(rows);
+}
+
+export async function insertClassScheduleRemote(
+  client: SupabaseClient,
+  userId: string,
+  input: Omit<ClassScheduleRow, "id">,
+): Promise<ClassScheduleRow> {
+  const { data, error } = await client
+    .from("user_class_schedule")
+    .insert({
+      user_id: userId,
+      weekday: input.weekday,
+      start_time: input.startTime,
+      end_time: input.endTime,
+      subject: input.subject,
+      location: input.location,
+      professor_name: input.professorName,
+    })
+    .select("id,weekday,start_time,end_time,subject,location,professor_name")
+    .single();
+  if (error) throw new Error(formatAgendaCloudError(error.message));
+  const row = data as ClassScheduleDbRow;
+  return classScheduleListSchema.element.parse({
+    id: row.id,
+    weekday: row.weekday,
+    startTime: (row.start_time ?? "").slice(0, 5),
+    endTime: (row.end_time ?? "").slice(0, 5),
+    subject: row.subject ?? "",
+    location: row.location ?? "",
+    professorName: row.professor_name ?? "",
+  });
+}
+
+export async function deleteClassScheduleRemote(client: SupabaseClient, userId: string, id: string): Promise<void> {
+  const { error } = await client.from("user_class_schedule").delete().eq("id", id).eq("user_id", userId);
   if (error) throw new Error(formatAgendaCloudError(error.message));
 }
 
