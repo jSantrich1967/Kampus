@@ -11,6 +11,8 @@ export type AgendaEvent = {
   title: string;
   subject: string;
   href: string;
+  /** Optional status text (e.g. cancellation reason). */
+  note?: string;
 };
 
 export function buildAgendaEvents(params: {

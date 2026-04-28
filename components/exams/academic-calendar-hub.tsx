@@ -15,7 +15,7 @@ import { cn } from "@/lib/cn";
 import { formatAgendaCloudError } from "@/lib/notebooks/storage-errors";
 import type { Exam } from "@/lib/schemas/exams";
 import type { StudentWork } from "@/lib/schemas/student-work";
-import type { ClassScheduleRow } from "@/lib/schemas/class-schedule";
+import type { ClassCancellation, ClassScheduleRow } from "@/lib/schemas/class-schedule";
 import { subjectToPathSegment } from "@/lib/notebooks/paths";
 import { seedDemoExamsIfEmpty, loadExams } from "@/lib/storage/exams-storage";
 import { loadPresentation } from "@/lib/storage/presentation-storage";
@@ -28,11 +28,14 @@ import {
   ensureDemoExamsRemote,
   fetchPresentationAgendaRemote,
   fetchClassScheduleRemote,
+  fetchClassCancellationsRemote,
   fetchStudentWorksRemote,
   fetchUserExams,
   insertClassScheduleRemote,
   insertStudentWorkRemote,
   deleteClassScheduleRemote,
+  upsertClassCancellationRemote,
+  deleteClassCancellationRemote,
 } from "@/lib/supabase/agenda-db";
 
 const WEEKDAYS_ES = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
@@ -73,6 +76,7 @@ export function AcademicCalendarHub() {
   const [exams, setExams] = useState<Exam[]>([]);
   const [works, setWorks] = useState<StudentWork[]>([]);
   const [classes, setClasses] = useState<ClassScheduleRow[]>([]);
+  const [cancellations, setCancellations] = useState<ClassCancellation[]>([]);
   const [presTitle, setPresTitle] = useState("");
   const [presDue, setPresDue] = useState<string | undefined>(undefined);
 
@@ -88,6 +92,10 @@ export function AcademicCalendarHub() {
   const [classLocation, setClassLocation] = useState("");
   const [classProfessor, setClassProfessor] = useState("");
 
+  const [cancelScheduleId, setCancelScheduleId] = useState("");
+  const [cancelDate, setCancelDate] = useState("");
+  const [cancelReason, setCancelReason] = useState("");
+
   const refresh = useCallback(() => setTick((t) => t + 1), []);
 
   const loadAgenda = useCallback(async () => {
@@ -99,15 +107,17 @@ export function AcademicCalendarHub() {
       if (useCloud) {
         const supabase = createSupabaseBrowserClient();
         await ensureDemoExamsRemote(supabase, authUserId!, profile.subjects[0]);
-        const [examList, workList, classList, remoteAgenda] = await Promise.all([
+        const [examList, workList, classList, cancelList, remoteAgenda] = await Promise.all([
           fetchUserExams(supabase, authUserId!),
           fetchStudentWorksRemote(supabase, authUserId!),
           fetchClassScheduleRemote(supabase, authUserId!),
+          fetchClassCancellationsRemote(supabase, authUserId!),
           fetchPresentationAgendaRemote(supabase, authUserId!),
         ]);
         setExams(examList);
         setWorks(workList);
         setClasses(classList);
+        setCancellations(cancelList);
         const local = loadPresentation();
         if (remoteAgenda) {
           setPresTitle(remoteAgenda.deckTitle.trim() ? remoteAgenda.deckTitle : local.deckTitle);
@@ -121,6 +131,7 @@ export function AcademicCalendarHub() {
         setExams(loadExams());
         setWorks(loadStudentWorks());
         setClasses(loadClassSchedule());
+        setCancellations([]);
         const loc = loadPresentation();
         setPresTitle(loc.deckTitle);
         setPresDue(loc.presentationDueDate);
@@ -163,6 +174,7 @@ export function AcademicCalendarHub() {
       const iso = `${year}-${String(monthIndex0 + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
       for (const c of classes) {
         if (c.weekday !== weekdayMon0) continue;
+        const cancelled = cancellations.find((x) => x.scheduleId === c.id && x.classDate === iso) ?? null;
         const uploadHref = `/study/library?subject=${encodeURIComponent(c.subject)}&topic=${encodeURIComponent(
           "Clase",
         )}&lesson=${encodeURIComponent(`${iso} ${c.startTime}–${c.endTime}`)}&expand=1`;
@@ -170,14 +182,15 @@ export function AcademicCalendarHub() {
           id: `class:${c.id}:${iso}`,
           kind: "class",
           date: iso,
-          title: `${c.startTime} · ${c.subject}`,
+          title: cancelled ? `${c.startTime} · ${c.subject} (suspendida)` : `${c.startTime} · ${c.subject}`,
           subject: c.subject,
           href: uploadHref,
+          note: cancelled?.reason?.trim() ? `Justificación: ${cancelled.reason.trim()}` : undefined,
         });
       }
     }
     return out;
-  }, [classes, cursor]);
+  }, [classes, cancellations, cursor]);
 
   const allEvents = useMemo(() => {
     return [...events, ...classEvents].sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title));
@@ -301,6 +314,47 @@ export function AcademicCalendarHub() {
     if (!classSubject.trim() && profile.subjects[0]) setClassSubject(profile.subjects[0]!);
   }, [hydrated, profile.subjects, classSubject]);
 
+  useEffect(() => {
+    if (cancelDate.trim()) return;
+    setCancelDate(localIsoDate());
+  }, [cancelDate]);
+
+  useEffect(() => {
+    if (cancelScheduleId.trim()) return;
+    if (classes[0]?.id) setCancelScheduleId(classes[0].id);
+  }, [cancelScheduleId, classes]);
+
+  async function submitCancellation(e: FormEvent) {
+    e.preventDefault();
+    if (!cancelScheduleId.trim() || !cancelDate.trim()) return;
+    try {
+      if (useCloud) {
+        const supabase = createSupabaseBrowserClient();
+        await upsertClassCancellationRemote(supabase, authUserId!, {
+          scheduleId: cancelScheduleId,
+          classDate: cancelDate,
+          reason: cancelReason.trim(),
+        });
+      }
+      setCancelReason("");
+      refresh();
+    } catch (err) {
+      setLoadError(formatAgendaCloudError(err instanceof Error ? err.message : "Error al guardar suspensión."));
+    }
+  }
+
+  async function removeCancellation(id: string) {
+    try {
+      if (useCloud) {
+        const supabase = createSupabaseBrowserClient();
+        await deleteClassCancellationRemote(supabase, authUserId!, id);
+      }
+      refresh();
+    } catch (err) {
+      setLoadError(formatAgendaCloudError(err instanceof Error ? err.message : "Error al eliminar suspensión."));
+    }
+  }
+
   if (!hydrated) return <div className="text-sm text-slate-400">Cargando…</div>;
 
   const workStorageHint = useCloud
@@ -418,7 +472,7 @@ export function AcademicCalendarHub() {
                         ev.kind === "class" && "bg-white/5 text-slate-200 ring-white/10",
                         ev.kind === "work" && "bg-white/5 text-slate-200 ring-white/10",
                       )}
-                      title={`${kindLabel(ev.kind)}: ${ev.title}`}
+                      title={`${kindLabel(ev.kind)}: ${ev.title}${ev.note ? ` · ${ev.note}` : ""}`}
                     >
                       {ev.title}
                     </Link>
@@ -546,6 +600,75 @@ export function AcademicCalendarHub() {
               Agregar clase
             </Button>
           </form>
+
+          <div className="border-t border-white/10 px-6 py-4">
+            <div className="text-sm font-semibold text-white">Clase suspendida</div>
+            <p className="mt-1 text-xs text-slate-400">
+              Marca una clase específica (una fecha) como suspendida. Esa fecha aparecerá en el calendario como “(suspendida)” con su justificación.
+            </p>
+            <form className="mt-3 space-y-3" onSubmit={(e) => void submitCancellation(e)}>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="space-y-1 text-xs">
+                  <span className="text-slate-500">Clase</span>
+                  <select
+                    className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
+                    value={cancelScheduleId}
+                    onChange={(e) => setCancelScheduleId(e.target.value)}
+                  >
+                    {classes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {WEEKDAYS_ES[c.weekday]} {c.startTime}–{c.endTime} · {c.subject}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="space-y-1 text-xs">
+                  <span className="text-slate-500">Fecha</span>
+                  <input
+                    required
+                    type="date"
+                    className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
+                    value={cancelDate}
+                    onChange={(e) => setCancelDate(e.target.value)}
+                  />
+                </label>
+              </div>
+              <label className="block space-y-1 text-xs">
+                <span className="text-slate-500">Justificación (opcional)</span>
+                <input
+                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm outline-none ring-indigo-400/30 focus:ring"
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="Ej. Profesor enfermo, paro, cambio de aula…"
+                />
+              </label>
+              <Button type="submit" size="sm" variant="secondary" disabled={!useCloud}>
+                Guardar suspensión
+              </Button>
+              {!useCloud ? (
+                <p className="text-[11px] text-slate-500">
+                  Para guardar “clase suspendida” en la nube, inicia sesión (usa Supabase). En modo local lo implementamos después.
+                </p>
+              ) : null}
+            </form>
+            {useCloud && cancellations.length > 0 ? (
+              <ul className="mt-4 space-y-2">
+                {cancellations.slice(0, 8).map((c) => (
+                  <li key={c.id} className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-slate-950/30 px-3 py-2 text-xs">
+                    <div className="min-w-0">
+                      <div className="truncate text-slate-200">
+                        {c.classDate} · {c.reason?.trim() ? c.reason : "Sin justificación"}
+                      </div>
+                    </div>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => void removeCancellation(c.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+
           <ul className="space-y-2 border-t border-white/10 px-6 py-4">
             {classes.length === 0 ? (
               <li className="text-sm text-slate-500">Aún no has agregado clases a tu horario.</li>

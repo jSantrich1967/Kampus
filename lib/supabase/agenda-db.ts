@@ -3,7 +3,12 @@ import { z } from "zod";
 
 import { demoExamDueDatesSameMonth } from "@/lib/calendar/local-iso-date";
 import { examFeedbackSchema, examQuestionSchema, type Exam, type ExamAttempt, type ExamFeedback } from "@/lib/schemas/exams";
-import { classScheduleListSchema, type ClassScheduleRow } from "@/lib/schemas/class-schedule";
+import {
+  classCancellationListSchema,
+  classScheduleListSchema,
+  type ClassCancellation,
+  type ClassScheduleRow,
+} from "@/lib/schemas/class-schedule";
 import type { StudentWork } from "@/lib/schemas/student-work";
 import { formatAgendaCloudError } from "@/lib/notebooks/storage-errors";
 
@@ -52,6 +57,13 @@ type ClassScheduleDbRow = {
   subject: string;
   location: string | null;
   professor_name: string | null;
+};
+
+type ClassCancellationDbRow = {
+  id: string;
+  schedule_id: string;
+  class_date: string;
+  reason: string | null;
 };
 
 function mapExamRow(row: UserExamRow): Exam {
@@ -295,6 +307,53 @@ export async function insertClassScheduleRemote(
 
 export async function deleteClassScheduleRemote(client: SupabaseClient, userId: string, id: string): Promise<void> {
   const { error } = await client.from("user_class_schedule").delete().eq("id", id).eq("user_id", userId);
+  if (error) throw new Error(formatAgendaCloudError(error.message));
+}
+
+export async function fetchClassCancellationsRemote(client: SupabaseClient, userId: string): Promise<ClassCancellation[]> {
+  const { data, error } = await client
+    .from("user_class_cancellations")
+    .select("id,schedule_id,class_date,reason")
+    .eq("user_id", userId)
+    .order("class_date", { ascending: false })
+    .limit(200);
+  if (error) throw new Error(formatAgendaCloudError(error.message));
+  const rows = ((data ?? []) as ClassCancellationDbRow[]).map((r) => ({
+    id: r.id,
+    scheduleId: r.schedule_id,
+    classDate: r.class_date,
+    reason: r.reason ?? "",
+  }));
+  return classCancellationListSchema.parse(rows);
+}
+
+export async function upsertClassCancellationRemote(
+  client: SupabaseClient,
+  userId: string,
+  input: { scheduleId: string; classDate: string; reason: string },
+): Promise<ClassCancellation> {
+  const { data, error } = await client
+    .from("user_class_cancellations")
+    .upsert({
+      user_id: userId,
+      schedule_id: input.scheduleId,
+      class_date: input.classDate,
+      reason: input.reason,
+    })
+    .select("id,schedule_id,class_date,reason")
+    .single();
+  if (error) throw new Error(formatAgendaCloudError(error.message));
+  const row = data as ClassCancellationDbRow;
+  return classCancellationListSchema.element.parse({
+    id: row.id,
+    scheduleId: row.schedule_id,
+    classDate: row.class_date,
+    reason: row.reason ?? "",
+  });
+}
+
+export async function deleteClassCancellationRemote(client: SupabaseClient, userId: string, id: string): Promise<void> {
+  const { error } = await client.from("user_class_cancellations").delete().eq("id", id).eq("user_id", userId);
   if (error) throw new Error(formatAgendaCloudError(error.message));
 }
 

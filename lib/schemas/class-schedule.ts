@@ -17,3 +17,15 @@ export type ClassScheduleRow = z.infer<typeof classScheduleRowSchema>;
 
 export const classScheduleListSchema = z.array(classScheduleRowSchema);
 
+export const classCancellationSchema = z.object({
+  id: z.string().min(1),
+  scheduleId: z.string().min(1),
+  /** YYYY-MM-DD */
+  classDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  reason: z.string().default(""),
+});
+
+export type ClassCancellation = z.infer<typeof classCancellationSchema>;
+
+export const classCancellationListSchema = z.array(classCancellationSchema);
+
