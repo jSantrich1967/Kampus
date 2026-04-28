@@ -203,20 +203,41 @@ export function PresentationPlanner() {
       const fd = new FormData();
       fd.append("file", blob, recordedAudioBlob ? "rehearsal-audio.webm" : "rehearsal.webm");
       const res = await fetch("/api/presentation/transcribe", { method: "POST", body: fd });
-      const json = (await res.json()) as { transcript?: string; error?: string };
+      const raw = await res.text();
+      let json: { transcript?: string; error?: string } = {};
+      try {
+        json = (JSON.parse(raw) as { transcript?: string; error?: string }) ?? {};
+      } catch {
+        json = {};
+      }
       if (!res.ok) {
-        setTutorError(json.error ?? (es ? "No se pudo transcribir." : "Could not transcribe."));
+        setTutorError(
+          json.error ??
+            (raw.trim()
+              ? `${es ? "Error al transcribir" : "Transcribe error"} (HTTP ${res.status}): ${raw.slice(0, 160)}`
+              : `${es ? "Error al transcribir" : "Transcribe error"} (HTTP ${res.status}).`),
+        );
         return;
       }
       const transcript = (json.transcript ?? "").trim();
       if (!transcript) {
-        setTutorError(es ? "La transcripción llegó vacía." : "Empty transcript.");
+        setTutorError(
+          raw.trim()
+            ? `${es ? "Transcripción vacía." : "Empty transcript."} ${raw.slice(0, 160)}`
+            : es
+              ? "La transcripción llegó vacía."
+              : "Empty transcript.",
+        );
         return;
       }
       setTutorNotes(transcript);
       await requestTutorFeedback();
     } catch {
-      setTutorError(es ? "Error de red al transcribir." : "Network error while transcribing.");
+      setTutorError(
+        es
+          ? "No se pudo contactar al servidor para transcribir (fallo de red). Si estás en local, confirma que el servidor está corriendo y recarga."
+          : "Could not reach the server to transcribe (network failure). If running locally, ensure the dev server is up and reload.",
+      );
     } finally {
       setTranscribing(false);
     }
@@ -334,9 +355,20 @@ export function PresentationPlanner() {
           probableQuestions: state.probableQuestions,
         }),
       });
-      const json = (await res.json()) as { feedback?: PresentationTutorFeedback; error?: string };
+      const raw = await res.text();
+      let json: { feedback?: PresentationTutorFeedback; error?: string } = {};
+      try {
+        json = (JSON.parse(raw) as { feedback?: PresentationTutorFeedback; error?: string }) ?? {};
+      } catch {
+        json = {};
+      }
       if (!res.ok) {
-        setTutorError(json.error ?? (es ? "No se pudo obtener la calificación." : "Could not get feedback."));
+        setTutorError(
+          json.error ??
+            (raw.trim()
+              ? `${es ? "Error del tutor" : "Tutor error"} (HTTP ${res.status}): ${raw.slice(0, 160)}`
+              : `${es ? "Error del tutor" : "Tutor error"} (HTTP ${res.status}).`),
+        );
         return;
       }
       if (json.feedback) setTutorFeedback(json.feedback);
