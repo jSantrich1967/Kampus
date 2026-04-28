@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Check, Clock, Loader2, Mic2, Plus, RefreshCw, Sparkles, Trash2, Video, Users } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ShareLinkButton } from "@/components/growth/share-link-button";
 import { useKampus } from "@/components/kampus/kampus-provider";
@@ -41,6 +41,17 @@ export function PresentationPlanner() {
   const [tutorLoading, setTutorLoading] = useState(false);
   const [tutorError, setTutorError] = useState<string | null>(null);
   const [tutorFeedback, setTutorFeedback] = useState<PresentationTutorFeedback | null>(null);
+
+  const liveVideoRef = useRef<HTMLVideoElement | null>(null);
+  const liveStreamRef = useRef<MediaStream | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<BlobPart[]>([]);
+
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
+  const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
+  const [transcribing, setTranscribing] = useState(false);
 
   /** Si abren el enlace de convocatoria, alinean el mismo código de sesión en su dispositivo. */
   useEffect(() => {
@@ -102,6 +113,98 @@ export function PresentationPlanner() {
     setRunning(false);
     setRehearsalSeconds(0);
   }
+
+  async function startRecording() {
+    setCameraError(null);
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setCameraError(es ? "Tu navegador no soporta cámara/micrófono." : "Your browser does not support camera/mic.");
+        return;
+      }
+
+      if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+      setRecordedUrl(null);
+      setRecordedBlob(null);
+
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      liveStreamRef.current = stream;
+      if (liveVideoRef.current) {
+        liveVideoRef.current.srcObject = stream;
+        await liveVideoRef.current.play().catch(() => {});
+      }
+
+      const mimeCandidates = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
+      const mimeType = mimeCandidates.find((t) => MediaRecorder.isTypeSupported(t)) ?? "";
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      recorderRef.current = recorder;
+      chunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "video/webm" });
+        const url = URL.createObjectURL(blob);
+        setRecordedBlob(blob);
+        setRecordedUrl(url);
+      };
+
+      recorder.start();
+      setRecording(true);
+    } catch (e) {
+      setCameraError(es ? "No se pudo acceder a cámara/micrófono." : "Could not access camera/mic.");
+      console.error(e);
+    }
+  }
+
+  function stopRecording() {
+    try {
+      recorderRef.current?.stop();
+    } catch {}
+    setRecording(false);
+    recorderRef.current = null;
+    if (liveVideoRef.current) liveVideoRef.current.srcObject = null;
+    liveStreamRef.current?.getTracks().forEach((t) => t.stop());
+    liveStreamRef.current = null;
+  }
+
+  async function transcribeAndGrade() {
+    if (!recordedBlob) return;
+    setTranscribing(true);
+    setTutorError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", recordedBlob, "rehearsal.webm");
+      const res = await fetch("/api/presentation/transcribe", { method: "POST", body: fd });
+      const json = (await res.json()) as { transcript?: string; error?: string };
+      if (!res.ok) {
+        setTutorError(json.error ?? (es ? "No se pudo transcribir." : "Could not transcribe."));
+        return;
+      }
+      const transcript = (json.transcript ?? "").trim();
+      if (!transcript) {
+        setTutorError(es ? "La transcripción llegó vacía." : "Empty transcript.");
+        return;
+      }
+      setTutorNotes(transcript);
+      await requestTutorFeedback();
+    } catch {
+      setTutorError(es ? "Error de red al transcribir." : "Network error while transcribing.");
+    } finally {
+      setTranscribing(false);
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      try {
+        recorderRef.current?.stop();
+      } catch {}
+      liveStreamRef.current?.getTracks().forEach((t) => t.stop());
+      if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+    };
+  }, [recordedUrl]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -598,6 +701,90 @@ export function PresentationPlanner() {
           </div>
         </Card>
       </div>
+
+      <Card className="border-white/10 bg-slate-950/40">
+        <CardHeader>
+          <CardTitle>{es ? "Grabación del ensayo (cámara)" : "Rehearsal recording (camera)"}</CardTitle>
+          <CardDescription>
+            {es
+              ? "Graba al grupo, reproduce el video y luego transcribe para que el tutor califique."
+              : "Record the group, play it back, then transcribe so the tutor can grade."}
+          </CardDescription>
+        </CardHeader>
+        <div className="space-y-4 px-5 pb-5">
+          {cameraError ? <p className="text-sm text-rose-300">{cameraError}</p> : null}
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="space-y-2">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">{es ? "Vista en vivo" : "Live"}</div>
+              <video
+                ref={liveVideoRef}
+                className="aspect-video w-full rounded-2xl border border-white/10 bg-black"
+                muted
+                playsInline
+              />
+              <div className="flex flex-wrap gap-2">
+                {!recording ? (
+                  <Button type="button" variant="primary" onClick={() => void startRecording()}>
+                    {es ? "Iniciar grabación" : "Start recording"}
+                  </Button>
+                ) : (
+                  <Button type="button" variant="danger" onClick={stopRecording}>
+                    {es ? "Detener" : "Stop"}
+                  </Button>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500">
+                {es
+                  ? "Consejo: pon el celular/laptop a la altura de los ojos y mide el tiempo real de cada sección."
+                  : "Tip: keep the camera at eye level and time each section."}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">{es ? "Reproducción" : "Playback"}</div>
+              {recordedUrl ? (
+                <video
+                  src={recordedUrl}
+                  className="aspect-video w-full rounded-2xl border border-white/10 bg-black"
+                  controls
+                  playsInline
+                />
+              ) : (
+                <div className="flex aspect-video items-center justify-center rounded-2xl border border-white/10 bg-black/40 text-sm text-slate-500">
+                  {es ? "Aún no hay grabación." : "No recording yet."}
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={!recordedBlob || transcribing || tutorLoading}
+                  onClick={() => void transcribeAndGrade()}
+                  className="gap-2"
+                >
+                  {transcribing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  {transcribing ? (es ? "Transcribiendo…" : "Transcribing…") : es ? "Transcribir y calificar" : "Transcribe & grade"}
+                </Button>
+                {recordedUrl ? (
+                  <a
+                    href={recordedUrl}
+                    download="kampus-rehearsal.webm"
+                    className={buttonClasses({ variant: "ghost", size: "sm" })}
+                  >
+                    {es ? "Descargar" : "Download"}
+                  </a>
+                ) : null}
+              </div>
+              <p className="text-[11px] text-slate-500">
+                {es
+                  ? "Privacidad: el video se queda en tu navegador; solo se envía el archivo al servidor cuando presionas “Transcribir y calificar”."
+                  : "Privacy: the video stays in your browser; it’s only uploaded when you press “Transcribe & grade”."}
+              </p>
+            </div>
+          </div>
+        </div>
+      </Card>
 
       <Card className="border-emerald-400/20 bg-emerald-500/[0.05]">
         <CardHeader>

@@ -1,0 +1,69 @@
+import { NextResponse } from "next/server";
+
+export const runtime = "nodejs";
+
+function clip(text: string, max: number): string {
+  const t = text.trim();
+  if (t.length <= max) return t;
+  return `${t.slice(0, max)}\n\n...(recortado)`;
+}
+
+export async function POST(req: Request) {
+  try {
+    const apiKey = process.env.OPENAI_API_KEY?.trim();
+    const model = process.env.OPENAI_TRANSCRIBE_MODEL?.trim() || "gpt-4o-mini-transcribe";
+
+    if (!apiKey) {
+      return NextResponse.json({ error: "Falta OPENAI_API_KEY en el servidor para transcribir." }, { status: 400 });
+    }
+
+    const form = await req.formData();
+    const file = form.get("file");
+    if (!(file instanceof File)) {
+      return NextResponse.json({ error: "Falta el archivo de audio/video (file)." }, { status: 400 });
+    }
+
+    // OpenAI audio transcriptions expects multipart/form-data: file + model.
+    const fd = new FormData();
+    fd.append("model", model);
+    fd.append("file", file, file.name || "rehearsal.webm");
+    fd.append("response_format", "json");
+
+    const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: fd,
+    });
+
+    if (!res.ok) {
+      let message = "";
+      try {
+        const json = (await res.json()) as { error?: { message?: string } };
+        message = json.error?.message ?? "";
+      } catch {
+        message = (await res.text()).slice(0, 400);
+      }
+      if (res.status === 429) {
+        return NextResponse.json(
+          { error: "Sin cuota OpenAI ahora (HTTP 429). Revisa facturación e inténtalo de nuevo." },
+          { status: 429 },
+        );
+      }
+      return NextResponse.json({ error: `OpenAI error (HTTP ${res.status}): ${message || "Unknown"}` }, { status: 502 });
+    }
+
+    const json = (await res.json()) as { text?: string };
+    const transcript = clip(String(json.text ?? ""), 12000);
+    if (!transcript.trim()) {
+      return NextResponse.json({ error: "La transcripción llegó vacía." }, { status: 502 });
+    }
+
+    return NextResponse.json({ transcript });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
