@@ -1,13 +1,8 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
-import Link from "next/link";
-
 import { ShareLinkButton } from "@/components/growth/share-link-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
-import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { NotebookLibraryPanel } from "@/components/study/notebook-library-panel";
 import { navCopy } from "@/lib/i18n/nav";
 
@@ -21,7 +16,7 @@ export function LibraryHub() {
       <PageHeader
         eyebrow={t.groups.learn}
         title="Mis cuadernos"
-        description="Cuadernos por materia: sube material, ábrelo clase a clase y genera kits de estudio desde tus filtros (materia, tema, punto…), con el mismo flujo de biblioteca y lector."
+        description="Crea tus cuadernos por materia, organiza tus clases/sesiones y genera kits de estudio cuando se acerque una evaluación."
         actions={
           <ShareLinkButton
             pathname="/study/library"
@@ -34,77 +29,7 @@ export function LibraryHub() {
         }
       />
 
-      <Card className="border-indigo-400/25 bg-gradient-to-br from-indigo-500/15 to-slate-950/80 ring-1 ring-indigo-400/20">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg text-indigo-100">
-            <Sparkles className="h-5 w-5 text-indigo-300" />
-            {t.items.rescue}
-          </CardTitle>
-          <CardDescription>
-            Arma el kit de estudios a partir de tus archivos, apuntes o todo un cuaderno, usando materia y etiquetas como
-            filtros. Si guardas en el cuaderno, se archiva el <strong>material que entraste</strong> (no el kit de la IA),
-            con esas etiquetas, para completar la fuente del cuaderno.
-          </CardDescription>
-        </CardHeader>
-        <div className="flex flex-wrap gap-2 px-6 pb-6">
-          <Link href="/study/library/rescue">
-            <Button size="sm" className="gap-2">
-              <Sparkles className="h-4 w-4" />
-              Abrir kit de estudios del cuaderno
-            </Button>
-          </Link>
-        </div>
-      </Card>
-
       <NotebookLibraryPanel />
-
-      <div className="grid gap-4 md:grid-cols-3">
-        {[
-          {
-            t: "Ruta express",
-            d: "15–25 min · alta utilidad examen",
-            tone: "text-emerald-200",
-          },
-          {
-            t: "Comprensión profunda",
-            d: "45–90 min · para huecos grandes",
-            tone: "text-indigo-200",
-          },
-          {
-            t: "Simulacro",
-            d: "20–40 min · presión real",
-            tone: "text-amber-200",
-          },
-        ].map((row) => (
-          <Card key={row.t}>
-            <CardHeader>
-              <CardTitle className={row.tone}>{row.t}</CardTitle>
-              <CardDescription>{row.d}</CardDescription>
-            </CardHeader>
-          </Card>
-        ))}
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Ruta recomendada (demo)</CardTitle>
-          <CardDescription>
-            Con material en tus cuadernos, enlaza con radar y kit de estudios para preparar la semana.
-          </CardDescription>
-        </CardHeader>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/risk">
-            <Button size="sm" variant="secondary">
-              Ver radar
-            </Button>
-          </Link>
-          <Link href="/study/library/rescue">
-            <Button size="sm" variant="ghost">
-              Abrir kit de estudios
-            </Button>
-          </Link>
-        </div>
-      </Card>
     </div>
   );
 }

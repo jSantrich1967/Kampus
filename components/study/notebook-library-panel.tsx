@@ -1,6 +1,6 @@
 "use client";
 
-import { BookMarked, BookOpen, ChevronDown, Loader2, Plus, Trash2, Upload } from "lucide-react";
+import { BookMarked, BookOpen, ChevronDown, ExternalLink, Loader2, Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -46,6 +46,8 @@ export function NotebookLibraryPanel() {
   const [savingTags, setSavingTags] = useState(false);
   const [creatingNotebook, setCreatingNotebook] = useState(false);
   const [newNotebookSubject, setNewNotebookSubject] = useState("");
+  const [showAllNotebooks, setShowAllNotebooks] = useState(false);
+  const [kitSubject, setKitSubject] = useState("");
 
   useEffect(() => {
     if (customSubject.trim()) return;
@@ -99,6 +101,20 @@ export function NotebookLibraryPanel() {
     // except when coming from the calendar (deep link with class metadata).
     return notebooks.length > 0 || docs.length > 0 || Boolean(uploadScheduleId) || Boolean(uploadClassDate);
   }, [docs.length, notebooks.length, uploadClassDate, uploadScheduleId]);
+
+  const createdNotebooks = useMemo(() => notebooksBySubject.filter((n) => n.exists), [notebooksBySubject]);
+
+  useEffect(() => {
+    if (kitSubject.trim()) return;
+    const first = createdNotebooks[0]?.subject ?? "";
+    if (first) setKitSubject(first);
+  }, [createdNotebooks, kitSubject]);
+
+  const kitHref = useMemo(() => {
+    const s = kitSubject.trim();
+    if (!s) return "/study/library/rescue";
+    return `/study/library/rescue?notebook=${subjectToPathSegment(s)}&subject=${encodeURIComponent(s)}`;
+  }, [kitSubject]);
 
   /** Cuadernos por materia (incluye vacíos creados en user_notebooks). */
   const notebooksBySubject = useMemo(() => {
@@ -517,15 +533,48 @@ export function NotebookLibraryPanel() {
         {error ? <p className="text-sm text-rose-300">{error}</p> : null}
 
         <div className="space-y-3">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Tus cuadernos</h3>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Mis cuadernos creados</h3>
+            <Button type="button" size="sm" variant="ghost" onClick={() => setShowAllNotebooks((v) => !v)} disabled={createdNotebooks.length === 0}>
+              {showAllNotebooks ? "Ocultar" : "Ver todos"}
+            </Button>
+          </div>
           {docs.length === 0 && notebooks.length === 0 && !loading ? (
             <p className="text-sm text-slate-500">
               Aún no tienes cuadernos. Crea uno (aunque esté vacío) y luego ve agregando clases con material.
             </p>
           ) : null}
 
-          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-            {notebooksBySubject.map(({ subject: subjectName, pages, exists }) => {
+          {createdNotebooks.length ? (
+            <div className="flex gap-3 overflow-auto pb-1">
+              {createdNotebooks.slice(0, 6).map((nb) => {
+                const classDates = new Set((nb.pages ?? []).map((p) => (p.class_date ?? "").trim()).filter(Boolean));
+                const classesCount = classDates.size;
+                const filesCount = nb.pages.length;
+                return (
+                  <Link
+                    key={nb.subject}
+                    href={`/study/notebook/${subjectToPathSegment(nb.subject)}`}
+                    className="min-w-[14rem] shrink-0 rounded-2xl border border-white/10 bg-slate-950/50 p-4 transition hover:border-white/20 hover:bg-slate-950/60"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold text-slate-100">{nb.subject}</div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          {classesCount} clase{classesCount === 1 ? "" : "s"} · {filesCount} archivo{filesCount === 1 ? "" : "s"}
+                        </div>
+                      </div>
+                      <ExternalLink className="h-4 w-4 text-slate-500" />
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {showAllNotebooks ? (
+            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              {notebooksBySubject.map(({ subject: subjectName, pages, exists }) => {
               const { background, spine } = notebookCoverGradient(subjectName);
               const initials = initialsFromSubject(subjectName);
               const expanded = expandedSubject === subjectName;
@@ -770,8 +819,57 @@ export function NotebookLibraryPanel() {
                   {/* (removed old flat pages list) */}
                 </div>
               );
-            })}
+              })}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="rounded-2xl border border-indigo-400/25 bg-gradient-to-br from-indigo-500/15 to-slate-950/80 p-4 ring-1 ring-indigo-400/20">
+          <div className="flex items-center gap-2 text-sm font-semibold text-indigo-100">
+            <Sparkles className="h-4 w-4 text-indigo-300" />
+            Kit de estudio para examen final
           </div>
+          <p className="mt-1 text-xs text-slate-400">
+            Selecciona el cuaderno de interés y genera un kit de estudios a partir del material que guardaste.
+          </p>
+
+          <div className="mt-3 grid gap-3 md:grid-cols-3">
+            <label className="space-y-1 text-sm md:col-span-2">
+              <span className="text-slate-400">Cuaderno de interés</span>
+              <select
+                className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none ring-indigo-400/40 focus:ring"
+                value={kitSubject}
+                onChange={(e) => setKitSubject(e.target.value)}
+              >
+                <option value="">Selecciona un cuaderno…</option>
+                {createdNotebooks.map((n) => (
+                  <option key={n.subject} value={n.subject}>
+                    {n.subject}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="flex items-end">
+              <Link
+                href={kitSubject.trim() ? kitHref : "/study/library/rescue"}
+                className={cn(
+                  "inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold",
+                  kitSubject.trim()
+                    ? "bg-indigo-500/30 text-indigo-100 ring-1 ring-indigo-400/30 hover:bg-indigo-500/35"
+                    : "cursor-not-allowed bg-white/5 text-slate-500 ring-1 ring-white/10",
+                )}
+                aria-disabled={!kitSubject.trim()}
+                onClick={(e) => {
+                  if (!kitSubject.trim()) e.preventDefault();
+                }}
+              >
+                <Sparkles className="h-4 w-4" />
+                Generar kit
+              </Link>
+            </div>
+          </div>
+
+          {!kitSubject.trim() ? <div className="mt-3 text-xs text-slate-500">Primero selecciona un cuaderno.</div> : null}
         </div>
       </div>
     </Card>
