@@ -1,11 +1,120 @@
 "use client";
 
+import { Download } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { RescuePack } from "@/lib/class-rescue";
 import { cn } from "@/lib/cn";
+
+function safeFilename(input: string): string {
+  const base = input.trim() || "kit";
+  return base
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/-+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 64);
+}
+
+function downloadFile(filename: string, content: string, mime: string) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function packToMarkdown(pack: RescuePack, premium: boolean): string {
+  const lines: string[] = [];
+  const push = (s = "") => lines.push(s);
+  const section = (title: string) => {
+    push("");
+    push(`## ${title}`);
+    push("");
+  };
+  const bullets = (items: string[]) => {
+    items.forEach((i) => push(`- ${i}`));
+    push("");
+  };
+
+  push(`# ${pack.subjectLine}`);
+  push("");
+  section("Resumen rápido");
+  push(pack.quickSummary);
+  push("");
+
+  section("Ideas clave");
+  bullets(pack.keyIdeas);
+
+  section("Checklist de estudio");
+  bullets(pack.studyChecklist);
+
+  section("Siguiente recurso sugerido");
+  push(pack.suggestedNextResource);
+  push("");
+
+  if (premium) {
+    section("Resumen completo");
+    push(pack.fullSummary);
+    push("");
+
+    section("Explicación profunda");
+    push(pack.deepExplanation);
+    push("");
+
+    section("Probables preguntas de examen");
+    pack.probableExamQuestions.forEach((q, idx) => push(`${idx + 1}. ${q}`));
+    push("");
+
+    section("Tarjetas");
+    pack.flashcards.forEach((c, idx) => {
+      push(`**${idx + 1}. Frente:** ${c.front}`);
+      push(`**Reverso:** ${c.back}`);
+      push("");
+    });
+
+    section("Quiz");
+    pack.quiz.forEach((q, idx) => {
+      push(`**${idx + 1}. ${q.question}**`);
+      q.options.forEach((opt, i) => {
+        const prefix = String.fromCharCode(65 + i);
+        const correct = i === q.answerIndex ? " ✅" : "";
+        push(`- ${prefix}. ${opt}${correct}`);
+      });
+      push("");
+    });
+
+    section("Mapa mental (outline)");
+    push("```");
+    push(pack.mindMapOutline);
+    push("```");
+    push("");
+
+    section("Explicación fácil");
+    push(pack.easyExplanation);
+    push("");
+
+    section("Explicación técnica");
+    push(pack.technicalExplanation);
+    push("");
+
+    section("Preguntas para hacer en clase");
+    bullets(pack.questionsForClass);
+  } else {
+    section("Nota");
+    push("Este kit se exportó en modo gratuito: algunas secciones profundas están bloqueadas en la app.");
+    push("");
+  }
+
+  return lines.join("\n").trim() + "\n";
+}
 
 function PackSection({
   title,
@@ -54,7 +163,35 @@ export function RescuePackDisplay({ pack, premium, headerActions }: Props) {
           <div className="text-xs uppercase tracking-wide text-slate-400">Línea de asunto</div>
           <div className="text-lg font-semibold text-white">{pack.subjectLine}</div>
         </div>
-        {headerActions ? <div className="flex flex-wrap gap-2">{headerActions}</div> : null}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="gap-2"
+            onClick={() => downloadFile(`${safeFilename(pack.subjectLine)}.md`, packToMarkdown(pack, premium), "text/markdown;charset=utf-8")}
+          >
+            <Download className="h-4 w-4" />
+            Descargar .md
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="gap-2 ring-1 ring-white/10"
+            onClick={() =>
+              downloadFile(
+                `${safeFilename(pack.subjectLine)}.json`,
+                JSON.stringify({ ...pack, exportedAt: new Date().toISOString(), premium }, null, 2),
+                "application/json;charset=utf-8",
+              )
+            }
+          >
+            <Download className="h-4 w-4" />
+            Descargar .json
+          </Button>
+          {headerActions ? <div className="flex flex-wrap gap-2">{headerActions}</div> : null}
+        </div>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">

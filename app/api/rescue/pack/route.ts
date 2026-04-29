@@ -5,6 +5,10 @@ import { rescuePackSchema } from "@/lib/schemas/rescue-pack";
 
 export const runtime = "nodejs";
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 const requestSchema = z.object({
   subjectHint: z.string().default(""),
   sourceLabel: z.string().default(""),
@@ -234,24 +238,43 @@ export async function POST(req: Request) {
         : []),
     ].join("\n");
 
-    const res = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        input: [
-          { role: "system", content: [{ type: "input_text", text: system }] },
-          { role: "user", content: [{ type: "input_text", text: user }] },
-        ],
-        temperature: extractUseful ? 0.25 : 0.35,
-      }),
-    });
+    const openaiUrl = "https://api.openai.com/v1/responses";
+    const openaiPayload = {
+      model,
+      input: [
+        { role: "system", content: [{ type: "input_text", text: system }] },
+        { role: "user", content: [{ type: "input_text", text: user }] },
+      ],
+      temperature: extractUseful ? 0.25 : 0.35,
+    };
+
+    // Retries for transient OpenAI issues (e.g., HTTP 500/503).
+    const transientStatuses = new Set([500, 502, 503, 504]);
+    let lastRes: Response | null = null;
+    let attempts = 0;
+    const maxAttempts = 3;
+    const backoffMs = [350, 900, 1800];
+
+    while (attempts < maxAttempts) {
+      attempts += 1;
+      lastRes = await fetch(openaiUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(openaiPayload),
+      });
+      if (lastRes.ok) break;
+      if (!transientStatuses.has(lastRes.status)) break;
+      await sleep(backoffMs[Math.min(attempts - 1, backoffMs.length - 1)] ?? 900);
+    }
+
+    const res = lastRes!;
 
     if (!res.ok) {
       let message = "";
+      const requestId = res.headers.get("x-request-id") || res.headers.get("x-openai-request-id") || "";
       try {
         const json = (await res.json()) as { error?: { message?: string } };
         message = json.error?.message ?? "";
@@ -268,7 +291,12 @@ export async function POST(req: Request) {
           { status: 429 },
         );
       }
-      return NextResponse.json({ error: `OpenAI error (HTTP ${res.status}): ${message || "Unknown error"}` }, { status: 502 });
+      const retryNote = attempts > 1 ? ` (reintentamos ${attempts} veces)` : "";
+      const idNote = requestId ? ` · request_id: ${requestId}` : "";
+      return NextResponse.json(
+        { error: `OpenAI error (HTTP ${res.status})${retryNote}: ${message || "Unknown error"}${idNote}` },
+        { status: 502 },
+      );
     }
 
     const payload = (await res.json()) as unknown;
