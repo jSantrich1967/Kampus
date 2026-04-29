@@ -108,9 +108,13 @@ export function AcademicCalendarHub() {
   const [kitError, setKitError] = useState<string | null>(null);
   const [kitPack, setKitPack] = useState<RescuePack | null>(null);
   const [kitTitle, setKitTitle] = useState<string>("");
+  const [kitDeleteBusy, setKitDeleteBusy] = useState(false);
   const [kitSources, setKitSources] = useState<
     | {
         title: string;
+        mode: "single" | "selection";
+        scheduleId?: string;
+        classDate?: string;
         docs: Array<{
           id: string;
           filename: string;
@@ -119,6 +123,7 @@ export function AcademicCalendarHub() {
           practice_exercises?: string | null;
           extractedLen: number;
           extractedPreview: string;
+          storagePath: string;
         }>;
       }
     | null
@@ -215,6 +220,62 @@ export function AcademicCalendarHub() {
     return lines.join("\n").trim();
   }
 
+  async function deleteNotebookDocuments(docs: Array<{ id: string; storagePath: string }>) {
+    if (!useCloud || !authUserId) {
+      setKitError("Para borrar apuntes desde la nube, inicia sesión (usa Supabase).");
+      return;
+    }
+    if (docs.length === 0) return;
+    if (kitDeleteBusy) return;
+
+    const ok = window.confirm(
+      docs.length === 1
+        ? "¿Borrar este apunte/archivo? Esto también eliminará el archivo de la nube."
+        : `¿Borrar ${docs.length} apuntes/archivos? Esto también eliminará los archivos de la nube.`,
+    );
+    if (!ok) return;
+
+    setKitDeleteBusy(true);
+    setKitError(null);
+    try {
+      const supabase = createSupabaseBrowserClient();
+
+      // 1) Remove storage objects (best-effort).
+      const paths = docs.map((d) => d.storagePath).filter((p) => Boolean(p && p.trim()));
+      if (paths.length > 0) {
+        const { error: rmErr } = await supabase.storage.from("notebooks").remove(paths);
+        if (rmErr) {
+          // Don't fail hard: we still delete DB rows so the UI unblocks, but we warn.
+          setKitError(`Aviso: no se pudieron borrar algunos archivos en Storage: ${rmErr.message}`);
+        }
+      }
+
+      // 2) Delete DB rows.
+      const ids = docs.map((d) => d.id);
+      const { error: delErr } = await supabase.from("notebook_documents").delete().in("id", ids).eq("user_id", authUserId);
+      if (delErr) throw delErr;
+
+      // Update local panel state so user sees immediate change.
+      setKitSources((prev) => {
+        if (!prev) return prev;
+        const nextDocs = prev.docs.filter((d) => !ids.includes(d.id));
+        return { ...prev, docs: nextDocs };
+      });
+
+      // Refresh calendar counts/hints.
+      refresh();
+
+      // If kit was based on deleted docs, clear it to avoid confusion.
+      setKitPack(null);
+      setKitError((prev) => prev ?? "Apuntes borrados. Vuelve a generar el kit si lo necesitas.");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "No se pudieron borrar los apuntes.";
+      setKitError(formatAgendaCloudError(msg));
+    } finally {
+      setKitDeleteBusy(false);
+    }
+  }
+
   async function generateKitForClass(scheduleId: string, classDate: string, subject: string) {
     if (!useCloud || !authUserId) {
       setKitError("Para generar el kit desde material del cuaderno, inicia sesión (usa Supabase).");
@@ -246,6 +307,9 @@ export function AcademicCalendarHub() {
       const notes = buildKitNotesFromDocs(docs, contextTitle);
       setKitSources({
         title: contextTitle,
+        mode: "single",
+        scheduleId,
+        classDate,
         docs: docs.map((d) => {
           const t = (d.extracted_text ?? "").trim();
           return {
@@ -256,6 +320,7 @@ export function AcademicCalendarHub() {
             practice_exercises: d.practice_exercises ?? null,
             extractedLen: t.length,
             extractedPreview: t.slice(0, 240),
+            storagePath: d.storage_path,
           };
         }),
       });
@@ -333,6 +398,7 @@ export function AcademicCalendarHub() {
       const notes = buildKitNotesFromDocs(docs, `Selección · ${keys.length} clase${keys.length === 1 ? "" : "s"}`);
       setKitSources({
         title: `Selección · ${keys.length} clase${keys.length === 1 ? "" : "s"}`,
+        mode: "selection",
         docs: docs.map((d) => {
           const t = (d.extracted_text ?? "").trim();
           return {
@@ -343,6 +409,7 @@ export function AcademicCalendarHub() {
             practice_exercises: d.practice_exercises ?? null,
             extractedLen: t.length,
             extractedPreview: t.slice(0, 240),
+            storagePath: d.storage_path,
           };
         }),
       });
@@ -1214,6 +1281,23 @@ export function AcademicCalendarHub() {
               </div>
             ) : null}
             {kitError ? <p className="text-sm text-rose-300">{kitError}</p> : null}
+            {kitSources?.mode === "single" && kitSources.docs.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="border border-rose-400/30 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20"
+                  disabled={!useCloud || kitDeleteBusy}
+                  onClick={() => void deleteNotebookDocuments(kitSources.docs.map((d) => ({ id: d.id, storagePath: d.storagePath })))}
+                >
+                  {kitDeleteBusy ? "Borrando…" : "Borrar apuntes de esta clase"}
+                </Button>
+                {!useCloud ? (
+                  <span className="text-[11px] text-slate-500">Para borrar en la nube, inicia sesión (Supabase).</span>
+                ) : null}
+              </div>
+            ) : null}
             {kitSources ? (
               <details className="rounded-xl border border-white/10 bg-slate-950/40 p-3 text-xs text-slate-300">
                 <summary className="cursor-pointer select-none text-slate-200">
@@ -1227,7 +1311,23 @@ export function AcademicCalendarHub() {
                   <ul className="space-y-2">
                     {kitSources.docs.slice(0, 40).map((d) => (
                       <li key={d.id} className="rounded-lg border border-white/10 bg-slate-950/30 p-2">
-                        <div className="font-medium text-slate-100">{d.filename}</div>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="truncate font-medium text-slate-100">{d.filename}</div>
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 shrink-0 text-rose-300 hover:text-rose-200"
+                            disabled={!useCloud || kitDeleteBusy}
+                            onClick={() => void deleteNotebookDocuments([{ id: d.id, storagePath: d.storagePath }])}
+                            aria-label="Borrar apunte"
+                            title={!useCloud ? "Inicia sesión para borrar en la nube" : "Borrar apunte"}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                         <div className="mt-0.5 text-[11px] text-slate-400">
                           extracted: {d.extractedLen} chars
                           {d.topic ? ` · Tema: ${d.topic}` : ""}
