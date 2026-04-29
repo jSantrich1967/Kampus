@@ -10,7 +10,9 @@ import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  createBlankPresentationState,
   defaultPresentationState,
+  ensurePresentationTeamCode,
   generateTeamSessionCode,
   loadPresentation,
   savePresentation,
@@ -32,7 +34,7 @@ export function PresentationPlanner() {
   const searchParams = useSearchParams();
 
   const [hydrated, setHydrated] = useState(false);
-  const [state, setState] = useState<PresentationState>(defaultPresentationState);
+  const [state, setState] = useState<PresentationState>(() => ({ ...createBlankPresentationState(), teamSessionCode: "" }));
   const [rehearsalSeconds, setRehearsalSeconds] = useState(0);
   const [running, setRunning] = useState(false);
   const [teleIndex, setTeleIndex] = useState(0);
@@ -104,18 +106,42 @@ export function PresentationPlanner() {
     };
   }, [authUserId]);
 
-  function resetDemoToDefaults() {
-    // Los defaults cambiaron a español, pero el usuario puede tener un estado viejo en localStorage.
-    // Esto fuerza un “reset” para que vea la UI limpia sin abrir DevTools.
-    const next: PresentationState = { ...defaultPresentationState, teamSessionCode: generateTeamSessionCode() };
-    setState(next);
-    savePresentation(next);
+  function resetPlannerUi() {
     setTutorNotes("");
     setTutorFeedback(null);
     setTutorError(null);
     setTeleIndex(0);
     setRunning(false);
     setRehearsalSeconds(0);
+    setCodeCopied(false);
+  }
+
+  /** Lienzo nuevo: título vacío, una sección y código de equipo nuevo. */
+  function startNewPresentation() {
+    const ok = window.confirm(
+      es
+        ? "¿Crear una exposición nueva? Se guardará en este dispositivo y reemplazará el borrador actual de Mis exposiciones."
+        : "Start a new presentation? This will replace the current draft saved on this device.",
+    );
+    if (!ok) return;
+    const next = ensurePresentationTeamCode({
+      ...createBlankPresentationState(),
+      teamSessionCode: generateTeamSessionCode(),
+    });
+    setState(next);
+    savePresentation(next);
+    resetPlannerUi();
+  }
+
+  /** Plantilla con equipo y textos de ejemplo para ver cómo funciona el planificador. */
+  function loadExampleTemplate() {
+    const next = ensurePresentationTeamCode({
+      ...defaultPresentationState,
+      teamSessionCode: generateTeamSessionCode(),
+    });
+    setState(next);
+    savePresentation(next);
+    resetPlannerUi();
   }
 
   async function startRecording() {
@@ -394,10 +420,17 @@ export function PresentationPlanner() {
         </h1>
         <p className="mt-2 max-w-3xl text-base text-slate-300">
           {es
-            ? "Pon nombre a la sesión, comparte el enlace y el código para que todos confluyan aquí; en Aula virtual pueden verse y hablar en vivo mientras ensayan."
-            : "Name the session, share the link and code so everyone lands here; use Virtual classroom for live video while you rehearse."}
+            ? "Aquí creas y organizas tu exposición: título, fecha en el calendario, equipo y guiones. Usa Nueva exposición para empezar en limpio, o la plantilla de ejemplo para ver el flujo. Comparte enlace y código para que el equipo abra la misma convocatoria; en Aula virtual ensayan en vivo."
+            : "Create your presentation here: title, calendar date, team, and scripts. Use New presentation for a blank deck, or Example template to learn the flow. Share link and code so your team lands on the same rally; use Virtual classroom to rehearse live."}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
+          <Button type="button" size="sm" variant="primary" className="gap-2" onClick={startNewPresentation}>
+            <Sparkles className="h-4 w-4" />
+            {es ? "Nueva exposición" : "New presentation"}
+          </Button>
+          <Button type="button" size="sm" variant="secondary" className="gap-2" onClick={loadExampleTemplate}>
+            {es ? "Plantilla de ejemplo" : "Example template"}
+          </Button>
           <ShareLinkButton
             pathname="/collaborate/exposiciones"
             campaign="presentation_team"
@@ -410,9 +443,6 @@ export function PresentationPlanner() {
             <Video className="h-4 w-4" />
             {es ? "Aula virtual (vivo)" : "Virtual classroom (live)"}
           </Link>
-          <Button type="button" size="sm" variant="ghost" onClick={resetDemoToDefaults}>
-            {es ? "Restablecer demo" : "Reset demo"}
-          </Button>
         </div>
       </div>
 
@@ -503,6 +533,7 @@ export function PresentationPlanner() {
           className="mx-5 mb-5 w-[calc(100%-2.5rem)] rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm outline-none ring-indigo-400/40 focus:ring"
           value={state.deckTitle}
           onChange={(e) => setState((p) => ({ ...p, deckTitle: e.target.value }))}
+          placeholder={es ? "Ej. Exposición final — Historia del arte" : "e.g. Final presentation — Art history"}
         />
       </Card>
 

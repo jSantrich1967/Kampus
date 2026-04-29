@@ -41,6 +41,24 @@ export function ensurePresentationTeamCode(state: PresentationState): Presentati
   return { ...state, teamSessionCode: normalizeTeamSessionCode(state.teamSessionCode) };
 }
 
+/** Lienzo vacío para una exposición nueva (primera visita o botón “Nueva exposición”). */
+export function createBlankPresentationState(): PresentationState {
+  const ownerId = "m1";
+  return {
+    deckTitle: "",
+    teamSessionCode: "",
+    presentationDueDate: undefined,
+    members: [{ id: ownerId, name: "Yo", role: "" }],
+    sections: [{ id: "s1", title: "Introducción", ownerId, minutes: 5, script: "" }],
+    masterScript: "",
+    probableQuestions: [],
+    juryNotes: "",
+    teleprompterFontPx: 28,
+    teleprompterLineHeight: 1.35,
+  };
+}
+
+/** Plantilla precargada con equipo, secciones y textos de ejemplo (para aprender la herramienta). */
 export const defaultPresentationState: PresentationState = {
   deckTitle: "Mi exposición",
   teamSessionCode: "",
@@ -68,16 +86,16 @@ export const defaultPresentationState: PresentationState = {
 export function loadPresentation(): PresentationState {
   /** Evita códigos aleatorios en SSR (hydration). */
   if (typeof window === "undefined") {
-    return { ...defaultPresentationState, teamSessionCode: "" };
+    return { ...createBlankPresentationState(), teamSessionCode: "" };
   }
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return ensurePresentationTeamCode(defaultPresentationState);
+    if (!raw) return ensurePresentationTeamCode(createBlankPresentationState());
     const parsed = JSON.parse(raw) as PresentationState;
-    if (!parsed || typeof parsed !== "object") return ensurePresentationTeamCode(defaultPresentationState);
-    return ensurePresentationTeamCode({ ...defaultPresentationState, ...parsed });
+    if (!parsed || typeof parsed !== "object") return ensurePresentationTeamCode(createBlankPresentationState());
+    return ensurePresentationTeamCode({ ...createBlankPresentationState(), ...parsed });
   } catch {
-    return ensurePresentationTeamCode(defaultPresentationState);
+    return ensurePresentationTeamCode(createBlankPresentationState());
   }
 }
 

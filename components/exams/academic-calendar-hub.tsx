@@ -774,7 +774,7 @@ export function AcademicCalendarHub() {
             </Link>
             <Link href="/collaborate/exposiciones">
               <Button variant="secondary" size="sm">
-                Mis exposiciones
+                Crear / planificar exposición
               </Button>
             </Link>
             <Link href="/collaborate/investigaciones">

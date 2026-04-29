@@ -36,10 +36,15 @@ export function ExamsHub() {
             todo en una sola vista mensual.
           </CardDescription>
         </CardHeader>
-        <div className="px-6 pb-6">
+        <div className="flex flex-wrap gap-2 px-6 pb-6">
           <Link href="/exams/calendar">
             <Button size="sm" className="gap-2">
               Abrir calendario
+            </Button>
+          </Link>
+          <Link href="/collaborate/exposiciones">
+            <Button size="sm" variant="secondary" className="gap-2">
+              Crear exposición
             </Button>
           </Link>
         </div>
