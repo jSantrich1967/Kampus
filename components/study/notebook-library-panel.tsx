@@ -739,8 +739,21 @@ export function NotebookLibraryPanel() {
                   <Link
                     key={nb.subject}
                     href={`/study/notebook/${subjectToPathSegment(nb.subject)}`}
-                    className="min-w-[14rem] shrink-0 rounded-2xl border border-white/10 bg-slate-950/50 p-4 transition hover:border-white/20 hover:bg-slate-950/60"
+                    className="relative min-w-[14rem] shrink-0 rounded-2xl border border-white/10 bg-slate-950/50 p-4 transition hover:border-white/20 hover:bg-slate-950/60"
                   >
+                    <button
+                      type="button"
+                      className="absolute right-2 top-2 rounded-lg p-2 text-rose-200 ring-1 ring-white/10 hover:bg-rose-500/10"
+                      aria-label={`Eliminar cuaderno ${nb.subject}`}
+                      disabled={Boolean(deletingNotebook)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        void deleteNotebook(nb.subject);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                     <div className="flex flex-col items-center gap-2">
                       <KampusNotebookCover subject={nb.subject} className="h-28 w-24 shadow-inner shadow-black/20" />
                       <div className="text-center text-xs text-slate-500">
