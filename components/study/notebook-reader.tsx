@@ -28,6 +28,7 @@ export function NotebookReader({ subjectSlug }: Props) {
   const [pageIndex, setPageIndex] = useState(0);
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [mediaBusy, setMediaBusy] = useState(false);
+  const [indexOpen, setIndexOpen] = useState(true);
 
   const subjectLabel =
     pages[0]?.subject ?? (subjectSlug && subjectSlug.length > 0 ? subjectSlug.replace(/_/g, " ") : "Cuaderno");
@@ -81,6 +82,21 @@ export function NotebookReader({ subjectSlug }: Props) {
   const current = pages[pageIndex] ?? null;
   const total = pages.length;
   const sessionNum = total > 0 ? pageIndex + 1 : 0;
+
+  const indexGroups = useMemo(() => {
+    // Group by class_date (YYYY-MM-DD). If missing, fall back to created_at date.
+    const groups = new Map<string, Array<{ page: NotebookDocumentRow; index0: number }>>();
+    pages.forEach((p, idx) => {
+      const key = (p.class_date ?? "").trim() || p.created_at.slice(0, 10) || "Sin fecha";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push({ page: p, index0: idx });
+    });
+    const keys = Array.from(groups.keys()).sort((a, b) => a.localeCompare(b));
+    return keys.map((k) => ({
+      dateKey: k,
+      items: (groups.get(k) ?? []).slice().sort((a, b) => a.page.created_at.localeCompare(b.page.created_at)),
+    }));
+  }, [pages]);
 
   useEffect(() => {
     if (!current || !authUserId) {
@@ -177,6 +193,81 @@ export function NotebookReader({ subjectSlug }: Props) {
 
       {!loading && total > 0 && current ? (
         <>
+          <div className="mx-auto max-w-5xl">
+            <div className="rounded-2xl border border-white/10 bg-slate-950/70 shadow-lg shadow-black/20 ring-1 ring-white/5">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                onClick={() => setIndexOpen((v) => !v)}
+                aria-expanded={indexOpen}
+              >
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Índice del cuaderno</div>
+                  <div className="mt-1 text-[11px] text-slate-400">
+                    Clases (fechas) y sus páginas. Haz clic para navegar.
+                  </div>
+                </div>
+                <div className="text-xs text-slate-400">
+                  {indexOpen ? "Ocultar" : "Mostrar"} · {total} página{total === 1 ? "" : "s"}
+                </div>
+              </button>
+
+              {indexOpen ? (
+                <div className="border-t border-white/10 px-4 py-4">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {indexGroups.map((g) => (
+                      <div key={g.dateKey} className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <div className="text-sm font-semibold text-white">
+                            {g.dateKey === "Sin fecha" ? "Clase (sin fecha)" : `Clase · ${g.dateKey}`}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {g.items.length} página{g.items.length === 1 ? "" : "s"}
+                          </div>
+                        </div>
+                        <ul className="mt-2 space-y-1.5">
+                          {g.items.map((it, localIdx) => {
+                            const isCurrent = it.index0 === pageIndex;
+                            return (
+                              <li key={it.page.id}>
+                                <button
+                                  type="button"
+                                  onClick={() => setPageIndex(it.index0)}
+                                  className={cn(
+                                    "flex w-full items-start justify-between gap-2 rounded-lg border px-2 py-2 text-left text-xs transition",
+                                    isCurrent
+                                      ? "border-indigo-400/40 bg-indigo-500/10 text-indigo-100"
+                                      : "border-white/10 bg-slate-950/40 text-slate-200 hover:border-white/20 hover:bg-slate-950/55",
+                                  )}
+                                >
+                                  <div className="min-w-0">
+                                    <div className="font-medium">
+                                      Página {localIdx + 1}
+                                      <span className="ml-2 font-normal text-slate-400">· {it.page.filename}</span>
+                                    </div>
+                                    {(it.page.topic ?? "").trim() || (it.page.lesson_point ?? "").trim() ? (
+                                      <div className="mt-0.5 text-[11px] text-slate-500">
+                                        {(it.page.topic ?? "").trim() ? `Tema: ${(it.page.topic ?? "").trim()}` : ""}
+                                        {(it.page.lesson_point ?? "").trim()
+                                          ? `${(it.page.topic ?? "").trim() ? " · " : ""}Punto: ${(it.page.lesson_point ?? "").trim()}`
+                                          : ""}
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                  <div className="shrink-0 text-[11px] text-slate-500">#{it.index0 + 1}</div>
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
           <div className="mx-auto max-w-5xl">
             {/* Marco tipo cuaderno */}
             <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-950/80 shadow-2xl shadow-black/40 ring-1 ring-white/5">
