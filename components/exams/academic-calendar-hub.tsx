@@ -607,13 +607,13 @@ export function AcademicCalendarHub() {
                     const key = isClass ? `${ev.id.split(":")[1]}:${ev.date}` : "";
                     const mat = key ? classDocsByKey[key] : null;
                     const hint = materialHint(mat);
-                    const suffix = mat?.count ? ` · +${mat.count}${hint ? ` · ${hint}` : ""}` : hint ? ` · ${hint}` : "";
+                    const countText = mat?.count ? `+${mat.count}` : "";
                     return (
                     <Link
                       key={ev.id}
                       href={ev.href}
                       className={cn(
-                        "block truncate rounded px-1 py-0.5 text-[10px] leading-tight ring-1 transition hover:bg-white/5",
+                        "block rounded px-1 py-0.5 text-[10px] leading-tight ring-1 transition hover:bg-white/5",
                         ev.kind === "exam" && "bg-emerald-500/15 text-emerald-100 ring-emerald-400/20",
                         ev.kind === "presentation" && "bg-indigo-500/15 text-indigo-100 ring-indigo-400/25",
                         ev.kind === "class" && "bg-white/5 text-slate-200 ring-white/10",
@@ -621,8 +621,11 @@ export function AcademicCalendarHub() {
                       )}
                       title={`${kindLabel(ev.kind)}: ${ev.title}${ev.note ? ` · ${ev.note}` : ""}`}
                     >
-                      {ev.title}
-                      {suffix}
+                      <div className="flex items-baseline justify-between gap-1">
+                        <span className="min-w-0 flex-1 truncate">{ev.title}</span>
+                        {countText ? <span className="shrink-0 text-[10px] text-slate-400">{countText}</span> : null}
+                      </div>
+                      {hint ? <div className="mt-0.5 truncate text-[10px] text-slate-400">{hint}</div> : null}
                     </Link>
                     );
                   })}
