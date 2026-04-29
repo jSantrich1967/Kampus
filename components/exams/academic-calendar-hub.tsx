@@ -141,6 +141,65 @@ export function AcademicCalendarHub() {
     return isoFromDate(d);
   }
 
+  function mostCommonSubjectFromDocs(docs: NotebookDocumentRow[]): string {
+    const counts = new Map<string, number>();
+    docs.forEach((d) => {
+      const s = String(d.subject ?? "").trim();
+      if (!s) return;
+      counts.set(s, (counts.get(s) ?? 0) + 1);
+    });
+    let best = "";
+    let bestCount = 0;
+    counts.forEach((count, subject) => {
+      if (count > bestCount) {
+        best = subject;
+        bestCount = count;
+      }
+    });
+    return best;
+  }
+
+  /**
+   * Notes sent to the pack generator so the output stays anchored to the selected class,
+   * even when extracted_text is empty (e.g. image scans without OCR).
+   */
+  function buildKitNotesFromDocs(docs: NotebookDocumentRow[], contextTitle: string): string {
+    const topics = new Set<string>();
+    const points = new Set<string>();
+    const exercises = new Set<string>();
+    docs.forEach((d) => {
+      const t = String(d.topic ?? "").trim();
+      const p = String(d.lesson_point ?? "").trim();
+      const e = String(d.practice_exercises ?? "").trim();
+      if (t) topics.add(t);
+      if (p) points.add(p);
+      if (e) exercises.add(e);
+    });
+
+    const lines: string[] = [];
+    lines.push(`Contexto: ${contextTitle}`);
+    if (topics.size) lines.push(`Tema(s): ${Array.from(topics).slice(0, 12).join(" | ")}`);
+    if (points.size) lines.push(`Punto(s): ${Array.from(points).slice(0, 12).join(" | ")}`);
+    if (exercises.size) lines.push(`Ejercicios: ${Array.from(exercises).slice(0, 12).join(" | ")}`);
+    lines.push("");
+    lines.push("Archivos usados en esta clase (con etiquetas):");
+    docs.slice(0, 40).forEach((d) => {
+      const parts: string[] = [d.filename];
+      const t = String(d.topic ?? "").trim();
+      const p = String(d.lesson_point ?? "").trim();
+      const e = String(d.practice_exercises ?? "").trim();
+      if (t) parts.push(`Tema=${t}`);
+      if (p) parts.push(`Punto=${p}`);
+      if (e) parts.push(`Ejercicios=${e}`);
+      lines.push(`- ${parts.join(" · ")}`);
+    });
+    lines.push("");
+    lines.push(
+      "Instrucción: genera el kit SOLO con base en este contexto y el texto extraído del archivo si existe. No inventes temario genérico que no aparezca aquí.",
+    );
+    return lines.join("\n").trim();
+  }
+
   async function generateKitForClass(scheduleId: string, classDate: string, subject: string) {
     if (!useCloud || !authUserId) {
       setKitError("Para generar el kit desde material del cuaderno, inicia sesión (usa Supabase).");
@@ -167,13 +226,15 @@ export function AcademicCalendarHub() {
         return;
       }
       const extractedFileText = combineNotebookExtractedTextForPack(docs);
+      const contextTitle = `${subject} · ${classDate}`;
+      const notes = buildKitNotesFromDocs(docs, contextTitle);
       const { pack, packError } = await postRescuePack(
         {
           subjectHint: subject,
           sourceLabel: `Clase ${classDate} (${docs.length} archivo${docs.length === 1 ? "" : "s"})`,
           sourceKind: "notes",
           extractedFileText,
-          notes: "",
+          notes,
           link: "",
           uploadedFileCount: docs.length,
           seedText: "",
@@ -236,19 +297,21 @@ export function AcademicCalendarHub() {
       }
 
       const extractedFileText = combineNotebookExtractedTextForPack(docs);
+      const subjectFromDocs = mostCommonSubjectFromDocs(docs) || profile.subjects[0] || "Selección";
+      const notes = buildKitNotesFromDocs(docs, `Selección · ${keys.length} clase${keys.length === 1 ? "" : "s"}`);
       const { pack, packError } = await postRescuePack(
         {
-          subjectHint: profile.subjects[0] || "Selección",
+          subjectHint: subjectFromDocs,
           sourceLabel: `Selección de clases (${keys.length}) · ${docs.length} archivo${docs.length === 1 ? "" : "s"}`,
           sourceKind: "notes",
           extractedFileText,
-          notes: "",
+          notes,
           link: "",
           uploadedFileCount: docs.length,
           seedText: "",
           packMode: profile.plan === "premium" ? ("full" as const) : ("lite" as const),
         },
-        { seedText: extractedFileText, subjectHint: profile.subjects[0] || "Selección", sourceLabel: "Cuaderno", sourceKind: "notes" },
+        { seedText: extractedFileText, subjectHint: subjectFromDocs, sourceLabel: "Cuaderno", sourceKind: "notes" },
       );
       setKitPack(pack);
       setKitError(packError);
