@@ -4,13 +4,16 @@ type Props = {
   className?: string;
   /** Tailwind size classes, e.g. "h-10 w-10" */
   sizeClassName?: string;
+  /** Subject label shown on cover (optional). */
+  subject?: string;
 };
 
 /**
  * Small notebook mark (inline SVG) in Kampus colors.
  * This avoids relying on external PNG assets and stays crisp on all screens.
  */
-export function KampusNotebookMark({ className, sizeClassName = "h-10 w-10" }: Props) {
+export function KampusNotebookMark({ className, sizeClassName = "h-10 w-10", subject }: Props) {
+  const label = (subject ?? "").trim();
   return (
     <span className={cn("inline-flex items-center justify-center", sizeClassName, className)} aria-hidden="true">
       <svg viewBox="0 0 64 64" className="h-full w-full" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -46,6 +49,25 @@ export function KampusNotebookMark({ className, sizeClassName = "h-10 w-10" }: P
             fill="white"
             opacity="0.92"
           />
+
+          {/* Subject label (replaces wordmark; keeps cover clean) */}
+          {label ? (
+            <>
+              <path d="M26 41h18" stroke="rgba(59,130,246,0.55)" strokeWidth="1.6" strokeLinecap="round" />
+              <circle cx="35" cy="41" r="1.4" fill="rgba(34,211,238,0.9)" />
+              <text
+                x="36"
+                y="50"
+                textAnchor="middle"
+                fontSize="6.2"
+                fontWeight="700"
+                fontFamily="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial"
+                fill="rgba(255,255,255,0.92)"
+              >
+                {label.length > 14 ? `${label.slice(0, 13)}…` : label}
+              </text>
+            </>
+          ) : null}
         </g>
 
         {/* Spiral rings */}

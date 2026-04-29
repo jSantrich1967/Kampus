@@ -695,7 +695,8 @@ export function NotebookLibraryPanel() {
                         </div>
                       </div>
                       <KampusNotebookMark
-                        sizeClassName="h-10 w-10"
+                        subject={nb.subject}
+                        sizeClassName="h-12 w-12"
                         className="shrink-0 rounded-2xl ring-1 ring-white/10 shadow-inner shadow-black/20"
                       />
                     </div>
