@@ -1,10 +1,11 @@
 "use client";
 
-import { BookMarked, BookOpen, ChevronDown, ExternalLink, Loader2, Plus, Sparkles, Trash2, Upload } from "lucide-react";
+import { BookMarked, BookOpen, ChevronDown, Loader2, Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { KampusMark } from "@/components/brand/kampus-logo";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { getNotebookSubjectCover } from "@/components/study/notebook-subject-cover";
 import { getNotebookSubjectIcon } from "@/components/study/notebook-subject-icon";
@@ -693,7 +694,10 @@ export function NotebookLibraryPanel() {
                           {classesCount} clase{classesCount === 1 ? "" : "s"} · {filesCount} archivo{filesCount === 1 ? "" : "s"}
                         </div>
                       </div>
-                      <ExternalLink className="h-4 w-4 text-slate-500" />
+                      <KampusMark
+                        sizeClassName="h-9 w-9"
+                        className="shrink-0 ring-1 ring-white/10 shadow-inner shadow-black/20"
+                      />
                     </div>
                   </Link>
                 );
