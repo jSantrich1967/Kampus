@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { KampusMark } from "@/components/brand/kampus-logo";
+import { KampusNotebookMark } from "@/components/brand/kampus-notebook-mark";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { getNotebookSubjectCover } from "@/components/study/notebook-subject-cover";
 import { getNotebookSubjectIcon } from "@/components/study/notebook-subject-icon";
@@ -694,9 +694,9 @@ export function NotebookLibraryPanel() {
                           {classesCount} clase{classesCount === 1 ? "" : "s"} · {filesCount} archivo{filesCount === 1 ? "" : "s"}
                         </div>
                       </div>
-                      <KampusMark
-                        sizeClassName="h-9 w-9"
-                        className="shrink-0 ring-1 ring-white/10 shadow-inner shadow-black/20"
+                      <KampusNotebookMark
+                        sizeClassName="h-10 w-10"
+                        className="shrink-0 rounded-2xl ring-1 ring-white/10 shadow-inner shadow-black/20"
                       />
                     </div>
                   </Link>
