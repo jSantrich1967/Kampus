@@ -689,10 +689,10 @@ export function NotebookLibraryPanel() {
                   >
                     <div className="flex flex-col items-center gap-2">
                       <KampusNotebookMark
-                        subject={nb.subject}
-                        sizeClassName="h-16 w-16"
+                        sizeClassName="h-20 w-20"
                         className="rounded-2xl ring-1 ring-white/10 shadow-inner shadow-black/20"
                       />
+                      <div className="text-center text-sm font-semibold text-slate-100">{nb.subject}</div>
                       <div className="text-center text-xs text-slate-500">
                         {classesCount} clase{classesCount === 1 ? "" : "s"} · {filesCount} archivo{filesCount === 1 ? "" : "s"}
                       </div>
