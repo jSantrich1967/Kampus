@@ -114,7 +114,10 @@ export function AcademicCalendarHub() {
   function materialHint(mat: { topic?: string | null; lesson_point?: string | null } | null): string {
     if (!mat) return "";
     const point = (mat.lesson_point ?? "").trim();
-    if (point) return `Punto: ${point}`;
+    // Some older uploads (from calendar deep link) stored date/time into lesson_point.
+    // Ignore those so we only show real "Punto" values.
+    const looksLikeDateTime = /^\d{4}-\d{2}-\d{2}\b/.test(point);
+    if (point && !looksLikeDateTime) return `Punto: ${point}`;
     const topic = (mat.topic ?? "").trim();
     if (topic) return `Tema: ${topic}`;
     return "";
@@ -261,9 +264,7 @@ export function AcademicCalendarHub() {
         const cancelled = cancellations.find((x) => x.scheduleId === c.id && x.classDate === iso) ?? null;
         const uploadHref = `/study/library?subject=${encodeURIComponent(c.subject)}&topic=${encodeURIComponent(
           "Clase",
-        )}&lesson=${encodeURIComponent(`${iso} ${c.startTime}–${c.endTime}`)}&scheduleId=${encodeURIComponent(
-          c.id,
-        )}&classDate=${encodeURIComponent(iso)}&expand=1`;
+        )}&scheduleId=${encodeURIComponent(c.id)}&classDate=${encodeURIComponent(iso)}&expand=1`;
         out.push({
           id: `class:${c.id}:${iso}`,
           kind: "class",
