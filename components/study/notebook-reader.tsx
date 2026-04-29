@@ -12,16 +12,15 @@ import { getNotebookSubjectIcon } from "@/components/study/notebook-subject-icon
 import { Button } from "@/components/ui/button";
 import { initialsFromSubject, notebookCoverGradient } from "@/lib/notebooks/cover-styles";
 import { buildNotebookIndexGroups } from "@/lib/notebooks/notebook-index";
-import { sanitizeStorageFilename, subjectToPathSegment } from "@/lib/notebooks/paths";
+import { subjectToPathSegment } from "@/lib/notebooks/paths";
 import { formatNotebookCloudError } from "@/lib/notebooks/storage-errors";
+import { uploadNotebookDocuments } from "@/lib/notebooks/upload-documents";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cn } from "@/lib/cn";
 
 type Props = { subjectSlug: string };
-
-const MAX_BYTES = 50 * 1024 * 1024; // aligned with bucket limit in migration (50 MiB)
 
 export function NotebookReader({ subjectSlug }: Props) {
   const { authUserId } = useKampus();
@@ -124,58 +123,20 @@ export function NotebookReader({ subjectSlug }: Props) {
     setUploading(true);
     setError(null);
     const supabase = createSupabaseBrowserClient();
-    const segment = subjectToPathSegment(subject);
 
     try {
-      await supabase.from("user_notebooks").upsert({ user_id: authUserId, subject });
-
-      for (const file of Array.from(fileList)) {
-        if (file.size > MAX_BYTES) {
-          throw new Error(`“${file.name}” supera el límite de ${MAX_BYTES / 1024 / 1024} MB.`);
-        }
-
-        let extractedText: string | null = null;
-        try {
-          const fd = new FormData();
-          fd.append("files", file);
-          const res = await fetch("/api/rescue/extract", { method: "POST", body: fd });
-          const json = (await res.json()) as { combinedText?: string; error?: string };
-          if (res.ok && json.combinedText?.trim()) {
-            extractedText = json.combinedText.trim();
-          }
-        } catch {
-          // Extraction is optional; upload still proceeds
-        }
-
-        const safeName = sanitizeStorageFilename(file.name);
-        const storagePath = `${authUserId}/${segment}/${crypto.randomUUID()}_${safeName}`;
-
-        const { error: upErr } = await supabase.storage.from("notebooks").upload(storagePath, file, {
-          cacheControl: "3600",
-          upsert: false,
-          contentType: file.type || "application/octet-stream",
-        });
-        if (upErr) throw upErr;
-
-        const { error: insErr } = await supabase.from("notebook_documents").insert({
-          user_id: authUserId,
-          subject,
+      await uploadNotebookDocuments(supabase, {
+        userId: authUserId,
+        subject,
+        files: Array.from(fileList),
+        fields: {
           topic: "",
           lesson_point: "",
           practice_exercises: "",
           schedule_id: null,
           class_date: null,
-          storage_path: storagePath,
-          filename: file.name,
-          mime_type: file.type || "application/octet-stream",
-          size_bytes: file.size,
-          extracted_text: extractedText,
-        });
-        if (insErr) {
-          await supabase.storage.from("notebooks").remove([storagePath]);
-          throw insErr;
-        }
-      }
+        },
+      });
 
       await load();
     } catch (e) {
@@ -327,7 +288,7 @@ export function NotebookReader({ subjectSlug }: Props) {
       <PageHeader
         eyebrow="Cuaderno"
         title={loading ? "Abriendo…" : subjectLabel}
-        description="Navega como en un cuaderno: cada archivo es una clase o sesión, en orden de fecha."
+        description="Navega como en un cuaderno: cada archivo es una hoja. Aquí puedes hacer subida rápida de archivos y editar etiquetas; para vincular material a una clase del horario y fechas del calendario, usa Mis cuadernos."
         actions={
           <Link href="/study/library">
             <Button variant="secondary" size="sm" className="gap-2">
@@ -351,11 +312,16 @@ export function NotebookReader({ subjectSlug }: Props) {
         <div className="mx-auto max-w-2xl space-y-3 rounded-2xl border border-white/10 bg-slate-950/60 p-5 text-sm text-slate-300">
           <p className="font-medium text-slate-100">Este cuaderno está vacío</p>
           <p className="text-xs text-slate-400">
-            Flujo recomendado: sube aquí tus archivos y luego organízalos con <strong className="text-slate-200">Etiquetas</strong> y el{" "}
-            <strong className="text-slate-200">Índice</strong>.
+            <strong className="text-slate-200">Subida rápida:</strong> los archivos entran sin enlace al calendario. Luego puedes usar{" "}
+            <strong className="text-slate-200">Etiquetas</strong> y el <strong className="text-slate-200">Índice</strong>. Si necesitas que el material
+            quede en un día concreto del calendario, sube desde <strong className="text-slate-200">Mis cuadernos</strong> marcando “clase del
+            calendario”.
           </p>
           <div className="flex flex-wrap items-center gap-3">
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-indigo-500/20 px-4 py-2 text-sm font-semibold text-indigo-100 ring-1 ring-indigo-400/30 hover:bg-indigo-500/30">
+            <label
+              className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-indigo-500/20 px-4 py-2 text-sm font-semibold text-indigo-100 ring-1 ring-indigo-400/30 hover:bg-indigo-500/30"
+              title="Subida rápida (sin horario ni fecha de clase). Para calendario, usa Mis cuadernos."
+            >
               <Upload className="h-4 w-4" />
               {uploading ? "Subiendo…" : "Subir primeros archivos"}
               <input
@@ -368,7 +334,7 @@ export function NotebookReader({ subjectSlug }: Props) {
               />
             </label>
             <Link href="/study/library" className="text-xs text-indigo-200 underline-offset-2 hover:underline">
-              Ir a Mis cuadernos (solo si necesitas subir desde el calendario)
+              Mis cuadernos — subir enlazado al calendario
             </Link>
           </div>
         </div>
@@ -494,9 +460,12 @@ export function NotebookReader({ subjectSlug }: Props) {
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
-                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-indigo-500/20 px-3 py-2 text-xs font-semibold text-indigo-100 ring-1 ring-indigo-400/30 hover:bg-indigo-500/30">
+                      <label
+                        className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-indigo-500/20 px-3 py-2 text-xs font-semibold text-indigo-100 ring-1 ring-indigo-400/30 hover:bg-indigo-500/30"
+                        title="Subida rápida: sin clase del horario. Calendario → Mis cuadernos."
+                      >
                         <Upload className="h-4 w-4" />
-                        {uploading ? "Subiendo…" : "Agregar"}
+                        {uploading ? "Subiendo…" : "Agregar (rápido)"}
                         <input
                           type="file"
                           className="hidden"

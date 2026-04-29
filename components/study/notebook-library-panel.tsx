@@ -13,8 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { initialsFromSubject, notebookCoverGradient } from "@/lib/notebooks/cover-styles";
-import { sanitizeStorageFilename, subjectToPathSegment } from "@/lib/notebooks/paths";
+import { subjectToPathSegment } from "@/lib/notebooks/paths";
 import { formatNotebookCloudError } from "@/lib/notebooks/storage-errors";
+import { uploadNotebookDocuments } from "@/lib/notebooks/upload-documents";
 import type { NotebookDocumentRow, UserNotebookRow } from "@/lib/notebooks/types";
 import type { ClassScheduleRow } from "@/lib/schemas/class-schedule";
 import { fetchClassScheduleRemote } from "@/lib/supabase/agenda-db";
@@ -22,8 +23,6 @@ import { loadClassSchedule } from "@/lib/storage/class-schedule-storage";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cn } from "@/lib/cn";
-
-const MAX_BYTES = 50 * 1024 * 1024; // aligned with bucket limit in migration (50 MiB)
 
 export function NotebookLibraryPanel() {
   const { profile, authUserId } = useKampus();
@@ -237,59 +236,20 @@ export function NotebookLibraryPanel() {
     setUploading(true);
     setError(null);
     const supabase = createSupabaseBrowserClient();
-    const segment = subjectToPathSegment(effectiveSubject);
 
     try {
-      // Ensure the notebook exists.
-      await supabase.from("user_notebooks").upsert({ user_id: authUserId, subject: effectiveSubject });
-
-      for (const file of Array.from(fileList)) {
-        if (file.size > MAX_BYTES) {
-          throw new Error(`“${file.name}” supera el límite de ${MAX_BYTES / 1024 / 1024} MB.`);
-        }
-
-        let extractedText: string | null = null;
-        try {
-          const fd = new FormData();
-          fd.append("files", file);
-          const res = await fetch("/api/rescue/extract", { method: "POST", body: fd });
-          const json = (await res.json()) as { combinedText?: string; error?: string };
-          if (res.ok && json.combinedText?.trim()) {
-            extractedText = json.combinedText.trim();
-          }
-        } catch {
-          // Extraction is optional; upload still proceeds
-        }
-
-        const safeName = sanitizeStorageFilename(file.name);
-        const storagePath = `${authUserId}/${segment}/${crypto.randomUUID()}_${safeName}`;
-
-        const { error: upErr } = await supabase.storage.from("notebooks").upload(storagePath, file, {
-          cacheControl: "3600",
-          upsert: false,
-          contentType: file.type || "application/octet-stream",
-        });
-        if (upErr) throw upErr;
-
-        const { error: insErr } = await supabase.from("notebook_documents").insert({
-          user_id: authUserId,
-          subject: effectiveSubject,
+      await uploadNotebookDocuments(supabase, {
+        userId: authUserId,
+        subject: effectiveSubject,
+        files: Array.from(fileList),
+        fields: {
           topic: topicValue,
           lesson_point: pointValue,
           practice_exercises: uploadPracticeExercises.trim(),
           schedule_id: uploadAsClass ? uploadScheduleId : null,
           class_date: uploadAsClass ? uploadClassDate : null,
-          storage_path: storagePath,
-          filename: file.name,
-          mime_type: file.type || "application/octet-stream",
-          size_bytes: file.size,
-          extracted_text: extractedText,
-        });
-        if (insErr) {
-          await supabase.storage.from("notebooks").remove([storagePath]);
-          throw insErr;
-        }
-      }
+        },
+      });
       await loadDocs();
       setExpandedSubject(effectiveSubject);
     } catch (e) {
@@ -411,7 +371,9 @@ export function NotebookLibraryPanel() {
           Cuadernos por materia
         </CardTitle>
         <CardDescription>
-          Cada materia es un cuaderno con portada propia. Dentro verás las “hojas” (archivos). Desde aquí puedes abrir el lector o generar el kit de estudios con todo el cuaderno.
+          Cada materia es un cuaderno con portada propia. <strong className="text-slate-200">Aquí</strong> subes material con opción de{" "}
+          <strong className="text-slate-200">enlazarlo al calendario</strong> y etiquetas antes de subir. En el{" "}
+          <strong className="text-slate-200">lector</strong> la subida es rápida (archivos sueltos); el índice y las etiquetas por archivo se gestionan allí.
         </CardDescription>
       </CardHeader>
 
@@ -469,6 +431,11 @@ export function NotebookLibraryPanel() {
 
         {canUploadMaterial ? (
           <>
+            <p className="text-[11px] leading-relaxed text-slate-500">
+              <strong className="text-slate-300">Subida con contexto:</strong> elige materia, opcionalmente marca si es una clase del calendario y rellena
+              Tema/Punto si quieres que el kit de estudios filtre bien. Para añadir PDFs al vuelo mientras lees, usa el lector (
+              <strong className="text-slate-400">Agregar (rápido)</strong>).
+            </p>
             <div className="grid gap-3 md:grid-cols-2">
               <label className="space-y-1 text-sm">
                 <span className="text-slate-400">Subir material al cuaderno</span>
