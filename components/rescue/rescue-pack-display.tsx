@@ -2,6 +2,7 @@
 
 import { Download } from "lucide-react";
 import type { ReactNode } from "react";
+import { useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,110 @@ function downloadFile(filename: string, content: string, mime: string) {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+
+function escapeHtml(input: string): string {
+  return input
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function packToSafeHtml(pack: RescuePack, premium: boolean): string {
+  const h: string[] = [];
+  const push = (s: string) => h.push(s);
+  const section = (title: string) => {
+    push(`<h2>${escapeHtml(title)}</h2>`);
+  };
+  const p = (text: string) => push(`<p>${escapeHtml(text)}</p>`);
+  const ul = (items: string[]) => {
+    push("<ul>");
+    items.forEach((i) => push(`<li>${escapeHtml(i)}</li>`));
+    push("</ul>");
+  };
+  const ol = (items: string[]) => {
+    push("<ol>");
+    items.forEach((i) => push(`<li>${escapeHtml(i)}</li>`));
+    push("</ol>");
+  };
+
+  push(`<h1>${escapeHtml(pack.subjectLine)}</h1>`);
+
+  section("Resumen rápido");
+  p(pack.quickSummary);
+
+  section("Ideas clave");
+  ul(pack.keyIdeas);
+
+  section("Checklist de estudio");
+  ul(pack.studyChecklist);
+
+  section("Siguiente recurso sugerido");
+  p(pack.suggestedNextResource);
+
+  if (premium) {
+    section("Resumen completo");
+    p(pack.fullSummary);
+
+    section("Explicación profunda");
+    p(pack.deepExplanation);
+
+    section("Probables preguntas de examen");
+    ol(pack.probableExamQuestions);
+
+    section("Tarjetas");
+    push("<ul>");
+    pack.flashcards.forEach((c) => {
+      push(`<li><strong>Frente:</strong> ${escapeHtml(c.front)}<br/><strong>Reverso:</strong> ${escapeHtml(c.back)}</li>`);
+    });
+    push("</ul>");
+
+    section("Quiz");
+    push("<ol>");
+    pack.quiz.forEach((q) => {
+      push(`<li><strong>${escapeHtml(q.question)}</strong>`);
+      push("<ul>");
+      q.options.forEach((opt, idx) => {
+        const letter = String.fromCharCode(65 + idx);
+        const correct = idx === q.answerIndex ? " (correcta)" : "";
+        push(`<li>${escapeHtml(`${letter}. ${opt}${correct}`)}</li>`);
+      });
+      push("</ul>");
+      push("</li>");
+    });
+    push("</ol>");
+
+    section("Mapa mental (outline)");
+    push(`<pre>${escapeHtml(pack.mindMapOutline)}</pre>`);
+
+    section("Explicación fácil");
+    p(pack.easyExplanation);
+
+    section("Explicación técnica");
+    p(pack.technicalExplanation);
+
+    section("Preguntas para hacer en clase");
+    ul(pack.questionsForClass);
+  } else {
+    section("Nota");
+    p("Este kit se exportó en modo gratuito: algunas secciones profundas están bloqueadas en la app.");
+  }
+
+  const css = `
+    <style>
+      @page { size: A4; margin: 18mm; }
+      body { font-family: Arial, Helvetica, sans-serif; color: #111827; }
+      h1 { font-size: 20px; margin: 0 0 10px; }
+      h2 { font-size: 14px; margin: 16px 0 6px; padding-top: 6px; border-top: 1px solid #e5e7eb; }
+      p, li { font-size: 11px; line-height: 1.45; }
+      ul, ol { margin: 6px 0 0 18px; padding: 0; }
+      pre { font-size: 10px; background: #f3f4f6; padding: 10px; border-radius: 8px; white-space: pre-wrap; }
+    </style>
+  `;
+
+  return `<!doctype html><html><head><meta charset="utf-8" />${css}</head><body>${h.join("\n")}</body></html>`;
 }
 
 function packToMarkdown(pack: RescuePack, premium: boolean): string {
@@ -156,8 +261,48 @@ type Props = {
 };
 
 export function RescuePackDisplay({ pack, premium, headerActions }: Props) {
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const pdfHostRef = useRef<HTMLDivElement | null>(null);
+
+  async function downloadPdf() {
+    if (pdfBusy) return;
+    setPdfBusy(true);
+    try {
+      const host = pdfHostRef.current;
+      if (!host) return;
+
+      host.innerHTML = packToSafeHtml(pack, premium);
+      const htmlEl = host.firstElementChild as HTMLElement | null;
+      if (!htmlEl) return;
+
+      const mod = await import("html2pdf.js");
+      type Html2PdfFactory = () => {
+        from: (el: HTMLElement) => {
+          set: (options: unknown) => {
+            save: () => Promise<void>;
+          };
+        };
+      };
+      const html2pdf = ((mod as unknown as { default?: unknown }).default ?? mod) as unknown as Html2PdfFactory;
+
+      await html2pdf()
+        .from(htmlEl)
+        .set({
+          filename: `${safeFilename(pack.subjectLine)}.pdf`,
+          margin: [18, 18, 18, 18],
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+          jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
+        })
+        .save();
+    } finally {
+      if (pdfHostRef.current) pdfHostRef.current.innerHTML = "";
+      setPdfBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-5">
+      <div ref={pdfHostRef} className="pointer-events-none fixed left-0 top-0 -z-10 h-0 w-0 overflow-hidden opacity-0" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="text-xs uppercase tracking-wide text-slate-400">Línea de asunto</div>
@@ -173,6 +318,17 @@ export function RescuePackDisplay({ pack, premium, headerActions }: Props) {
           >
             <Download className="h-4 w-4" />
             Descargar .md
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="gap-2"
+            onClick={() => void downloadPdf()}
+            disabled={pdfBusy}
+          >
+            <Download className="h-4 w-4" />
+            {pdfBusy ? "Generando PDF…" : "Descargar PDF"}
           </Button>
           <Button
             type="button"
