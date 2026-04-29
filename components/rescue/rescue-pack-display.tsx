@@ -41,7 +41,7 @@ function escapeHtml(input: string): string {
     .replaceAll("'", "&#39;");
 }
 
-function packToSafeHtml(pack: RescuePack, premium: boolean): string {
+function packToSafeInnerHtml(pack: RescuePack, premium: boolean): string {
   const h: string[] = [];
   const push = (s: string) => h.push(s);
   const section = (title: string) => {
@@ -121,19 +121,7 @@ function packToSafeHtml(pack: RescuePack, premium: boolean): string {
     p("Este kit se exportó en modo gratuito: algunas secciones profundas están bloqueadas en la app.");
   }
 
-  const css = `
-    <style>
-      @page { size: A4; margin: 18mm; }
-      body { font-family: Arial, Helvetica, sans-serif; color: #111827; }
-      h1 { font-size: 20px; margin: 0 0 10px; }
-      h2 { font-size: 14px; margin: 16px 0 6px; padding-top: 6px; border-top: 1px solid #e5e7eb; }
-      p, li { font-size: 11px; line-height: 1.45; }
-      ul, ol { margin: 6px 0 0 18px; padding: 0; }
-      pre { font-size: 10px; background: #f3f4f6; padding: 10px; border-radius: 8px; white-space: pre-wrap; }
-    </style>
-  `;
-
-  return `<!doctype html><html><head><meta charset="utf-8" />${css}</head><body>${h.join("\n")}</body></html>`;
+  return h.join("\n");
 }
 
 function packToMarkdown(pack: RescuePack, premium: boolean): string {
@@ -271,9 +259,20 @@ export function RescuePackDisplay({ pack, premium, headerActions }: Props) {
       const host = pdfHostRef.current;
       if (!host) return;
 
-      host.innerHTML = packToSafeHtml(pack, premium);
-      const htmlEl = host.firstElementChild as HTMLElement | null;
-      if (!htmlEl) return;
+      // Render offscreen but with real width so html2canvas can "see" it.
+      host.innerHTML = `
+        <style>
+          .pdf-sheet { font-family: Arial, Helvetica, sans-serif; color: #111827; }
+          .pdf-sheet h1 { font-size: 20px; margin: 0 0 10px; }
+          .pdf-sheet h2 { font-size: 14px; margin: 16px 0 6px; padding-top: 6px; border-top: 1px solid #e5e7eb; }
+          .pdf-sheet p, .pdf-sheet li { font-size: 11px; line-height: 1.45; }
+          .pdf-sheet ul, .pdf-sheet ol { margin: 6px 0 0 18px; padding: 0; }
+          .pdf-sheet pre { font-size: 10px; background: #f3f4f6; padding: 10px; border-radius: 8px; white-space: pre-wrap; }
+        </style>
+        <div class="pdf-sheet">${packToSafeInnerHtml(pack, premium)}</div>
+      `;
+      const pdfEl = host.querySelector(".pdf-sheet") as HTMLElement | null;
+      if (!pdfEl) return;
 
       const mod = await import("html2pdf.js");
       type Html2PdfFactory = () => {
@@ -286,7 +285,7 @@ export function RescuePackDisplay({ pack, premium, headerActions }: Props) {
       const html2pdf = ((mod as unknown as { default?: unknown }).default ?? mod) as unknown as Html2PdfFactory;
 
       await html2pdf()
-        .from(htmlEl)
+        .from(pdfEl)
         .set({
           filename: `${safeFilename(pack.subjectLine)}.pdf`,
           margin: [18, 18, 18, 18],
@@ -302,7 +301,11 @@ export function RescuePackDisplay({ pack, premium, headerActions }: Props) {
 
   return (
     <div className="space-y-5">
-      <div ref={pdfHostRef} className="pointer-events-none fixed left-0 top-0 -z-10 h-0 w-0 overflow-hidden opacity-0" />
+      <div
+        ref={pdfHostRef}
+        className="pointer-events-none fixed left-[-10000px] top-0 z-[-1] w-[794px] bg-white p-6 opacity-100"
+        aria-hidden="true"
+      />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="text-xs uppercase tracking-wide text-slate-400">Línea de asunto</div>
