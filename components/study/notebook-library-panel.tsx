@@ -687,18 +687,15 @@ export function NotebookLibraryPanel() {
                     href={`/study/notebook/${subjectToPathSegment(nb.subject)}`}
                     className="min-w-[14rem] shrink-0 rounded-2xl border border-white/10 bg-slate-950/50 p-4 transition hover:border-white/20 hover:bg-slate-950/60"
                   >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold text-slate-100">{nb.subject}</div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          {classesCount} clase{classesCount === 1 ? "" : "s"} · {filesCount} archivo{filesCount === 1 ? "" : "s"}
-                        </div>
-                      </div>
+                    <div className="flex flex-col items-center gap-2">
                       <KampusNotebookMark
                         subject={nb.subject}
-                        sizeClassName="h-12 w-12"
-                        className="shrink-0 rounded-2xl ring-1 ring-white/10 shadow-inner shadow-black/20"
+                        sizeClassName="h-16 w-16"
+                        className="rounded-2xl ring-1 ring-white/10 shadow-inner shadow-black/20"
                       />
+                      <div className="text-center text-xs text-slate-500">
+                        {classesCount} clase{classesCount === 1 ? "" : "s"} · {filesCount} archivo{filesCount === 1 ? "" : "s"}
+                      </div>
                     </div>
                   </Link>
                 );
