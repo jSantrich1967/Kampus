@@ -55,6 +55,7 @@ export function NotebookLibraryPanel() {
   const [showAllNotebooks, setShowAllNotebooks] = useState(false);
   const [kitSubject, setKitSubject] = useState("");
   const [deletingNotebook, setDeletingNotebook] = useState<string | null>(null);
+  const [indexQuery, setIndexQuery] = useState("");
 
   useEffect(() => {
     if (customSubject.trim()) return;
@@ -303,6 +304,24 @@ export function NotebookLibraryPanel() {
     } finally {
       setUploading(false);
     }
+  }
+
+  async function uploadFilesToSubject(subjectName: string, fileList: FileList | null) {
+    const s = subjectName.trim();
+    if (!s) return;
+    // Keep the upload form aligned with the notebook the user is viewing.
+    if (profile.subjects.includes(s)) {
+      setCustomSubject("");
+      setSubject(s);
+    } else {
+      setCustomSubject(s);
+    }
+    setExpandedSubject(s);
+    // Help beginners: if they haven't filled tags yet, set a safe default.
+    if (!uploadTopic.trim() && !uploadLessonPoint.trim()) {
+      setUploadTopic("Clase");
+    }
+    await uploadFiles(fileList);
   }
 
   async function createNotebook(subjectName: string) {
@@ -895,7 +914,46 @@ export function NotebookLibraryPanel() {
 
                   {expanded ? (
                     <div className="border-t border-white/10 bg-slate-950/80 px-4 py-4">
-                      <p className="mb-3 text-xs font-medium text-slate-400">Clases dentro de este cuaderno</p>
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Índice del cuaderno</p>
+                          <p className="mt-1 text-[11px] text-slate-500">
+                            Desde aquí puedes <strong className="text-slate-300">agregar</strong>,{" "}
+                            <strong className="text-slate-300">editar etiquetas</strong> y{" "}
+                            <strong className="text-slate-300">eliminar</strong> apuntes/archivos.
+                          </p>
+                        </div>
+                        <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-indigo-500/20 px-3 py-2 text-xs font-semibold text-indigo-100 ring-1 ring-indigo-400/30 hover:bg-indigo-500/30">
+                          <Upload className="h-4 w-4" />
+                          Agregar archivos
+                          <input
+                            type="file"
+                            className="hidden"
+                            multiple
+                            accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md,application/pdf,image/*,text/plain,text/markdown"
+                            disabled={uploading}
+                            onChange={(e) => void uploadFilesToSubject(subjectName, e.target.files)}
+                          />
+                        </label>
+                      </div>
+
+                      <div className="mb-3 grid gap-2 sm:grid-cols-2">
+                        <label className="space-y-1 text-xs">
+                          <span className="text-slate-500">Buscar en este cuaderno</span>
+                          <input
+                            className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2 text-xs text-slate-200 outline-none ring-indigo-400/30 focus:ring"
+                            value={indexQuery}
+                            onChange={(e) => setIndexQuery(e.target.value)}
+                            placeholder="Ej. “regresión”, “Tema: Álgebra”, “Punto 2.1”…"
+                          />
+                        </label>
+                        <div className="flex items-end">
+                          <Button type="button" size="sm" variant="ghost" className="h-9 w-full ring-1 ring-white/10" onClick={() => setIndexQuery("")}>
+                            Limpiar búsqueda
+                          </Button>
+                        </div>
+                      </div>
+
                       {pages.length === 0 ? (
                         <div className="space-y-2 rounded-xl border border-white/10 bg-slate-950/60 px-3 py-3 text-sm text-slate-400">
                           <div>Este cuaderno está vacío.</div>
@@ -906,13 +964,35 @@ export function NotebookLibraryPanel() {
                       ) : (
                         <ul className="space-y-3">
                           {(() => {
+                            const q = indexQuery.trim().toLowerCase();
+                            const filteredPages = q
+                              ? pages.filter((d) => {
+                                  const hay = [
+                                    d.filename,
+                                    d.topic ?? "",
+                                    d.lesson_point ?? "",
+                                    d.practice_exercises ?? "",
+                                    d.class_date ?? "",
+                                  ]
+                                    .join(" ")
+                                    .toLowerCase();
+                                  return hay.includes(q);
+                                })
+                              : pages;
                             const byDate = new Map<string, NotebookDocumentRow[]>();
-                            for (const d of pages) {
+                            for (const d of filteredPages) {
                               const key = (d.class_date ?? "").trim() || "Sin fecha";
                               if (!byDate.has(key)) byDate.set(key, []);
                               byDate.get(key)!.push(d);
                             }
                             const keys = Array.from(byDate.keys()).sort((a, b) => (a === "Sin fecha" ? 1 : a.localeCompare(b)));
+                            if (keys.length === 0) {
+                              return (
+                                <li className="rounded-xl border border-white/10 bg-slate-950/60 px-3 py-3 text-sm text-slate-400">
+                                  No hay coincidencias con tu búsqueda en este cuaderno.
+                                </li>
+                              );
+                            }
                             return keys.map((dateKey) => {
                               const list = byDate.get(dateKey)!;
                               return (
