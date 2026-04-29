@@ -54,6 +54,7 @@ export function NotebookLibraryPanel() {
   const [newNotebookSubject, setNewNotebookSubject] = useState("");
   const [showAllNotebooks, setShowAllNotebooks] = useState(false);
   const [kitSubject, setKitSubject] = useState("");
+  const [deletingNotebook, setDeletingNotebook] = useState<string | null>(null);
 
   useEffect(() => {
     if (customSubject.trim()) return;
@@ -321,6 +322,59 @@ export function NotebookLibraryPanel() {
       setError(formatNotebookCloudError(msg));
     } finally {
       setCreatingNotebook(false);
+    }
+  }
+
+  async function deleteNotebook(subjectName: string) {
+    if (!authUserId) return;
+    const s = subjectName.trim() || "General";
+    const ok = window.confirm(
+      `¿Eliminar el cuaderno “${s}”?\n\nEsto borrará también todos los archivos subidos a ese cuaderno.`,
+    );
+    if (!ok) return;
+
+    setDeletingNotebook(s);
+    setError(null);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error: qErr } = await supabase
+        .from("notebook_documents")
+        .select("id,storage_path")
+        .eq("user_id", authUserId)
+        .eq("subject", s)
+        .order("created_at", { ascending: false })
+        .limit(1000);
+      if (qErr) throw qErr;
+      const rows = (data ?? []) as Pick<NotebookDocumentRow, "id" | "storage_path">[];
+      const paths = rows.map((r) => r.storage_path).filter(Boolean);
+
+      // Remove files from Storage in chunks (avoid huge requests).
+      const chunkSize = 100;
+      for (let i = 0; i < paths.length; i += chunkSize) {
+        const chunk = paths.slice(i, i + chunkSize);
+        const { error: rmErr } = await supabase.storage.from("notebooks").remove(chunk);
+        if (rmErr) throw rmErr;
+      }
+
+      // Remove DB rows.
+      if (rows.length) {
+        const { error: delDocsErr } = await supabase.from("notebook_documents").delete().eq("user_id", authUserId).eq("subject", s);
+        if (delDocsErr) throw delDocsErr;
+      }
+
+      const { error: delNbErr } = await supabase.from("user_notebooks").delete().eq("user_id", authUserId).eq("subject", s);
+      if (delNbErr) throw delNbErr;
+
+      // Update local state quickly.
+      setDocs((prev) => prev.filter((d) => d.subject !== s));
+      setNotebooks((prev) => prev.filter((n) => n.subject !== s));
+      if (expandedSubject === s) setExpandedSubject(null);
+      if (kitSubject === s) setKitSubject("");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "No se pudo eliminar el cuaderno.";
+      setError(formatNotebookCloudError(msg));
+    } finally {
+      setDeletingNotebook(null);
     }
   }
 
@@ -796,6 +850,18 @@ export function NotebookLibraryPanel() {
                             <BookOpen className="h-4 w-4 shrink-0 opacity-90" />
                             Ver cuaderno
                           </Link>
+                            {exists ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="w-full text-rose-200 hover:bg-rose-500/10"
+                                disabled={Boolean(deletingNotebook)}
+                                onClick={() => void deleteNotebook(subjectName)}
+                              >
+                                {deletingNotebook === subjectName ? "Eliminando…" : "Eliminar cuaderno"}
+                              </Button>
+                            ) : null}
                           {!exists ? (
                             <Button
                               type="button"
