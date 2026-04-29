@@ -108,6 +108,21 @@ export function AcademicCalendarHub() {
   const [kitError, setKitError] = useState<string | null>(null);
   const [kitPack, setKitPack] = useState<RescuePack | null>(null);
   const [kitTitle, setKitTitle] = useState<string>("");
+  const [kitSources, setKitSources] = useState<
+    | {
+        title: string;
+        docs: Array<{
+          id: string;
+          filename: string;
+          topic?: string | null;
+          lesson_point?: string | null;
+          practice_exercises?: string | null;
+          extractedLen: number;
+          extractedPreview: string;
+        }>;
+      }
+    | null
+  >(null);
   const [selectedClassKeys, setSelectedClassKeys] = useState<string[]>([]);
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
@@ -208,6 +223,7 @@ export function AcademicCalendarHub() {
     setKitBusy(true);
     setKitError(null);
     setKitPack(null);
+    setKitSources(null);
     setKitTitle(`${subject} · ${classDate}`);
     try {
       const supabase = createSupabaseBrowserClient();
@@ -228,6 +244,21 @@ export function AcademicCalendarHub() {
       const extractedFileText = combineNotebookExtractedTextForPack(docs);
       const contextTitle = `${subject} · ${classDate}`;
       const notes = buildKitNotesFromDocs(docs, contextTitle);
+      setKitSources({
+        title: contextTitle,
+        docs: docs.map((d) => {
+          const t = (d.extracted_text ?? "").trim();
+          return {
+            id: String(d.id),
+            filename: d.filename,
+            topic: d.topic ?? null,
+            lesson_point: d.lesson_point ?? null,
+            practice_exercises: d.practice_exercises ?? null,
+            extractedLen: t.length,
+            extractedPreview: t.slice(0, 240),
+          };
+        }),
+      });
       const { pack, packError } = await postRescuePack(
         {
           subjectHint: subject,
@@ -265,6 +296,7 @@ export function AcademicCalendarHub() {
     setKitBusy(true);
     setKitError(null);
     setKitPack(null);
+    setKitSources(null);
     setKitTitle(`Selección · ${keys.length} clase${keys.length === 1 ? "" : "s"}`);
     try {
       const supabase = createSupabaseBrowserClient();
@@ -299,6 +331,21 @@ export function AcademicCalendarHub() {
       const extractedFileText = combineNotebookExtractedTextForPack(docs);
       const subjectFromDocs = mostCommonSubjectFromDocs(docs) || profile.subjects[0] || "Selección";
       const notes = buildKitNotesFromDocs(docs, `Selección · ${keys.length} clase${keys.length === 1 ? "" : "s"}`);
+      setKitSources({
+        title: `Selección · ${keys.length} clase${keys.length === 1 ? "" : "s"}`,
+        docs: docs.map((d) => {
+          const t = (d.extracted_text ?? "").trim();
+          return {
+            id: String(d.id),
+            filename: d.filename,
+            topic: d.topic ?? null,
+            lesson_point: d.lesson_point ?? null,
+            practice_exercises: d.practice_exercises ?? null,
+            extractedLen: t.length,
+            extractedPreview: t.slice(0, 240),
+          };
+        }),
+      });
       const { pack, packError } = await postRescuePack(
         {
           subjectHint: subjectFromDocs,
@@ -1167,6 +1214,40 @@ export function AcademicCalendarHub() {
               </div>
             ) : null}
             {kitError ? <p className="text-sm text-rose-300">{kitError}</p> : null}
+            {kitSources ? (
+              <details className="rounded-xl border border-white/10 bg-slate-950/40 p-3 text-xs text-slate-300">
+                <summary className="cursor-pointer select-none text-slate-200">
+                  Ver archivos usados y texto extraído (diagnóstico)
+                </summary>
+                <div className="mt-2 space-y-2">
+                  <p className="text-slate-400">
+                    Si <strong className="text-slate-200">extracted</strong> está en 0–50 caracteres, el kit puede salir genérico porque no
+                    hubo OCR/texto real.
+                  </p>
+                  <ul className="space-y-2">
+                    {kitSources.docs.slice(0, 40).map((d) => (
+                      <li key={d.id} className="rounded-lg border border-white/10 bg-slate-950/30 p-2">
+                        <div className="font-medium text-slate-100">{d.filename}</div>
+                        <div className="mt-0.5 text-[11px] text-slate-400">
+                          extracted: {d.extractedLen} chars
+                          {d.topic ? ` · Tema: ${d.topic}` : ""}
+                          {d.lesson_point ? ` · Punto: ${d.lesson_point}` : ""}
+                          {d.practice_exercises ? ` · Ejercicios: ${d.practice_exercises}` : ""}
+                        </div>
+                        {d.extractedPreview ? (
+                          <div className="mt-1 whitespace-pre-wrap rounded-md border border-white/10 bg-black/20 p-2 text-[11px] text-slate-300">
+                            {d.extractedPreview}
+                            {d.extractedLen > d.extractedPreview.length ? "…" : ""}
+                          </div>
+                        ) : (
+                          <div className="mt-1 text-[11px] text-slate-500">(Sin texto extraído)</div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </details>
+            ) : null}
           </div>
           {kitPack ? <RescuePackDisplay pack={kitPack} premium={profile.plan === "premium"} /> : null}
         </Card>
