@@ -108,8 +108,13 @@ export function AcademicCalendarHub() {
   const [kitError, setKitError] = useState<string | null>(null);
   const [kitPack, setKitPack] = useState<RescuePack | null>(null);
   const [kitTitle, setKitTitle] = useState<string>("");
+  const [selectedClassKeys, setSelectedClassKeys] = useState<string[]>([]);
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
+
+  function toggleSelectedClassKey(key: string) {
+    setSelectedClassKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  }
 
   function materialHint(mat: { topic?: string | null; lesson_point?: string | null } | null): string {
     if (!mat) return "";
@@ -174,6 +179,74 @@ export function AcademicCalendarHub() {
           seedText: "",
         },
         { seedText: extractedFileText, subjectHint: subject, sourceLabel: "Cuaderno", sourceKind: "notes" },
+      );
+      setKitPack(pack);
+      setKitError(packError);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "No se pudo generar el kit.";
+      setKitError(formatAgendaCloudError(msg));
+    } finally {
+      setKitBusy(false);
+    }
+  }
+
+  async function generateKitForSelectedClasses() {
+    if (!useCloud || !authUserId) {
+      setKitError("Para generar el kit desde material del cuaderno, inicia sesión (usa Supabase).");
+      return;
+    }
+    const keys = selectedClassKeys.slice();
+    if (keys.length === 0) {
+      setKitError("Primero selecciona al menos una clase en el calendario (clic para marcar en amarillo).");
+      return;
+    }
+    setKitBusy(true);
+    setKitError(null);
+    setKitPack(null);
+    setKitTitle(`Selección · ${keys.length} clase${keys.length === 1 ? "" : "s"}`);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const parts = keys
+        .map((k) => {
+          const [scheduleId, classDate] = k.split(":");
+          return { scheduleId: scheduleId ?? "", classDate: classDate ?? "" };
+        })
+        .filter((x) => x.scheduleId && x.classDate);
+
+      const results = await Promise.all(
+        parts.map(async ({ scheduleId, classDate }) => {
+          const { data, error } = await supabase
+            .from("notebook_documents")
+            .select("*")
+            .eq("user_id", authUserId)
+            .eq("schedule_id", scheduleId)
+            .eq("class_date", classDate)
+            .order("created_at", { ascending: false })
+            .limit(60);
+          if (error) throw error;
+          return (data as NotebookDocumentRow[]) ?? [];
+        }),
+      );
+
+      const docs = results.flat();
+      if (docs.length === 0) {
+        setKitError("No hay material subido en las clases seleccionadas todavía. Sube apuntes y vuelve a intentar.");
+        return;
+      }
+
+      const extractedFileText = combineNotebookExtractedTextForPack(docs);
+      const { pack, packError } = await postRescuePack(
+        {
+          subjectHint: profile.subjects[0] || "Selección",
+          sourceLabel: `Selección de clases (${keys.length}) · ${docs.length} archivo${docs.length === 1 ? "" : "s"}`,
+          sourceKind: "notes",
+          extractedFileText,
+          notes: "",
+          link: "",
+          uploadedFileCount: docs.length,
+          seedText: "",
+        },
+        { seedText: extractedFileText, subjectHint: profile.subjects[0] || "Selección", sourceLabel: "Cuaderno", sourceKind: "notes" },
       );
       setKitPack(pack);
       setKitError(packError);
@@ -606,6 +679,7 @@ export function AcademicCalendarHub() {
                   {dayEvents.slice(0, 3).map((ev) => {
                     const isClass = ev.kind === "class" && ev.id.startsWith("class:");
                     const key = isClass ? `${ev.id.split(":")[1]}:${ev.date}` : "";
+                    const selected = Boolean(key) && selectedClassKeys.includes(key);
                     const mat = key ? classDocsByKey[key] : null;
                     const hint = materialHint(mat);
                     const countText = mat?.count ? `+${mat.count}` : "";
@@ -617,10 +691,18 @@ export function AcademicCalendarHub() {
                         "block rounded px-1 py-0.5 text-[10px] leading-tight ring-1 transition hover:bg-white/5",
                         ev.kind === "exam" && "bg-emerald-500/15 text-emerald-100 ring-emerald-400/20",
                         ev.kind === "presentation" && "bg-indigo-500/15 text-indigo-100 ring-indigo-400/25",
-                        ev.kind === "class" && "bg-white/5 text-slate-200 ring-white/10",
+                        ev.kind === "class" && !selected && "bg-white/5 text-slate-200 ring-white/10",
+                        ev.kind === "class" && selected && "bg-amber-500/20 text-amber-100 ring-amber-400/30",
                         ev.kind === "work" && "bg-white/5 text-slate-200 ring-white/10",
                       )}
                       title={`${kindLabel(ev.kind)}: ${ev.title}${ev.note ? ` · ${ev.note}` : ""}`}
+                      onClick={(e) => {
+                        // UX: click selects class days; Ctrl/Cmd click keeps navigation.
+                        if (!isClass) return;
+                        if (e.metaKey || e.ctrlKey) return;
+                        e.preventDefault();
+                        toggleSelectedClassKey(key);
+                      }}
                     >
                       <div className="flex items-baseline justify-between gap-1">
                         <span className="min-w-0 flex-1 truncate">{ev.title}</span>
@@ -637,6 +719,31 @@ export function AcademicCalendarHub() {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3">
+        <div className="text-sm text-slate-300">
+          <span className="text-slate-500">Selección:</span>{" "}
+          <span className="font-semibold text-slate-100">
+            {selectedClassKeys.length} clase{selectedClassKeys.length === 1 ? "" : "s"}
+          </span>
+          <span className="ml-2 text-xs text-slate-500">(clic para marcar en amarillo · Ctrl/Cmd clic para abrir)</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" size="sm" variant="ghost" onClick={() => setSelectedClassKeys([])} disabled={selectedClassKeys.length === 0}>
+            Limpiar
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            className="bg-amber-500/20 text-amber-100 ring-1 ring-amber-400/30 hover:bg-amber-500/25"
+            disabled={kitBusy || selectedClassKeys.length === 0}
+            onClick={() => void generateKitForSelectedClasses()}
+          >
+            {kitBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Crear kit con selección
+          </Button>
         </div>
       </div>
 
