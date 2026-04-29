@@ -45,17 +45,11 @@ export function NotebookLibraryPanel() {
   const [uploadClassDate, setUploadClassDate] = useState<string | null>(null);
   const [uploadAsClass, setUploadAsClass] = useState(false);
   const [scheduleRows, setScheduleRows] = useState<ClassScheduleRow[]>([]);
-  const [editingDocId, setEditingDocId] = useState<string | null>(null);
-  const [editTopic, setEditTopic] = useState("");
-  const [editLessonPoint, setEditLessonPoint] = useState("");
-  const [editPractice, setEditPractice] = useState("");
-  const [savingTags, setSavingTags] = useState(false);
   const [creatingNotebook, setCreatingNotebook] = useState(false);
   const [newNotebookSubject, setNewNotebookSubject] = useState("");
   const [showAllNotebooks, setShowAllNotebooks] = useState(false);
   const [kitSubject, setKitSubject] = useState("");
   const [deletingNotebook, setDeletingNotebook] = useState<string | null>(null);
-  const [indexQuery, setIndexQuery] = useState("");
 
   useEffect(() => {
     if (customSubject.trim()) return;
@@ -306,24 +300,6 @@ export function NotebookLibraryPanel() {
     }
   }
 
-  async function uploadFilesToSubject(subjectName: string, fileList: FileList | null) {
-    const s = subjectName.trim();
-    if (!s) return;
-    // Keep the upload form aligned with the notebook the user is viewing.
-    if (profile.subjects.includes(s)) {
-      setCustomSubject("");
-      setSubject(s);
-    } else {
-      setCustomSubject(s);
-    }
-    setExpandedSubject(s);
-    // Help beginners: if they haven't filled tags yet, set a safe default.
-    if (!uploadTopic.trim() && !uploadLessonPoint.trim()) {
-      setUploadTopic("Clase");
-    }
-    await uploadFiles(fileList);
-  }
-
   async function createNotebook(subjectName: string) {
     if (!authUserId) return;
     const s = subjectName.trim() || "General";
@@ -395,69 +371,6 @@ export function NotebookLibraryPanel() {
     } finally {
       setDeletingNotebook(null);
     }
-  }
-
-  async function removeDoc(doc: NotebookDocumentRow) {
-    if (!authUserId) return;
-    setError(null);
-    const supabase = createSupabaseBrowserClient();
-    try {
-      const { error: rmErr } = await supabase.storage.from("notebooks").remove([doc.storage_path]);
-      if (rmErr) throw rmErr;
-      const { error: delErr } = await supabase.from("notebook_documents").delete().eq("id", doc.id).eq("user_id", authUserId);
-      if (delErr) throw delErr;
-      setDocs((prev) => prev.filter((d) => d.id !== doc.id));
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "No se pudo borrar.";
-      setError(formatNotebookCloudError(msg));
-    }
-  }
-
-  function openTagEditor(doc: NotebookDocumentRow) {
-    setEditingDocId(doc.id);
-    setEditTopic(doc.topic ?? "");
-    setEditLessonPoint(doc.lesson_point ?? "");
-    setEditPractice(doc.practice_exercises ?? "");
-  }
-
-  function closeTagEditor() {
-    setEditingDocId(null);
-  }
-
-  async function saveDocTags(docId: string) {
-    if (!authUserId) return;
-    setSavingTags(true);
-    setError(null);
-    try {
-      const supabase = createSupabaseBrowserClient();
-      const { error: upErr } = await supabase
-        .from("notebook_documents")
-        .update({
-          topic: editTopic.trim(),
-          lesson_point: editLessonPoint.trim(),
-          practice_exercises: editPractice.trim(),
-        })
-        .eq("id", docId)
-        .eq("user_id", authUserId);
-      if (upErr) throw upErr;
-      closeTagEditor();
-      await loadDocs();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "No se pudieron guardar las etiquetas.";
-      setError(formatNotebookCloudError(msg));
-    } finally {
-      setSavingTags(false);
-    }
-  }
-
-  async function signedDownload(doc: NotebookDocumentRow) {
-    const supabase = createSupabaseBrowserClient();
-    const { data, error: uErr } = await supabase.storage.from("notebooks").createSignedUrl(doc.storage_path, 3600);
-    if (uErr || !data?.signedUrl) {
-      setError(formatNotebookCloudError(uErr?.message ?? "No se pudo generar el enlace de descarga."));
-      return;
-    }
-    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
   }
 
   if (!isSupabaseConfigured()) {
@@ -914,185 +827,50 @@ export function NotebookLibraryPanel() {
 
                   {expanded ? (
                     <div className="border-t border-white/10 bg-slate-950/80 px-4 py-4">
-                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Índice del cuaderno</p>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Resumen del cuaderno</p>
                           <p className="mt-1 text-[11px] text-slate-500">
-                            Desde aquí puedes <strong className="text-slate-300">agregar</strong>,{" "}
-                            <strong className="text-slate-300">editar etiquetas</strong> y{" "}
-                            <strong className="text-slate-300">eliminar</strong> apuntes/archivos.
+                            Para evitar pantallas duplicadas, el <strong className="text-slate-300">índice completo</strong> (clases + páginas) y las acciones
+                            por archivo viven en el <strong className="text-slate-300">Lector</strong>.
                           </p>
                         </div>
-                        <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-indigo-500/20 px-3 py-2 text-xs font-semibold text-indigo-100 ring-1 ring-indigo-400/30 hover:bg-indigo-500/30">
-                          <Upload className="h-4 w-4" />
-                          Agregar archivos
-                          <input
-                            type="file"
-                            className="hidden"
-                            multiple
-                            accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md,application/pdf,image/*,text/plain,text/markdown"
-                            disabled={uploading}
-                            onChange={(e) => void uploadFilesToSubject(subjectName, e.target.files)}
-                          />
-                        </label>
-                      </div>
-
-                      <div className="mb-3 grid gap-2 sm:grid-cols-2">
-                        <label className="space-y-1 text-xs">
-                          <span className="text-slate-500">Buscar en este cuaderno</span>
-                          <input
-                            className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2 text-xs text-slate-200 outline-none ring-indigo-400/30 focus:ring"
-                            value={indexQuery}
-                            onChange={(e) => setIndexQuery(e.target.value)}
-                            placeholder="Ej. “regresión”, “Tema: Álgebra”, “Punto 2.1”…"
-                          />
-                        </label>
-                        <div className="flex items-end">
-                          <Button type="button" size="sm" variant="ghost" className="h-9 w-full ring-1 ring-white/10" onClick={() => setIndexQuery("")}>
-                            Limpiar búsqueda
-                          </Button>
-                        </div>
+                        <Link
+                          href={`/study/notebook/${subjectToPathSegment(subjectName)}`}
+                          className="inline-flex items-center justify-center rounded-xl border border-indigo-400/30 bg-indigo-500/15 px-3 py-2 text-xs font-semibold text-indigo-100 hover:bg-indigo-500/25"
+                        >
+                          Abrir lector (índice + gestión)
+                        </Link>
                       </div>
 
                       {pages.length === 0 ? (
-                        <div className="space-y-2 rounded-xl border border-white/10 bg-slate-950/60 px-3 py-3 text-sm text-slate-400">
+                        <div className="mt-3 space-y-2 rounded-xl border border-white/10 bg-slate-950/60 px-3 py-3 text-sm text-slate-400">
                           <div>Este cuaderno está vacío.</div>
                           <div className="text-xs text-slate-500">
-                            Sugerencia: entra desde tu calendario y usa “Subir apuntes de hoy” para que quede asociado a la clase del día.
+                            Puedes subir aquí arriba (sección “Subir archivos”) o abrir el lector y subir directamente allí.
                           </div>
                         </div>
                       ) : (
-                        <ul className="space-y-3">
+                        <ul className="mt-3 space-y-2">
                           {(() => {
-                            const q = indexQuery.trim().toLowerCase();
-                            const filteredPages = q
-                              ? pages.filter((d) => {
-                                  const hay = [
-                                    d.filename,
-                                    d.topic ?? "",
-                                    d.lesson_point ?? "",
-                                    d.practice_exercises ?? "",
-                                    d.class_date ?? "",
-                                  ]
-                                    .join(" ")
-                                    .toLowerCase();
-                                  return hay.includes(q);
-                                })
-                              : pages;
                             const byDate = new Map<string, NotebookDocumentRow[]>();
-                            for (const d of filteredPages) {
+                            for (const d of pages) {
                               const key = (d.class_date ?? "").trim() || "Sin fecha";
                               if (!byDate.has(key)) byDate.set(key, []);
                               byDate.get(key)!.push(d);
                             }
                             const keys = Array.from(byDate.keys()).sort((a, b) => (a === "Sin fecha" ? 1 : a.localeCompare(b)));
-                            if (keys.length === 0) {
-                              return (
-                                <li className="rounded-xl border border-white/10 bg-slate-950/60 px-3 py-3 text-sm text-slate-400">
-                                  No hay coincidencias con tu búsqueda en este cuaderno.
-                                </li>
-                              );
-                            }
                             return keys.map((dateKey) => {
                               const list = byDate.get(dateKey)!;
                               return (
-                                <li key={dateKey} className="rounded-2xl border border-white/10 bg-slate-950/60 p-3">
-                                  <div className="flex items-baseline justify-between gap-2">
-                                    <div className="text-sm font-semibold text-white">
+                                <li key={dateKey} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-xs text-slate-300">
+                                  <div className="min-w-0">
+                                    <div className="truncate font-medium text-slate-100">
                                       {dateKey === "Sin fecha" ? "Clase (sin fecha)" : `Clase · ${dateKey}`}
                                     </div>
-                                    <div className="text-xs text-slate-500">{list.length} archivo{list.length === 1 ? "" : "s"}</div>
+                                    <div className="text-[11px] text-slate-500">{list.length} archivo{list.length === 1 ? "" : "s"}</div>
                                   </div>
-                                  <ul className="mt-2 space-y-2">
-                                    {list.map((doc) => (
-                                      <li key={doc.id} className="rounded-xl border border-white/10 bg-slate-950/50 px-3 py-2.5">
-                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                                          <div className="min-w-0 flex-1">
-                                            <div className="truncate text-sm font-medium text-slate-100">{doc.filename}</div>
-                                            <div className="mt-0.5 text-[11px] text-slate-500">
-                                              {(doc.size_bytes / 1024 / 1024).toFixed(2)} MB ·{" "}
-                                              <span suppressHydrationWarning>{new Date(doc.created_at).toLocaleString("es")}</span>
-                                            </div>
-                                            {(doc.topic ?? "").trim() || (doc.lesson_point ?? "").trim() || (doc.practice_exercises ?? "").trim() ? (
-                                              <div className="mt-1.5 flex flex-wrap gap-1.5 text-[10px] text-slate-400">
-                                                {(doc.topic ?? "").trim() ? (
-                                                  <span className="rounded-md bg-indigo-500/15 px-1.5 py-0.5 text-indigo-100">
-                                                    Tema: {(doc.topic ?? "").trim()}
-                                                  </span>
-                                                ) : null}
-                                                {(doc.lesson_point ?? "").trim() ? (
-                                                  <span className="rounded-md bg-white/10 px-1.5 py-0.5">Punto: {(doc.lesson_point ?? "").trim()}</span>
-                                                ) : null}
-                                                {(doc.practice_exercises ?? "").trim() ? (
-                                                  <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-emerald-100">
-                                                    Ej.: {(doc.practice_exercises ?? "").trim()}
-                                                  </span>
-                                                ) : null}
-                                              </div>
-                                            ) : null}
-                                          </div>
-                                          <div className="flex shrink-0 flex-wrap gap-2">
-                                            <Button type="button" size="sm" variant="ghost" className="ring-1 ring-white/15" onClick={() => openTagEditor(doc)}>
-                                              Etiquetas
-                                            </Button>
-                                            <Button type="button" size="sm" variant="secondary" onClick={() => void signedDownload(doc)}>
-                                              Descargar
-                                            </Button>
-                                            <Button
-                                              type="button"
-                                              size="sm"
-                                              variant="ghost"
-                                              className="text-rose-300 hover:bg-rose-500/10"
-                                              onClick={() => void removeDoc(doc)}
-                                              aria-label={`Eliminar ${doc.filename}`}
-                                            >
-                                              <Trash2 className="h-4 w-4" />
-                                              <span className="ml-1 hidden sm:inline">Eliminar</span>
-                                            </Button>
-                                          </div>
-                                        </div>
-                                        {editingDocId === doc.id ? (
-                                          <div className="mt-3 space-y-3 rounded-xl border border-indigo-400/25 bg-indigo-500/10 p-3">
-                                            <p className="text-xs font-medium text-indigo-100">Editar Tema, Punto y Ejercicios</p>
-                                            <div className="grid gap-2 sm:grid-cols-3">
-                                              <label className="space-y-1 text-[11px]">
-                                                <span className="text-slate-500">Tema</span>
-                                                <input
-                                                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-1.5 text-xs text-slate-200 outline-none focus:ring focus:ring-indigo-400/30"
-                                                  value={editTopic}
-                                                  onChange={(e) => setEditTopic(e.target.value)}
-                                                />
-                                              </label>
-                                              <label className="space-y-1 text-[11px]">
-                                                <span className="text-slate-500">Punto</span>
-                                                <input
-                                                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-1.5 text-xs text-slate-200 outline-none focus:ring focus:ring-indigo-400/30"
-                                                  value={editLessonPoint}
-                                                  onChange={(e) => setEditLessonPoint(e.target.value)}
-                                                />
-                                              </label>
-                                              <label className="space-y-1 text-[11px]">
-                                                <span className="text-slate-500">Ejercicios prácticos</span>
-                                                <input
-                                                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-1.5 text-xs text-slate-200 outline-none focus:ring focus:ring-indigo-400/30"
-                                                  value={editPractice}
-                                                  onChange={(e) => setEditPractice(e.target.value)}
-                                                />
-                                              </label>
-                                            </div>
-                                            <div className="flex flex-wrap gap-2">
-                                              <Button type="button" size="sm" variant="secondary" disabled={savingTags} onClick={() => void saveDocTags(doc.id)}>
-                                                Guardar
-                                              </Button>
-                                              <Button type="button" size="sm" variant="ghost" onClick={closeTagEditor}>
-                                                Cancelar
-                                              </Button>
-                                            </div>
-                                          </div>
-                                        ) : null}
-                                      </li>
-                                    ))}
-                                  </ul>
+                                  <div className="shrink-0 text-[11px] text-slate-500">Ver páginas en el lector</div>
                                 </li>
                               );
                             });

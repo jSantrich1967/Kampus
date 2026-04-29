@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -11,7 +11,8 @@ import { getNotebookSubjectCover } from "@/components/study/notebook-subject-cov
 import { getNotebookSubjectIcon } from "@/components/study/notebook-subject-icon";
 import { Button } from "@/components/ui/button";
 import { initialsFromSubject, notebookCoverGradient } from "@/lib/notebooks/cover-styles";
-import { subjectToPathSegment } from "@/lib/notebooks/paths";
+import { buildNotebookIndexGroups } from "@/lib/notebooks/notebook-index";
+import { sanitizeStorageFilename, subjectToPathSegment } from "@/lib/notebooks/paths";
 import { formatNotebookCloudError } from "@/lib/notebooks/storage-errors";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -19,6 +20,8 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cn } from "@/lib/cn";
 
 type Props = { subjectSlug: string };
+
+const MAX_BYTES = 50 * 1024 * 1024; // aligned with bucket limit in migration (50 MiB)
 
 export function NotebookReader({ subjectSlug }: Props) {
   const { authUserId } = useKampus();
@@ -29,9 +32,23 @@ export function NotebookReader({ subjectSlug }: Props) {
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [mediaBusy, setMediaBusy] = useState(false);
   const [indexOpen, setIndexOpen] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [tagOpen, setTagOpen] = useState(false);
+  const [editTopic, setEditTopic] = useState("");
+  const [editLessonPoint, setEditLessonPoint] = useState("");
+  const [editPractice, setEditPractice] = useState("");
+  const [savingTags, setSavingTags] = useState(false);
 
   const subjectLabel =
     pages[0]?.subject ?? (subjectSlug && subjectSlug.length > 0 ? subjectSlug.replace(/_/g, " ") : "Cuaderno");
+
+  const uploadSubject = useMemo(() => {
+    const fromPages = (pages[0]?.subject ?? "").trim();
+    if (fromPages) return fromPages;
+    const slug = (subjectSlug ?? "").trim();
+    if (!slug) return "General";
+    return slug.replace(/_/g, " ");
+  }, [pages, subjectSlug]);
 
   const { background, spine } = useMemo(() => notebookCoverGradient(subjectLabel), [subjectLabel]);
   const cover = useMemo(() => getNotebookSubjectCover(subjectLabel), [subjectLabel]);
@@ -83,20 +100,169 @@ export function NotebookReader({ subjectSlug }: Props) {
   const total = pages.length;
   const sessionNum = total > 0 ? pageIndex + 1 : 0;
 
-  const indexGroups = useMemo(() => {
-    // Group by class_date (YYYY-MM-DD). If missing, fall back to created_at date.
-    const groups = new Map<string, Array<{ page: NotebookDocumentRow; index0: number }>>();
-    pages.forEach((p, idx) => {
-      const key = (p.class_date ?? "").trim() || p.created_at.slice(0, 10) || "Sin fecha";
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push({ page: p, index0: idx });
-    });
-    const keys = Array.from(groups.keys()).sort((a, b) => a.localeCompare(b));
-    return keys.map((k) => ({
-      dateKey: k,
-      items: (groups.get(k) ?? []).slice().sort((a, b) => a.page.created_at.localeCompare(b.page.created_at)),
-    }));
-  }, [pages]);
+  const indexGroups = useMemo(() => buildNotebookIndexGroups(pages), [pages]);
+
+  useEffect(() => {
+    if (!current) {
+      setTagOpen(false);
+      return;
+    }
+    setEditTopic(current.topic ?? "");
+    setEditLessonPoint(current.lesson_point ?? "");
+    setEditPractice(current.practice_exercises ?? "");
+    setTagOpen(false);
+  }, [current]);
+
+  async function uploadMoreFiles(fileList: FileList | null) {
+    if (!fileList?.length || !authUserId) return;
+    if (!isSupabaseConfigured()) {
+      setError("Supabase no está configurado.");
+      return;
+    }
+
+    const subject = uploadSubject.trim() || "General";
+    setUploading(true);
+    setError(null);
+    const supabase = createSupabaseBrowserClient();
+    const segment = subjectToPathSegment(subject);
+
+    try {
+      await supabase.from("user_notebooks").upsert({ user_id: authUserId, subject });
+
+      for (const file of Array.from(fileList)) {
+        if (file.size > MAX_BYTES) {
+          throw new Error(`“${file.name}” supera el límite de ${MAX_BYTES / 1024 / 1024} MB.`);
+        }
+
+        let extractedText: string | null = null;
+        try {
+          const fd = new FormData();
+          fd.append("files", file);
+          const res = await fetch("/api/rescue/extract", { method: "POST", body: fd });
+          const json = (await res.json()) as { combinedText?: string; error?: string };
+          if (res.ok && json.combinedText?.trim()) {
+            extractedText = json.combinedText.trim();
+          }
+        } catch {
+          // Extraction is optional; upload still proceeds
+        }
+
+        const safeName = sanitizeStorageFilename(file.name);
+        const storagePath = `${authUserId}/${segment}/${crypto.randomUUID()}_${safeName}`;
+
+        const { error: upErr } = await supabase.storage.from("notebooks").upload(storagePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: file.type || "application/octet-stream",
+        });
+        if (upErr) throw upErr;
+
+        const { error: insErr } = await supabase.from("notebook_documents").insert({
+          user_id: authUserId,
+          subject,
+          topic: "",
+          lesson_point: "",
+          practice_exercises: "",
+          schedule_id: null,
+          class_date: null,
+          storage_path: storagePath,
+          filename: file.name,
+          mime_type: file.type || "application/octet-stream",
+          size_bytes: file.size,
+          extracted_text: extractedText,
+        });
+        if (insErr) {
+          await supabase.storage.from("notebooks").remove([storagePath]);
+          throw insErr;
+        }
+      }
+
+      await load();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Error al subir.";
+      setError(formatNotebookCloudError(msg));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function signedDownload(doc: NotebookDocumentRow) {
+    if (!authUserId) return;
+    const supabase = createSupabaseBrowserClient();
+    const { data, error: uErr } = await supabase.storage.from("notebooks").createSignedUrl(doc.storage_path, 3600);
+    if (uErr || !data?.signedUrl) {
+      setError(formatNotebookCloudError(uErr?.message ?? "No se pudo generar el enlace de descarga."));
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  }
+
+  async function removeDoc(doc: NotebookDocumentRow) {
+    if (!authUserId) return;
+    const ok = window.confirm(`¿Eliminar “${doc.filename}”?\n\nEsto también borrará el archivo de la nube.`);
+    if (!ok) return;
+
+    setError(null);
+    const supabase = createSupabaseBrowserClient();
+    try {
+      const { error: rmErr } = await supabase.storage.from("notebooks").remove([doc.storage_path]);
+      if (rmErr) throw rmErr;
+      const { error: delErr } = await supabase.from("notebook_documents").delete().eq("id", doc.id).eq("user_id", authUserId);
+      if (delErr) throw delErr;
+
+      setPages((prev) => {
+        const idx = prev.findIndex((p) => p.id === doc.id);
+        const next = prev.filter((p) => p.id !== doc.id);
+        setPageIndex((i) => {
+          if (next.length === 0) return 0;
+          if (idx >= 0 && i > idx) return Math.max(0, i - 1);
+          return Math.min(i, next.length - 1);
+        });
+        return next;
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "No se pudo borrar.";
+      setError(formatNotebookCloudError(msg));
+    }
+  }
+
+  async function saveDocTags(docId: string) {
+    if (!authUserId) return;
+    setSavingTags(true);
+    setError(null);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { error: upErr } = await supabase
+        .from("notebook_documents")
+        .update({
+          topic: editTopic.trim(),
+          lesson_point: editLessonPoint.trim(),
+          practice_exercises: editPractice.trim(),
+        })
+        .eq("id", docId)
+        .eq("user_id", authUserId);
+      if (upErr) throw upErr;
+
+      setPages((prev) =>
+        prev.map((p) =>
+          p.id === docId
+            ? {
+                ...p,
+                topic: editTopic.trim(),
+                lesson_point: editLessonPoint.trim(),
+                practice_exercises: editPractice.trim(),
+              }
+            : p,
+        ),
+      );
+      setTagOpen(false);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "No se pudieron guardar las etiquetas.";
+      setError(formatNotebookCloudError(msg));
+    } finally {
+      setSavingTags(false);
+    }
+  }
 
   useEffect(() => {
     if (!current || !authUserId) {
@@ -182,13 +348,30 @@ export function NotebookReader({ subjectSlug }: Props) {
       ) : null}
 
       {!loading && total === 0 ? (
-        <p className="text-sm text-slate-400">
-          No hay archivos en este cuaderno.{" "}
-          <Link href="/study/library" className="text-indigo-300 underline-offset-2 hover:underline">
-            Vuelve a Mis cuadernos
-          </Link>{" "}
-          y sube material para esta materia.
-        </p>
+        <div className="mx-auto max-w-2xl space-y-3 rounded-2xl border border-white/10 bg-slate-950/60 p-5 text-sm text-slate-300">
+          <p className="font-medium text-slate-100">Este cuaderno está vacío</p>
+          <p className="text-xs text-slate-400">
+            Flujo recomendado: sube aquí tus archivos y luego organízalos con <strong className="text-slate-200">Etiquetas</strong> y el{" "}
+            <strong className="text-slate-200">Índice</strong>.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-indigo-500/20 px-4 py-2 text-sm font-semibold text-indigo-100 ring-1 ring-indigo-400/30 hover:bg-indigo-500/30">
+              <Upload className="h-4 w-4" />
+              {uploading ? "Subiendo…" : "Subir primeros archivos"}
+              <input
+                type="file"
+                className="hidden"
+                multiple
+                accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md,application/pdf,image/*,text/plain,text/markdown"
+                disabled={uploading}
+                onChange={(e) => void uploadMoreFiles(e.target.files)}
+              />
+            </label>
+            <Link href="/study/library" className="text-xs text-indigo-200 underline-offset-2 hover:underline">
+              Ir a Mis cuadernos (solo si necesitas subir desde el calendario)
+            </Link>
+          </div>
+        </div>
       ) : null}
 
       {!loading && total > 0 && current ? (
@@ -310,7 +493,36 @@ export function NotebookReader({ subjectSlug }: Props) {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-indigo-500/20 px-3 py-2 text-xs font-semibold text-indigo-100 ring-1 ring-indigo-400/30 hover:bg-indigo-500/30">
+                        <Upload className="h-4 w-4" />
+                        {uploading ? "Subiendo…" : "Agregar"}
+                        <input
+                          type="file"
+                          className="hidden"
+                          multiple
+                          accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md,application/pdf,image/*,text/plain,text/markdown"
+                          disabled={uploading}
+                          onChange={(e) => void uploadMoreFiles(e.target.files)}
+                        />
+                      </label>
+                      <Button type="button" size="sm" variant="secondary" disabled={!current} onClick={() => void signedDownload(current)}>
+                        Descargar
+                      </Button>
+                      <Button type="button" size="sm" variant="secondary" disabled={!current} onClick={() => setTagOpen((v) => !v)}>
+                        Etiquetas
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="text-rose-200 hover:bg-rose-500/10"
+                        disabled={!current}
+                        onClick={() => void removeDoc(current)}
+                        aria-label="Eliminar hoja"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                       <Button
                         type="button"
                         size="sm"
@@ -335,6 +547,46 @@ export function NotebookReader({ subjectSlug }: Props) {
                   </div>
 
                   <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 md:p-6">
+                  {tagOpen ? (
+                    <div className="rounded-xl border border-indigo-400/25 bg-indigo-500/10 p-3">
+                      <p className="text-xs font-medium text-indigo-100">Editar Tema, Punto y Ejercicios</p>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                        <label className="space-y-1 text-[11px]">
+                          <span className="text-slate-500">Tema</span>
+                          <input
+                            className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-1.5 text-xs text-slate-200 outline-none focus:ring focus:ring-indigo-400/30"
+                            value={editTopic}
+                            onChange={(e) => setEditTopic(e.target.value)}
+                          />
+                        </label>
+                        <label className="space-y-1 text-[11px]">
+                          <span className="text-slate-500">Punto</span>
+                          <input
+                            className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-1.5 text-xs text-slate-200 outline-none focus:ring focus:ring-indigo-400/30"
+                            value={editLessonPoint}
+                            onChange={(e) => setEditLessonPoint(e.target.value)}
+                          />
+                        </label>
+                        <label className="space-y-1 text-[11px]">
+                          <span className="text-slate-500">Ejercicios prácticos</span>
+                          <input
+                            className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-1.5 text-xs text-slate-200 outline-none focus:ring focus:ring-indigo-400/30"
+                            value={editPractice}
+                            onChange={(e) => setEditPractice(e.target.value)}
+                          />
+                        </label>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button type="button" size="sm" variant="secondary" disabled={savingTags || !current} onClick={() => void saveDocTags(current.id)}>
+                          Guardar
+                        </Button>
+                        <Button type="button" size="sm" variant="ghost" onClick={() => setTagOpen(false)}>
+                          Cerrar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+
                   <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
                     <p className="text-xs text-slate-500">Archivo</p>
                     <p className="truncate text-sm font-medium text-slate-100">{current.filename}</p>
@@ -376,7 +628,10 @@ export function NotebookReader({ subjectSlug }: Props) {
                       </pre>
                     </div>
                   ) : (
-                    <p className="text-xs text-slate-500">No hay texto extraído para esta hoja. Puedes volver a subir el archivo en Mis cuadernos para intentar OCR de nuevo.</p>
+                    <p className="text-xs text-slate-500">
+                      No hay texto extraído para esta hoja. Puedes usar <strong className="text-slate-300">Agregar</strong> arriba para volver a subir el
+                      archivo y reintentar OCR.
+                    </p>
                   )}
 
                   <p className="text-center text-[11px] text-slate-600">Tip: usa las flechas del teclado ← → para pasar de clase.</p>
