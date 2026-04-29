@@ -13,6 +13,7 @@ const requestSchema = z.object({
   subjectHint: z.string().default(""),
   sourceLabel: z.string().default(""),
   sourceKind: z.string().optional(),
+  packMode: z.enum(["lite", "full"]).optional(),
   /** OCR / PDF / TXT — primary grounding for uploaded files */
   extractedFileText: z.string().default(""),
   notes: z.string().default(""),
@@ -165,6 +166,7 @@ export async function POST(req: Request) {
     const extractUseful = !looksLikeNoUsefulExtract(extracted);
     const hasNotes = notes.length > 0;
     const hasLink = link.length > 0;
+    const packMode = body.packMode === "lite" ? "lite" : "full";
 
     let groundingMode = "";
     if (hasUploadedFiles && extractUseful) {
@@ -210,25 +212,37 @@ export async function POST(req: Request) {
       `Materia foco (etiqueta): ${subject}`,
       `Archivos subidos: ${hasUploadedFiles ? "sí" : "no"}${hasUploadedFiles ? ` (${body.uploadedFileCount})` : ""}`,
       `Fuente: ${sourceLabel}${body.sourceKind ? ` (${body.sourceKind})` : ""}`,
+      `Modo de pack: ${packMode === "lite" ? "lite (rápido)" : "full"}`,
       "",
       "Produce un objeto JSON con EXACTAMENTE estas llaves:",
       Object.keys(rescuePackSchema.shape).join(", "),
       "",
       "Reglas importantes:",
-      "- keyIdeas: 6–10 bullets cortos.",
-      "- probableExamQuestions: 6–10 preguntas tipo examen (enunciado).",
-      "- flashcards: 8–12 tarjetas (front/back).",
-      "- quiz: 6–10 preguntas de opción múltiple con 4 opciones y answerIndex correcto (0-3).",
-      "- studyChecklist: 6–10 pasos concretos (con tiempos si aplica).",
+      ...(packMode === "lite"
+        ? [
+            "- keyIdeas: 4–6 bullets cortos.",
+            "- probableExamQuestions: 4–6 preguntas tipo examen (enunciado).",
+            "- flashcards: 4–6 tarjetas (front/back).",
+            "- quiz: 3–5 preguntas de opción múltiple con 4 opciones y answerIndex correcto (0-3).",
+            "- studyChecklist: 4–6 pasos concretos.",
+            "- fullSummary/deepExplanation/easyExplanation/technicalExplanation: cortos (1–3 párrafos).",
+          ]
+        : [
+            "- keyIdeas: 6–10 bullets cortos.",
+            "- probableExamQuestions: 6–10 preguntas tipo examen (enunciado).",
+            "- flashcards: 8–12 tarjetas (front/back).",
+            "- quiz: 6–10 preguntas de opción múltiple con 4 opciones y answerIndex correcto (0-3).",
+            "- studyChecklist: 6–10 pasos concretos (con tiempos si aplica).",
+          ]),
       "- mindMapOutline: un outline tipo mapa mental (texto con indentación).",
       "- questionsForClass: 5–8 preguntas para aclarar dudas con el profe/mentor.",
       "- subjectLine: debe reflejar el TEMA del material (del texto extraído o notas), no solo el nombre genérico de la materia.",
       "",
       "--- CONTENIDO EXTRAÍDO DEL ARCHIVO (prioridad si hay texto útil) ---",
-      clip(extracted || "(vacío)", 9000),
+      clip(extracted || "(vacío)", packMode === "lite" ? 5500 : 9000),
       "",
       "--- NOTAS PEGADAS ---",
-      clip(notes || "(vacío)", 4000),
+      clip(notes || "(vacío)", packMode === "lite" ? 2500 : 4000),
       "",
       "--- ENLACE ---",
       link || "(vacío)",
@@ -246,6 +260,7 @@ export async function POST(req: Request) {
         { role: "user", content: [{ type: "input_text", text: user }] },
       ],
       temperature: extractUseful ? 0.25 : 0.35,
+      max_output_tokens: packMode === "lite" ? 1400 : 2600,
     };
 
     // Retries for transient OpenAI issues (e.g., HTTP 500/503).

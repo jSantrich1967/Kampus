@@ -177,6 +177,7 @@ export function AcademicCalendarHub() {
           link: "",
           uploadedFileCount: docs.length,
           seedText: "",
+          packMode: profile.plan === "premium" ? ("full" as const) : ("lite" as const),
         },
         { seedText: extractedFileText, subjectHint: subject, sourceLabel: "Cuaderno", sourceKind: "notes" },
       );
@@ -245,6 +246,7 @@ export function AcademicCalendarHub() {
           link: "",
           uploadedFileCount: docs.length,
           seedText: "",
+          packMode: profile.plan === "premium" ? ("full" as const) : ("lite" as const),
         },
         { seedText: extractedFileText, subjectHint: profile.subjects[0] || "Selección", sourceLabel: "Cuaderno", sourceKind: "notes" },
       );

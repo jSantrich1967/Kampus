@@ -99,6 +99,7 @@ export function NotebookStudyKitPanel({ pages, currentPage, subjectLabel, subjec
       link: "",
       uploadedFileCount,
       seedText: "",
+      packMode: premium ? ("full" as const) : ("lite" as const),
     };
     const { pack: next, packError: err } = await postRescuePack(body, {
       seedText: fallbackSeed,

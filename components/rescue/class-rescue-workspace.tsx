@@ -451,6 +451,7 @@ export function ClassRescueWorkspace() {
           link,
           uploadedFileCount: librarySelection ? 1 : fromNotebookBundle ? notebookDocCount : list.length,
           seedText: f.seed && !extractedText && !notesForApi && !link ? f.seed : "",
+          packMode: premium ? ("full" as const) : ("lite" as const),
         },
         { seedText, subjectHint, sourceLabel, sourceKind: kind },
       );

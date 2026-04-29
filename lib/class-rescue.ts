@@ -51,95 +51,95 @@ function pick<T>(items: T[], seed: number, index: number): T {
 
 export function generateRescuePack(input: RescueInput): RescuePack {
   const seed = hashString(`${input.seedText}|${input.subjectHint}|${input.sourceLabel}|${input.sourceKind ?? ""}`);
-  const topic = input.subjectHint.trim() || "this topic";
+  const topic = input.subjectHint.trim() || "este tema";
   const snippet = input.seedText.trim().slice(0, 280) || `Uploaded source: ${input.sourceLabel}`;
 
   const keyIdeas = [
-    `Define the core objective of ${topic} in one sentence.`,
-    `Separate assumptions vs. evidence in ${input.sourceLabel}.`,
-    `Identify the 2–3 mechanisms that usually appear on exams for ${topic}.`,
-    `Translate jargon into a diagram you can redraw from memory.`,
+    `Define el objetivo central de ${topic} en una sola frase.`,
+    `Separa supuestos vs. evidencia en ${input.sourceLabel}.`,
+    `Identifica 2–3 mecanismos que suelen aparecer en exámenes de ${topic}.`,
+    `Traduce jerga a un diagrama que puedas redibujar de memoria.`,
   ];
 
   const probableExamQuestions = [
-    `Explain ${topic} from first principles using an example from class.`,
-    `Compare/contrast two approaches discussed in ${input.sourceLabel}.`,
-    `Solve a standard problem and justify each step (no skipped algebra).`,
-    `What are the failure modes / edge cases instructors love to test?`,
+    `Explica ${topic} desde primeros principios usando un ejemplo de clase.`,
+    `Compara/contrasta dos enfoques discutidos en ${input.sourceLabel}.`,
+    `Resuelve un problema típico y justifica cada paso (sin saltarte álgebra).`,
+    `¿Cuáles son los fallos típicos / casos borde que suelen evaluar?`,
   ];
 
   const flashcards: RescueFlashcard[] = [
-    { front: `What is the main idea of ${topic}?`, back: `A compact claim supported by definitions + one example.` },
-    { front: "What should you memorize vs. derive?", back: "Memorize definitions + canonical steps; derive variations." },
-    { front: "What is a common trap on exams?", back: "Sign errors, unit mismatches, unstated assumptions." },
-    { front: `One-line intuition for ${topic}`, back: "Explain it like you are teaching a tired friend in 60 seconds." },
+    { front: `¿Cuál es la idea principal de ${topic}?`, back: "Una afirmación breve apoyada por definiciones + un ejemplo." },
+    { front: "¿Qué memorizar vs. qué derivar?", back: "Memoriza definiciones + pasos canónicos; deriva variaciones." },
+    { front: "¿Trampa común en exámenes?", back: "Errores de signo, unidades, o supuestos no declarados." },
+    { front: `Intuición en 1 línea de ${topic}`, back: "Explícalo como si enseñaras a un amigo cansado en 60 segundos." },
   ];
 
   const quiz: RescueQuizItem[] = [
     {
-      question: `Which best describes your first move when reviewing ${topic}?`,
+      question: `¿Qué describe mejor tu primer paso al repasar ${topic}?`,
       options: [
-        "Skim headings only",
-        "Rebuild a mini-outline from memory",
-        "Re-read everything slowly",
-        "Copy slides verbatim",
+        "Solo mirar títulos",
+        "Reconstruir un mini-esquema de memoria",
+        "Releer todo lento",
+        "Copiar diapositivas tal cual",
       ],
       answerIndex: 1,
     },
     {
-      question: "What is the highest-leverage practice before an exam?",
+      question: "¿Qué práctica rinde más antes de un examen?",
       options: [
-        "Passive highlighting",
-        "Timed mixed retrieval",
-        "Rewatching lectures at 2x",
-        "Organizing folders",
+        "Subrayado pasivo",
+        "Recuperación activa cronometrada (mixta)",
+        "Rever clases a 2x",
+        "Ordenar carpetas",
       ],
       answerIndex: 1,
     },
   ];
 
   const studyChecklist = [
-    `Skim ${input.sourceLabel} for structure (6 minutes).`,
-    `Rewrite the outline without looking (10 minutes).`,
-    `Do 12 flashcards + 6 quiz items (15 minutes).`,
-    `Explain ${topic} aloud once (4 minutes).`,
-    `List 5 “exam-style” prompts you still fear (5 minutes).`,
+    `Mira ${input.sourceLabel} por estructura (6 min).`,
+    "Reescribe el esquema sin mirar (10 min).",
+    "Haz 12 flashcards + 6 preguntas tipo quiz (15 min).",
+    `Explica ${topic} en voz alta una vez (4 min).`,
+    "Lista 5 preguntas “tipo examen” que aún te asustan (5 min).",
   ];
 
   const mindMapOutline = [
     `${topic}`,
-    `  Definitions`,
-    `  Mechanisms`,
-    `  Examples`,
-    `  Edge cases`,
-    `  Exam patterns`,
-    `  Your weak spots (from notes)`,
+    "  Definiciones",
+    "  Mecanismos",
+    "  Ejemplos",
+    "  Casos borde",
+    "  Patrones de examen",
+    "  Tus puntos débiles (de tus notas)",
   ].join("\n");
 
   return {
     subjectLine: `${topic} · ${input.sourceLabel}`,
-    quickSummary: `You are catching up on ${topic}. Start with structure, then retrieval: rebuild the outline, then drill 10 questions. Source anchor: ${snippet.slice(0, 120)}…`,
-    fullSummary: `This rescue pack treats "${topic}" as the spine. From ${input.sourceLabel}, prioritize definitions, canonical examples, and instructor-repeated phrases. Your notes imply focus areas in: ${snippet.slice(0, 200)}… Next, connect each idea to a practice question so it becomes exam-usable, not just “understood.”`,
-    deepExplanation: `Deep layer: explain ${topic} as a chain of causes → definitions → implications. When stuck, ask: what quantity is conserved? what boundary conditions matter? what approximation is valid? Use ${input.sourceLabel} as evidence, not as a script to memorize.`,
+    quickSummary: `Te estás poniendo al día con ${topic}. Empieza por estructura y luego recuperación activa: reconstruye el esquema y después practica 10 preguntas. Ancla de fuente: ${snippet.slice(0, 120)}…`,
+    fullSummary: `Este pack usa "${topic}" como columna vertebral. Desde ${input.sourceLabel}, prioriza definiciones, ejemplos canónicos y frases que el profe repite. Tus notas sugieren foco en: ${snippet.slice(0, 200)}… Luego conecta cada idea con una pregunta práctica para que sea “examinable”, no solo “entendida”.`,
+    deepExplanation: `Capa profunda: explica ${topic} como una cadena de causas → definiciones → implicaciones. Si te atoras, pregunta: ¿qué se conserva?, ¿qué condiciones de borde importan?, ¿qué aproximación es válida? Usa ${input.sourceLabel} como evidencia, no como guion para memorizar.`,
     keyIdeas: keyIdeas.map((k, i) => `${pick(["•", "→", "★"], seed, i)} ${k}`),
     probableExamQuestions: probableExamQuestions.map((q, i) => `${i + 1}. ${q}`),
     flashcards,
     quiz,
     studyChecklist,
     mindMapOutline,
-    easyExplanation: `Easy version: ${topic} is basically “how things connect.” Imagine a subway map: each station is a concept; lines are relationships. Your job is to travel the map without GPS—${input.sourceLabel} is the map sketch.`,
-    technicalExplanation: `Technical version: formalize ${topic} using precise definitions, invariants, and worked boundaries. Validate each step against ${input.sourceLabel} and stress-test with edge cases instructors like.`,
+    easyExplanation: `Versión fácil: ${topic} es básicamente “cómo se conectan las cosas”. Imagina un mapa de metro: cada estación es un concepto; las líneas son relaciones. Tu trabajo es recorrer el mapa sin GPS—${input.sourceLabel} es el boceto del mapa.`,
+    technicalExplanation: `Versión técnica: formaliza ${topic} con definiciones precisas, invariantes y límites trabajados. Valida cada paso contra ${input.sourceLabel} y estresa con casos borde que suelen evaluar.`,
     questionsForClass: [
-      `If ${topic} fails in a real system, what is the first diagnostic question you should ask?`,
-      `Which assumption in ${input.sourceLabel} is the shakiest—and how would you test it?`,
-      `What is the fastest way to check if I actually understood vs. recognized?`,
+      `Si ${topic} falla en un caso real, ¿cuál es la primera pregunta de diagnóstico?`,
+      `¿Qué supuesto en ${input.sourceLabel} es el más débil y cómo lo probarías?`,
+      "¿Cuál es la forma más rápida de saber si entendí de verdad vs. solo reconocí?",
     ],
     suggestedNextResource: pick(
       [
-        "A 20-question mixed practice set (timed)",
-        "A peer explanation thread in your subject community",
-        "A 12-minute “explain from zero” voice memo to yourself",
-        "A professor-style mock exam (Pass Mode → practice)",
+        "Un set mixto de 20 preguntas (cronometrado)",
+        "Un hilo de explicación con un compañero en tu comunidad",
+        "Una nota de voz de 12 minutos explicando “desde cero”",
+        "Un simulacro estilo profesor (Modo aprobar → práctica)",
       ],
       seed,
       2,
