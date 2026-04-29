@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Check, Clock, Loader2, Mic2, Plus, RefreshCw, Sparkles, Trash2, Video, Users } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -14,7 +14,9 @@ import {
   defaultPresentationState,
   ensurePresentationTeamCode,
   generateTeamSessionCode,
+  loadActivePresentationDeckId,
   loadPresentation,
+  saveActivePresentationDeckId,
   savePresentation,
   type PresentationSection,
   type PresentationState,
@@ -22,7 +24,14 @@ import {
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import type { PresentationTutorFeedback } from "@/lib/schemas/presentation-tutor";
-import { fetchPresentationAgendaRemote, upsertPresentationAgendaRemote } from "@/lib/supabase/agenda-db";
+import {
+  deletePresentationDeckRemote,
+  fetchPresentationDeckByIdRemote,
+  fetchPresentationDeckSummariesRemote,
+  insertPresentationDeckRemote,
+  updatePresentationDeckRemote,
+  type PresentationDeckSummary,
+} from "@/lib/supabase/agenda-db";
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
@@ -32,8 +41,13 @@ export function PresentationPlanner() {
   const { locale, profile, authUserId } = useKampus();
   const es = locale === "es";
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname() ?? "/collaborate/exposiciones";
+  const useCloud = Boolean(isSupabaseConfigured() && authUserId);
 
   const [hydrated, setHydrated] = useState(false);
+  const [deckSummaries, setDeckSummaries] = useState<PresentationDeckSummary[]>([]);
+  const [activeDeckId, setActiveDeckId] = useState<string | null>(null);
   const [state, setState] = useState<PresentationState>(() => ({ ...createBlankPresentationState(), teamSessionCode: "" }));
   const [rehearsalSeconds, setRehearsalSeconds] = useState(0);
   const [running, setRunning] = useState(false);
@@ -70,42 +84,6 @@ export function PresentationPlanner() {
     });
   }, [searchParams]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const loc = loadPresentation();
-    setState(loc);
-
-    const done = () => {
-      if (!cancelled) setHydrated(true);
-    };
-
-    if (!isSupabaseConfigured() || !authUserId) {
-      done();
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    void (async () => {
-      try {
-        const supabase = createSupabaseBrowserClient();
-        const remote = await fetchPresentationAgendaRemote(supabase, authUserId);
-        if (cancelled || !remote) return;
-        setState((prev) => ({
-          ...prev,
-          deckTitle: remote.deckTitle.trim() ? remote.deckTitle : prev.deckTitle,
-          presentationDueDate: remote.presentationDueDate ?? prev.presentationDueDate,
-        }));
-      } finally {
-        done();
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authUserId]);
-
   function resetPlannerUi() {
     setTutorNotes("");
     setTutorFeedback(null);
@@ -116,21 +94,197 @@ export function PresentationPlanner() {
     setCodeCopied(false);
   }
 
-  /** Lienzo nuevo: título vacío, una sección y código de equipo nuevo. */
-  function startNewPresentation() {
+  useEffect(() => {
+    let cancelled = false;
+    const done = () => {
+      if (!cancelled) setHydrated(true);
+    };
+
+    if (!useCloud) {
+      const loc = loadPresentation();
+      setState(loc);
+      setActiveDeckId(null);
+      setDeckSummaries([]);
+      done();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    void (async () => {
+      try {
+        const supabase = createSupabaseBrowserClient();
+        let summaries = await fetchPresentationDeckSummariesRemote(supabase, authUserId!);
+        if (cancelled) return;
+
+        if (summaries.length === 0) {
+          const blank = ensurePresentationTeamCode({
+            ...createBlankPresentationState(),
+            teamSessionCode: generateTeamSessionCode(),
+          });
+          const row = await insertPresentationDeckRemote(supabase, authUserId!, blank);
+          if (cancelled) return;
+          summaries = [
+            {
+              id: row.id,
+              deckTitle: row.deckTitle,
+              presentationDueDate: row.presentationDueDate,
+              updatedAt: row.updatedAt,
+            },
+          ];
+        }
+
+        if (cancelled) return;
+        setDeckSummaries(summaries);
+
+        const url = typeof window !== "undefined" ? new URL(window.location.href) : null;
+        const paramDeck = url?.searchParams.get("deck")?.trim() ?? null;
+        const stored = loadActivePresentationDeckId();
+        const pick =
+          paramDeck && summaries.some((s) => s.id === paramDeck)
+            ? paramDeck
+            : stored && summaries.some((s) => s.id === stored)
+              ? stored
+              : summaries[0]!.id;
+
+        const record = await fetchPresentationDeckByIdRemote(supabase, authUserId!, pick);
+        if (cancelled) return;
+        setActiveDeckId(pick);
+        saveActivePresentationDeckId(pick);
+        const rawEq = url?.searchParams.get("equipo")?.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") ?? "";
+        const fromInvite = rawEq.length >= 6 ? rawEq.slice(0, 8) : null;
+        setState(
+          fromInvite ? ensurePresentationTeamCode({ ...record.state, teamSessionCode: fromInvite }) : record.state,
+        );
+        setTutorNotes("");
+        setTutorFeedback(null);
+        setTutorError(null);
+        setTeleIndex(0);
+        setRunning(false);
+        setRehearsalSeconds(0);
+        setCodeCopied(false);
+
+        const shouldSyncUrl = typeof window !== "undefined" && (paramDeck !== pick || !paramDeck);
+        if (shouldSyncUrl) {
+          const qs = new URLSearchParams(window.location.search);
+          qs.set("deck", pick);
+          router.replace(`${pathname}?${qs.toString()}`, { scroll: false });
+        }
+      } catch (e) {
+        console.error(e);
+        if (!cancelled) {
+          const loc = loadPresentation();
+          setState(loc);
+          setActiveDeckId(null);
+          setDeckSummaries([]);
+        }
+      } finally {
+        done();
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, useCloud, pathname, router]);
+
+  async function selectDeckById(id: string) {
+    if (!id || id === activeDeckId || !useCloud || !authUserId) return;
+    try {
+      const supabase = createSupabaseBrowserClient();
+      if (activeDeckId) {
+        await updatePresentationDeckRemote(supabase, authUserId, activeDeckId, state);
+      }
+      const record = await fetchPresentationDeckByIdRemote(supabase, authUserId, id);
+      setActiveDeckId(id);
+      saveActivePresentationDeckId(id);
+      setState(record.state);
+      resetPlannerUi();
+      const qs = new URLSearchParams(window.location.search);
+      qs.set("deck", id);
+      router.replace(`${pathname}?${qs.toString()}`, { scroll: false });
+      const fresh = await fetchPresentationDeckSummariesRemote(supabase, authUserId);
+      setDeckSummaries(fresh);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function removeCurrentDeckFromCloud() {
+    if (!useCloud || !authUserId || !activeDeckId) return;
+    if (deckSummaries.length <= 1) {
+      window.alert(es ? "Debes tener al menos una exposición." : "You must keep at least one presentation.");
+      return;
+    }
     const ok = window.confirm(
       es
-        ? "¿Crear una exposición nueva? Se guardará en este dispositivo y reemplazará el borrador actual de Mis exposiciones."
-        : "Start a new presentation? This will replace the current draft saved on this device.",
+        ? "¿Eliminar esta exposición de tu cuenta? No se puede deshacer."
+        : "Delete this presentation from your account? This cannot be undone.",
     );
     if (!ok) return;
+    try {
+      const supabase = createSupabaseBrowserClient();
+      await deletePresentationDeckRemote(supabase, authUserId, activeDeckId);
+      const nextSummaries = deckSummaries.filter((s) => s.id !== activeDeckId);
+      setDeckSummaries(nextSummaries);
+      const newId = nextSummaries[0]!.id;
+      const record = await fetchPresentationDeckByIdRemote(supabase, authUserId, newId);
+      setActiveDeckId(newId);
+      saveActivePresentationDeckId(newId);
+      setState(record.state);
+      resetPlannerUi();
+      const qs = new URLSearchParams(window.location.search);
+      qs.set("deck", newId);
+      router.replace(`${pathname}?${qs.toString()}`, { scroll: false });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  /** Lienzo nuevo: título vacío, una sección y código de equipo nuevo. */
+  async function startNewPresentation() {
     const next = ensurePresentationTeamCode({
       ...createBlankPresentationState(),
       teamSessionCode: generateTeamSessionCode(),
     });
-    setState(next);
-    savePresentation(next);
-    resetPlannerUi();
+    if (!useCloud || !authUserId) {
+      const ok = window.confirm(
+        es
+          ? "¿Crear una exposición nueva? Se guardará en este dispositivo y reemplazará el borrador actual de Mis exposiciones."
+          : "Start a new presentation? This will replace the current draft saved on this device.",
+      );
+      if (!ok) return;
+      setState(next);
+      savePresentation(next);
+      resetPlannerUi();
+      return;
+    }
+    const ok = window.confirm(
+      es
+        ? "¿Crear otra exposición en tu cuenta? La actual se guarda antes de abrir la nueva."
+        : "Create another presentation in your account? The current one is saved first.",
+    );
+    if (!ok) return;
+    try {
+      const supabase = createSupabaseBrowserClient();
+      if (activeDeckId) {
+        await updatePresentationDeckRemote(supabase, authUserId, activeDeckId, state);
+      }
+      const row = await insertPresentationDeckRemote(supabase, authUserId, next);
+      setDeckSummaries((prev) => [
+        { id: row.id, deckTitle: row.deckTitle, presentationDueDate: row.presentationDueDate, updatedAt: row.updatedAt },
+        ...prev,
+      ]);
+      setActiveDeckId(row.id);
+      saveActivePresentationDeckId(row.id);
+      setState(row.state);
+      resetPlannerUi();
+      const qs = new URLSearchParams(window.location.search);
+      qs.set("deck", row.id);
+      router.replace(`${pathname}?${qs.toString()}`, { scroll: false });
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   /** Plantilla con equipo y textos de ejemplo para ver cómo funciona el planificador. */
@@ -140,7 +294,9 @@ export function PresentationPlanner() {
       teamSessionCode: generateTeamSessionCode(),
     });
     setState(next);
-    savePresentation(next);
+    if (!useCloud) {
+      savePresentation(next);
+    }
     resetPlannerUi();
   }
 
@@ -285,17 +441,31 @@ export function PresentationPlanner() {
 
   useEffect(() => {
     if (!hydrated) return;
+    if (useCloud) return;
     savePresentation(state);
-  }, [hydrated, state]);
+  }, [hydrated, useCloud, state]);
 
   useEffect(() => {
-    if (!hydrated || !isSupabaseConfigured() || !authUserId) return;
+    if (!hydrated || !useCloud || !activeDeckId || !authUserId) return;
     const supabase = createSupabaseBrowserClient();
     const handle = window.setTimeout(() => {
-      void upsertPresentationAgendaRemote(supabase, authUserId, state.deckTitle, state.presentationDueDate);
+      void updatePresentationDeckRemote(supabase, authUserId, activeDeckId, state).then(() => {
+        setDeckSummaries((prev) =>
+          prev.map((s) =>
+            s.id === activeDeckId
+              ? {
+                  ...s,
+                  deckTitle: state.deckTitle.trim(),
+                  presentationDueDate: state.presentationDueDate,
+                  updatedAt: new Date().toISOString(),
+                }
+              : s,
+          ),
+        );
+      });
     }, 700);
     return () => window.clearTimeout(handle);
-  }, [hydrated, authUserId, state.deckTitle, state.presentationDueDate]);
+  }, [hydrated, useCloud, authUserId, activeDeckId, state]);
 
   useEffect(() => {
     if (!running) return;
@@ -420,11 +590,40 @@ export function PresentationPlanner() {
         </h1>
         <p className="mt-2 max-w-3xl text-base text-slate-300">
           {es
-            ? "Aquí creas y organizas tu exposición: título, fecha en el calendario, equipo y guiones. Usa Nueva exposición para empezar en limpio, o la plantilla de ejemplo para ver el flujo. Comparte enlace y código para que el equipo abra la misma convocatoria; en Aula virtual ensayan en vivo."
-            : "Create your presentation here: title, calendar date, team, and scripts. Use New presentation for a blank deck, or Example template to learn the flow. Share link and code so your team lands on the same rally; use Virtual classroom to rehearse live."}
+            ? "Aquí creas y organizas tus exposiciones: puedes tener varias en tu cuenta (cada una con título, fecha en el calendario, equipo y guiones). Usa Nueva exposición para otra más, o la plantilla de ejemplo para ver el flujo. Comparte enlace y código; en Aula virtual ensayan en vivo."
+            : "Create and organize multiple presentations in your account. Use New presentation for another deck, or Example template to learn the flow. Share link and code; use Virtual classroom to rehearse live."}
         </p>
+        {useCloud && deckSummaries.length > 0 ? (
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3">
+            <label className="flex flex-wrap items-center gap-2 text-sm text-slate-200">
+              <span className="text-slate-500">{es ? "Exposición activa" : "Active presentation"}</span>
+              <select
+                className="min-w-[12rem] rounded-lg border border-white/15 bg-slate-950/80 px-2 py-1.5 text-sm outline-none ring-indigo-400/30 focus:ring"
+                value={activeDeckId ?? ""}
+                onChange={(e) => void selectDeckById(e.target.value)}
+              >
+                {deckSummaries.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.deckTitle.trim() || (es ? "(sin título)" : "(untitled)")}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="gap-1 text-rose-200 hover:bg-rose-500/10"
+              disabled={deckSummaries.length <= 1}
+              onClick={() => void removeCurrentDeckFromCloud()}
+            >
+              <Trash2 className="h-4 w-4" />
+              {es ? "Eliminar esta" : "Delete this"}
+            </Button>
+          </div>
+        ) : null}
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button type="button" size="sm" variant="primary" className="gap-2" onClick={startNewPresentation}>
+          <Button type="button" size="sm" variant="primary" className="gap-2" onClick={() => void startNewPresentation()}>
             <Sparkles className="h-4 w-4" />
             {es ? "Nueva exposición" : "New presentation"}
           </Button>
@@ -434,7 +633,10 @@ export function PresentationPlanner() {
           <ShareLinkButton
             pathname="/collaborate/exposiciones"
             campaign="presentation_team"
-            extra={{ deck: state.deckTitle, equipo: state.teamSessionCode }}
+            extra={{
+              ...(activeDeckId ? { deck: activeDeckId } : {}),
+              equipo: state.teamSessionCode,
+            }}
             refHandle={profile.university || "kampus"}
             label={es ? "Copiar enlace de convocatoria" : "Copy invite link"}
             copiedLabel={es ? "Copiado" : "Copied"}
@@ -454,8 +656,8 @@ export function PresentationPlanner() {
           </CardTitle>
           <CardDescription className="text-indigo-100/80">
             {es
-              ? "El nombre del deck es cómo se llama esta sección para el grupo. El código y el enlace sirven para que cada quien abra Mis exposiciones alineado contigo; el guion sigue siendo local en cada dispositivo hasta que tengamos sync en nube."
-              : "The deck title is how you refer to this session. The code and link help everyone open the same Mis exposiciones entry; scripts stay local per device until cloud sync exists."}
+              ? "Con sesión, el plan (título, equipo, guiones) se guarda en tu cuenta. El enlace de convocatoria incluye la exposición activa y el código de equipo para que todos abran la misma vista."
+              : "When signed in, your plan syncs to your account. The invite link includes the active deck and team code so everyone opens the same view."}
           </CardDescription>
         </CardHeader>
         <div className="space-y-4 px-5 pb-5">

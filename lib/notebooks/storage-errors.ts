@@ -22,11 +22,12 @@ export function formatAgendaCloudError(message: string): string {
     low.includes("user_exams") ||
     low.includes("user_exam_attempts") ||
     low.includes("student_works") ||
-    low.includes("user_presentation_agenda")
+    low.includes("user_presentation_agenda") ||
+    low.includes("user_presentation_decks")
   ) {
     return (
-      "Faltan tablas de agenda en Supabase (exámenes, intentos, trabajos o exposición). " +
-      "En el SQL Editor ejecuta `supabase/migrations/20260426140000_agenda_supabase.sql` " +
+      "Faltan tablas de agenda en Supabase (exámenes, intentos, trabajos o exposiciones). " +
+      "En el SQL Editor ejecuta las migraciones `20260426140000_agenda_supabase.sql` y `20260429103000_user_presentation_decks.sql` " +
       "y vuelve a intentar. Detalle técnico: " +
       message.trim()
     );

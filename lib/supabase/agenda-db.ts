@@ -11,6 +11,8 @@ import {
 } from "@/lib/schemas/class-schedule";
 import type { StudentWork } from "@/lib/schemas/student-work";
 import { formatAgendaCloudError } from "@/lib/notebooks/storage-errors";
+import type { PresentationState } from "@/lib/storage/presentation-storage";
+import { presentationStateFromRemoteJson } from "@/lib/storage/presentation-storage";
 
 type UserExamRow = {
   id: string;
@@ -43,11 +45,41 @@ type WorkRow = {
   created_at: string;
 };
 
-type AgendaRow = {
+type PresentationDeckRow = {
+  id: string;
   user_id: string;
   deck_title: string;
   presentation_due_date: string | null;
+  state: unknown;
+  updated_at: string;
 };
+
+export type PresentationDeckSummary = {
+  id: string;
+  deckTitle: string;
+  presentationDueDate?: string;
+  updatedAt: string;
+};
+
+export type PresentationDeckRecord = {
+  id: string;
+  userId: string;
+  deckTitle: string;
+  presentationDueDate?: string;
+  state: PresentationState;
+  updatedAt: string;
+};
+
+function mapPresentationDeckRow(row: PresentationDeckRow): PresentationDeckRecord {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    deckTitle: row.deck_title ?? "",
+    presentationDueDate: row.presentation_due_date ?? undefined,
+    state: presentationStateFromRemoteJson(row.state),
+    updatedAt: row.updated_at,
+  };
+}
 
 type ClassScheduleDbRow = {
   id: string;
@@ -357,34 +389,87 @@ export async function deleteClassCancellationRemote(client: SupabaseClient, user
   if (error) throw new Error(formatAgendaCloudError(error.message));
 }
 
-export async function fetchPresentationAgendaRemote(
+export async function fetchPresentationDeckSummariesRemote(
   client: SupabaseClient,
   userId: string,
-): Promise<{ deckTitle: string; presentationDueDate?: string } | null> {
-  const { data, error } = await client.from("user_presentation_agenda").select("deck_title,presentation_due_date").eq("user_id", userId).maybeSingle();
+): Promise<PresentationDeckSummary[]> {
+  const { data, error } = await client
+    .from("user_presentation_decks")
+    .select("id,deck_title,presentation_due_date,updated_at")
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false });
   if (error) throw new Error(formatAgendaCloudError(error.message));
-  if (!data) return null;
-  const row = data as Pick<AgendaRow, "deck_title" | "presentation_due_date">;
-  return {
-    deckTitle: row.deck_title ?? "",
-    presentationDueDate: row.presentation_due_date ?? undefined,
-  };
+  const rows = (data ?? []) as Pick<PresentationDeckRow, "id" | "deck_title" | "presentation_due_date" | "updated_at">[];
+  return rows.map((r) => ({
+    id: r.id,
+    deckTitle: r.deck_title ?? "",
+    presentationDueDate: r.presentation_due_date ?? undefined,
+    updatedAt: r.updated_at,
+  }));
 }
 
-export async function upsertPresentationAgendaRemote(
+export async function fetchPresentationDeckByIdRemote(
   client: SupabaseClient,
   userId: string,
-  deckTitle: string,
-  presentationDueDate: string | undefined,
-): Promise<void> {
-  const { error } = await client.from("user_presentation_agenda").upsert(
-    {
+  deckId: string,
+): Promise<PresentationDeckRecord> {
+  const { data, error } = await client
+    .from("user_presentation_decks")
+    .select("id,user_id,deck_title,presentation_due_date,state,updated_at")
+    .eq("user_id", userId)
+    .eq("id", deckId)
+    .single();
+  if (error) throw new Error(formatAgendaCloudError(error.message));
+  return mapPresentationDeckRow(data as PresentationDeckRow);
+}
+
+export async function insertPresentationDeckRemote(
+  client: SupabaseClient,
+  userId: string,
+  state: PresentationState,
+): Promise<PresentationDeckRecord> {
+  const deckTitle = state.deckTitle.trim();
+  const due = state.presentationDueDate?.trim() ? state.presentationDueDate : null;
+  const { data, error } = await client
+    .from("user_presentation_decks")
+    .insert({
       user_id: userId,
       deck_title: deckTitle,
-      presentation_due_date: presentationDueDate?.trim() ? presentationDueDate : null,
+      presentation_due_date: due,
+      state: state as unknown as Record<string, unknown>,
+    })
+    .select("id,user_id,deck_title,presentation_due_date,state,updated_at")
+    .single();
+  if (error) throw new Error(formatAgendaCloudError(error.message));
+  return mapPresentationDeckRow(data as PresentationDeckRow);
+}
+
+export async function updatePresentationDeckRemote(
+  client: SupabaseClient,
+  userId: string,
+  deckId: string,
+  state: PresentationState,
+): Promise<void> {
+  const deckTitle = state.deckTitle.trim();
+  const due = state.presentationDueDate?.trim() ? state.presentationDueDate : null;
+  const { error } = await client
+    .from("user_presentation_decks")
+    .update({
+      deck_title: deckTitle,
+      presentation_due_date: due,
+      state: state as unknown as Record<string, unknown>,
       updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id" },
-  );
+    })
+    .eq("id", deckId)
+    .eq("user_id", userId);
+  if (error) throw new Error(formatAgendaCloudError(error.message));
+}
+
+export async function deletePresentationDeckRemote(
+  client: SupabaseClient,
+  userId: string,
+  deckId: string,
+): Promise<void> {
+  const { error } = await client.from("user_presentation_decks").delete().eq("id", deckId).eq("user_id", userId);
   if (error) throw new Error(formatAgendaCloudError(error.message));
 }

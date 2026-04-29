@@ -15,10 +15,20 @@ export type AgendaEvent = {
   note?: string;
 };
 
+/** Id fijo en cliente sin Supabase para una sola exposición en borrador local. */
+export const LOCAL_ONLY_PRESENTATION_ID = "local-draft";
+
+export type PresentationAgendaSlice = {
+  id: string;
+  title: string;
+  /** YYYY-MM-DD */
+  dueDate?: string;
+};
+
 export function buildAgendaEvents(params: {
   exams: Exam[];
-  presentationTitle: string;
-  presentationDueDate: string | undefined;
+  /** Una entrada por exposición con fecha (calendario). */
+  presentations: PresentationAgendaSlice[];
   works: StudentWork[];
 }): AgendaEvent[] {
   const out: AgendaEvent[] = [];
@@ -36,15 +46,19 @@ export function buildAgendaEvents(params: {
     });
   }
 
-  const pd = params.presentationDueDate?.trim();
-  if (pd) {
+  for (const p of params.presentations) {
+    const pd = p.dueDate?.trim();
+    if (!pd) continue;
     out.push({
-      id: "presentation:deck",
+      id: `presentation:${p.id}`,
       kind: "presentation",
       date: pd,
-      title: params.presentationTitle.trim() || "Mis exposiciones",
+      title: p.title.trim() || "Exposición",
       subject: "Exposición",
-      href: "/collaborate/exposiciones",
+      href:
+        p.id === LOCAL_ONLY_PRESENTATION_ID
+          ? "/collaborate/exposiciones"
+          : `/collaborate/exposiciones?deck=${encodeURIComponent(p.id)}`,
     });
   }
 

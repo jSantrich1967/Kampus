@@ -10,7 +10,13 @@ import { RescuePackDisplay } from "@/components/rescue/rescue-pack-display";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { buildAgendaEvents, monthMatrix, type AgendaEvent } from "@/lib/calendar/agenda-events";
+import {
+  buildAgendaEvents,
+  LOCAL_ONLY_PRESENTATION_ID,
+  monthMatrix,
+  type AgendaEvent,
+  type PresentationAgendaSlice,
+} from "@/lib/calendar/agenda-events";
 import { localIsoDate } from "@/lib/calendar/local-iso-date";
 import { cn } from "@/lib/cn";
 import { formatAgendaCloudError } from "@/lib/notebooks/storage-errors";
@@ -31,7 +37,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   deleteStudentWorkRemote,
   ensureDemoExamsRemote,
-  fetchPresentationAgendaRemote,
+  fetchPresentationDeckSummariesRemote,
   fetchClassScheduleRemote,
   fetchClassCancellationsRemote,
   fetchStudentWorksRemote,
@@ -85,8 +91,7 @@ export function AcademicCalendarHub() {
   const [classDocsByKey, setClassDocsByKey] = useState<
     Record<string, { count: number; filenames: string[]; topic?: string | null; lesson_point?: string | null }>
   >({});
-  const [presTitle, setPresTitle] = useState("");
-  const [presDue, setPresDue] = useState<string | undefined>(undefined);
+  const [presentationSlices, setPresentationSlices] = useState<PresentationAgendaSlice[]>([]);
 
   const [workTitle, setWorkTitle] = useState("");
   const [workSubject, setWorkSubject] = useState("");
@@ -446,25 +451,24 @@ export function AcademicCalendarHub() {
       if (useCloud) {
         const supabase = createSupabaseBrowserClient();
         await ensureDemoExamsRemote(supabase, authUserId!, profile.subjects[0]);
-        const [examList, workList, classList, cancelList, remoteAgenda] = await Promise.all([
+        const [examList, workList, classList, cancelList, deckSummaries] = await Promise.all([
           fetchUserExams(supabase, authUserId!),
           fetchStudentWorksRemote(supabase, authUserId!),
           fetchClassScheduleRemote(supabase, authUserId!),
           fetchClassCancellationsRemote(supabase, authUserId!),
-          fetchPresentationAgendaRemote(supabase, authUserId!),
+          fetchPresentationDeckSummariesRemote(supabase, authUserId!),
         ]);
         setExams(examList);
         setWorks(workList);
         setClasses(classList);
         setCancellations(cancelList);
-        const local = loadPresentation();
-        if (remoteAgenda) {
-          setPresTitle(remoteAgenda.deckTitle.trim() ? remoteAgenda.deckTitle : local.deckTitle);
-          setPresDue(remoteAgenda.presentationDueDate ?? local.presentationDueDate);
-        } else {
-          setPresTitle(local.deckTitle);
-          setPresDue(local.presentationDueDate);
-        }
+        setPresentationSlices(
+          deckSummaries.map((s) => ({
+            id: s.id,
+            title: s.deckTitle,
+            dueDate: s.presentationDueDate,
+          })),
+        );
       } else {
         seedDemoExamsIfEmpty(profile.subjects[0]);
         setExams(loadExams());
@@ -472,8 +476,18 @@ export function AcademicCalendarHub() {
         setClasses(loadClassSchedule());
         setCancellations([]);
         const loc = loadPresentation();
-        setPresTitle(loc.deckTitle);
-        setPresDue(loc.presentationDueDate);
+        const due = loc.presentationDueDate?.trim();
+        setPresentationSlices(
+          due
+            ? [
+                {
+                  id: LOCAL_ONLY_PRESENTATION_ID,
+                  title: loc.deckTitle.trim() || "Exposición",
+                  dueDate: due,
+                },
+              ]
+            : [],
+        );
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "No se pudo cargar el calendario.";
@@ -494,11 +508,10 @@ export function AcademicCalendarHub() {
     () =>
       buildAgendaEvents({
         exams,
-        presentationTitle: presTitle,
-        presentationDueDate: presDue,
+        presentations: presentationSlices,
         works,
       }),
-    [exams, presTitle, presDue, works],
+    [exams, presentationSlices, works],
   );
 
   const classEvents = useMemo(() => {

@@ -103,3 +103,34 @@ export function savePresentation(state: PresentationState) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
+
+const ACTIVE_DECK_ID_KEY = "kampus.presentation.activeDeckId.v1";
+
+export function loadActivePresentationDeckId(): string | null {
+  if (typeof window === "undefined") return null;
+  const v = window.localStorage.getItem(ACTIVE_DECK_ID_KEY)?.trim();
+  return v || null;
+}
+
+export function saveActivePresentationDeckId(id: string | null) {
+  if (typeof window === "undefined") return;
+  if (!id) window.localStorage.removeItem(ACTIVE_DECK_ID_KEY);
+  else window.localStorage.setItem(ACTIVE_DECK_ID_KEY, id);
+}
+
+/** Merge JSONB from Supabase into a full PresentationState (migraciones / filas vacías). */
+export function presentationStateFromRemoteJson(raw: unknown): PresentationState {
+  const blank = createBlankPresentationState();
+  if (!raw || typeof raw !== "object") {
+    return ensurePresentationTeamCode({ ...blank, teamSessionCode: "" });
+  }
+  const patch = raw as Partial<PresentationState>;
+  const merged: PresentationState = {
+    ...blank,
+    ...patch,
+    members: Array.isArray(patch.members) && patch.members.length > 0 ? patch.members : blank.members,
+    sections: Array.isArray(patch.sections) && patch.sections.length > 0 ? patch.sections : blank.sections,
+    probableQuestions: Array.isArray(patch.probableQuestions) ? patch.probableQuestions : blank.probableQuestions,
+  };
+  return ensurePresentationTeamCode(merged);
+}
