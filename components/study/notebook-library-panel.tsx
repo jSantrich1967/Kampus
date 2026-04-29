@@ -15,6 +15,9 @@ import { initialsFromSubject, notebookCoverGradient } from "@/lib/notebooks/cove
 import { sanitizeStorageFilename, subjectToPathSegment } from "@/lib/notebooks/paths";
 import { formatNotebookCloudError } from "@/lib/notebooks/storage-errors";
 import type { NotebookDocumentRow, UserNotebookRow } from "@/lib/notebooks/types";
+import type { ClassScheduleRow } from "@/lib/schemas/class-schedule";
+import { fetchClassScheduleRemote } from "@/lib/supabase/agenda-db";
+import { loadClassSchedule } from "@/lib/storage/class-schedule-storage";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cn } from "@/lib/cn";
@@ -39,6 +42,8 @@ export function NotebookLibraryPanel() {
   const [uploadPracticeExercises, setUploadPracticeExercises] = useState("");
   const [uploadScheduleId, setUploadScheduleId] = useState<string | null>(null);
   const [uploadClassDate, setUploadClassDate] = useState<string | null>(null);
+  const [uploadAsClass, setUploadAsClass] = useState(false);
+  const [scheduleRows, setScheduleRows] = useState<ClassScheduleRow[]>([]);
   const [editingDocId, setEditingDocId] = useState<string | null>(null);
   const [editTopic, setEditTopic] = useState("");
   const [editLessonPoint, setEditLessonPoint] = useState("");
@@ -81,8 +86,37 @@ export function NotebookLibraryPanel() {
     if (expand && subj) setExpandedSubject(subj);
     if (scheduleId) setUploadScheduleId(scheduleId);
     if (classDate) setUploadClassDate(classDate);
+    if (scheduleId || classDate) setUploadAsClass(true);
     // Only re-run when params/profile list changes.
   }, [searchParams, profile.subjects]);
+
+  const useCloud = Boolean(isSupabaseConfigured() && authUserId);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      if (!hydratedSafe()) return;
+      try {
+        if (useCloud && authUserId) {
+          const supabase = createSupabaseBrowserClient();
+          const rows = await fetchClassScheduleRemote(supabase, authUserId);
+          if (!cancelled) setScheduleRows(rows);
+        } else {
+          if (!cancelled) setScheduleRows(loadClassSchedule());
+        }
+      } catch {
+        if (!cancelled) setScheduleRows([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [useCloud, authUserId]);
+
+  function hydratedSafe() {
+    // This component already runs client-side; keep a guard for safety.
+    return typeof window !== "undefined";
+  }
 
   const effectiveSubject = useMemo(() => {
     const c = customSubject.trim();
@@ -183,9 +217,23 @@ export function NotebookLibraryPanel() {
       setError("Supabase no está configurado.");
       return;
     }
+    if (uploadAsClass) {
+      const sid = (uploadScheduleId ?? "").trim();
+      const cd = (uploadClassDate ?? "").trim();
+      if (!sid) {
+        setError("Para subir una clase al calendario, primero elige cuál clase del horario es (arriba).");
+        return;
+      }
+      if (!cd) {
+        setError("Para subir una clase al calendario, primero elige la fecha de la clase (arriba).");
+        return;
+      }
+    }
     // Beginners UX: make sure the user sees these fields exist.
     // We require at least one of Tema / Punto so filtros in el kit tengan sentido.
-    if (!uploadTopic.trim() && !uploadLessonPoint.trim()) {
+    const topicValue = uploadTopic.trim() || (uploadAsClass ? "Clase" : "");
+    const pointValue = uploadLessonPoint.trim();
+    if (!topicValue && !pointValue) {
       setError("Antes de subir, escribe al menos un Tema o un Punto (arriba).");
       return;
     }
@@ -229,11 +277,11 @@ export function NotebookLibraryPanel() {
         const { error: insErr } = await supabase.from("notebook_documents").insert({
           user_id: authUserId,
           subject: effectiveSubject,
-          topic: uploadTopic.trim(),
-          lesson_point: uploadLessonPoint.trim(),
+          topic: topicValue,
+          lesson_point: pointValue,
           practice_exercises: uploadPracticeExercises.trim(),
-          schedule_id: uploadScheduleId,
-          class_date: uploadClassDate,
+          schedule_id: uploadAsClass ? uploadScheduleId : null,
+          class_date: uploadAsClass ? uploadClassDate : null,
           storage_path: storagePath,
           filename: file.name,
           mime_type: file.type || "application/octet-stream",
@@ -458,6 +506,87 @@ export function NotebookLibraryPanel() {
                   placeholder="Ej. Econometría II"
                 />
               </label>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-slate-950/40 p-4">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">¿Esto es una clase del calendario?</p>
+              <p className="mb-3 text-[11px] text-slate-500">
+                Si lo marcas, el material se guarda como <strong className="text-slate-300">Clase</strong> y aparecerá en el día del calendario (requiere
+                elegir la clase del horario y su fecha).
+              </p>
+
+              <label className="flex items-center gap-2 text-sm text-slate-200">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-white/20 bg-slate-950/60"
+                  checked={uploadAsClass}
+                  onChange={(e) => {
+                    const v = e.target.checked;
+                    setUploadAsClass(v);
+                    if (!v) {
+                      setUploadScheduleId(null);
+                      setUploadClassDate(null);
+                    } else {
+                      // Default date: today.
+                      const today = new Date().toISOString().slice(0, 10);
+                      setUploadClassDate((prev) => prev ?? today);
+                    }
+                  }}
+                />
+                Sí, es material de una clase
+              </label>
+
+              {uploadAsClass ? (
+                <div className="mt-3 grid gap-3 md:grid-cols-3">
+                  <label className="space-y-1 text-sm md:col-span-2">
+                    <span className="text-slate-400">Clase del horario</span>
+                    <select
+                      className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none ring-indigo-400/40 focus:ring"
+                      value={uploadScheduleId ?? ""}
+                      onChange={(e) => {
+                        const nextId = e.target.value || null;
+                        setUploadScheduleId(nextId);
+                        const row = scheduleRows.find((r) => r.id === nextId) ?? null;
+                        if (row?.subject) {
+                          // Keep notebook subject aligned with the class subject.
+                          if (profile.subjects.includes(row.subject)) {
+                            setCustomSubject("");
+                            setSubject(row.subject);
+                          } else {
+                            setCustomSubject(row.subject);
+                          }
+                        }
+                      }}
+                    >
+                      <option value="">Selecciona…</option>
+                      {scheduleRows.map((r) => {
+                        const weekdays = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+                        const label = `${r.subject} · ${weekdays[r.weekday] ?? "?"} ${r.startTime}–${r.endTime}`;
+                        return (
+                          <option key={r.id} value={r.id}>
+                            {label}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    {scheduleRows.length === 0 ? (
+                      <div className="mt-1 text-[11px] text-slate-500">
+                        No tienes horario configurado todavía. Ve a <strong className="text-slate-400">Mi calendario</strong> y agrega tu horario semanal.
+                      </div>
+                    ) : null}
+                  </label>
+
+                  <label className="space-y-1 text-sm md:col-span-1">
+                    <span className="text-slate-400">Fecha de la clase</span>
+                    <input
+                      type="date"
+                      className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none ring-indigo-400/40 focus:ring"
+                      value={uploadClassDate ?? ""}
+                      onChange={(e) => setUploadClassDate(e.target.value || null)}
+                    />
+                  </label>
+                </div>
+              ) : null}
             </div>
 
             <div className="rounded-xl border border-white/10 bg-slate-950/40 p-4">
