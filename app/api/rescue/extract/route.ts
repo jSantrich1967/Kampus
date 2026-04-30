@@ -28,7 +28,7 @@ function isPdf(mime: string, name: string): boolean {
 
 async function ocrImageWithOpenAI(file: File): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
-  const model = process.env.OPENAI_VISION_MODEL?.trim() || "gpt-4.1-mini";
+  const model = process.env.OPENAI_VISION_MODEL?.trim() || "gpt-4.1";
   if (!apiKey) {
     return "[Missing OPENAI_API_KEY on the server. Add it in Vercel env vars to enable OCR for images.]";
   }
@@ -53,11 +53,16 @@ async function ocrImageWithOpenAI(file: File): Promise<string> {
             {
               type: "input_text",
               text:
-                "Haz OCR de la imagen y devuelve SOLO texto en español (sin explicaciones). " +
-                "Conserva títulos, viñetas y fórmulas lo mejor posible. " +
+                "Eres un motor de OCR. Extrae el texto de la imagen y devuelve SOLO el texto (sin explicaciones, sin JSON, sin etiquetas, sin metadatos). " +
+                "Reglas: " +
+                "1) Mantén la estructura: títulos, numeración, viñetas y saltos de línea. " +
+                "2) No inventes contenido. Si una parte no se entiende, omítela. " +
+                "3) Evita basura tipo IDs, tokens, 'output_text', 'assistant', 'in_memory', etc. " +
+                "4) Si hay fórmulas, escríbelas en texto plano lo mejor posible. " +
                 "Si la imagen no tiene texto legible, responde exactamente: SIN_TEXTO",
             },
-            { type: "input_image", image_url: dataUrl },
+            // `detail: high` improves OCR for small text (supported by vision models).
+            { type: "input_image", image_url: dataUrl, detail: "high" },
           ],
         },
       ],
@@ -101,20 +106,42 @@ function extractTextFromOpenAIResponses(payload: unknown): string {
   // Some SDKs / API versions expose a convenience field.
   if (typeof root.output_text === "string" && root.output_text.trim()) return root.output_text;
 
+  // Prefer strictly reading only "output_text" content blocks from the Responses API structure,
+  // instead of recursively collecting every string (which can include ids, model names, etc.).
+  const output = root.output;
+  if (Array.isArray(output)) {
+    const chunks: string[] = [];
+    for (const item of output) {
+      if (!item || typeof item !== "object") continue;
+      const content = (item as Record<string, unknown>).content;
+      if (!Array.isArray(content)) continue;
+      for (const c of content) {
+        if (!c || typeof c !== "object") continue;
+        const obj = c as Record<string, unknown>;
+        if (obj.type !== "output_text") continue;
+        const text = obj.text;
+        if (typeof text === "string" && text.trim()) chunks.push(text.trim());
+      }
+    }
+    if (chunks.length) return chunks.join("\n\n").trim();
+  }
+
+  // Fallback: if the payload doesn't match expected structure, use conservative collector.
   const parts: string[] = [];
   collectOpenAIResponseText(payload, parts);
-
-  // De-dupe while keeping order
   const seen = new Set<string>();
   const deduped: string[] = [];
   for (const p of parts) {
     const t = p.trim();
     if (!t) continue;
     if (seen.has(t)) continue;
+    // Avoid obvious metadata strings in fallback mode.
+    if (/^(resp|msg)_[a-z0-9]+$/i.test(t)) continue;
+    if (/^gpt-\S+$/i.test(t)) continue;
+    if (t.toLowerCase() === "output_text") continue;
     seen.add(t);
     deduped.push(t);
   }
-
   return deduped.join("\n").trim();
 }
 
