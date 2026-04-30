@@ -190,7 +190,19 @@ export function NotebookReader({ subjectSlug }: Props) {
     setBookBusy(true);
     setError(null);
     try {
-      const blob = generateNotebookBookPdf({ subjectLabel, pages });
+      const supabase = createSupabaseBrowserClient();
+      const blob = await generateNotebookBookPdf({
+        subjectLabel,
+        pages,
+        resolveImageBlob: async (page) => {
+          if (!authUserId) return null;
+          const { data, error: uErr } = await supabase.storage.from("notebooks").createSignedUrl(page.storage_path, 3600);
+          if (uErr || !data?.signedUrl) return null;
+          const res = await fetch(data.signedUrl);
+          if (!res.ok) return null;
+          return await res.blob();
+        },
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;

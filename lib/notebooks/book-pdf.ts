@@ -3,6 +3,15 @@ import { jsPDF } from "jspdf";
 import { buildNotebookIndexGroups } from "@/lib/notebooks/notebook-index";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 
+async function blobToDataUrl(blob: Blob): Promise<string> {
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("No se pudo leer la imagen."));
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.readAsDataURL(blob);
+  });
+}
+
 function sanitizeExtractedText(raw: string): string {
   const text = (raw ?? "").replace(/\r\n/g, "\n").trim();
   if (!text) return "";
@@ -53,13 +62,45 @@ function addWrappedText(doc: jsPDF, text: string, x: number, y: number, maxWidth
   return cursorY;
 }
 
+function addImageScaled(doc: jsPDF, dataUrl: string, x: number, y: number, maxWidth: number) {
+  const props = doc.getImageProperties(dataUrl);
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const bottom = pageHeight - 18;
+  const availHeight = bottom - y;
+
+  // Keep aspect ratio; constrain to maxWidth and available height.
+  const ratio = props.width > 0 ? maxWidth / props.width : 1;
+  let w = maxWidth;
+  let h = props.height * ratio;
+  if (h > availHeight) {
+    const r2 = availHeight / h;
+    w = w * r2;
+    h = h * r2;
+  }
+
+  // If still too small space, add new page.
+  if (h < 10 || y + h > bottom) {
+    doc.addPage();
+    y = 20;
+  }
+
+  const format = dataUrl.startsWith("data:image/png") ? "PNG" : "JPEG";
+  doc.addImage(dataUrl, format, x, y, w, h);
+  return y + h;
+}
+
 /**
  * Generates a clean compiled PDF from notebook extracted text (no AI rewriting).
  * - Uses date groups (class_date or created_at date).
  * - Adds a simple index.
  * - Includes sanitized extracted_text per page.
+ * - Optionally embeds images (when resolver returns a data URL).
  */
-export function generateNotebookBookPdf(args: { subjectLabel: string; pages: NotebookDocumentRow[] }): Blob {
+export async function generateNotebookBookPdf(args: {
+  subjectLabel: string;
+  pages: NotebookDocumentRow[];
+  resolveImageBlob?: (page: NotebookDocumentRow) => Promise<Blob | null>;
+}): Promise<Blob> {
   const subject = args.subjectLabel.trim() || "Cuaderno";
   const groups = buildNotebookIndexGroups(args.pages);
 
@@ -118,6 +159,25 @@ export function generateNotebookBookPdf(args: { subjectLabel: string; pages: Not
       doc.text(heading, marginX, cy);
       cy += 14;
       doc.setFont("helvetica", "normal");
+
+      const isImage = Boolean(p.mime_type?.startsWith("image/")) || /\.(png|jpe?g|webp)$/i.test(p.filename ?? "");
+      if (isImage && args.resolveImageBlob) {
+        try {
+          const blob = await args.resolveImageBlob(p);
+          if (blob) {
+            const dataUrl = await blobToDataUrl(blob);
+            cy = addImageScaled(doc, dataUrl, marginX, cy, maxWidth) + 10;
+            const bodyAfter = sanitizeExtractedText(p.extracted_text ?? "");
+            if (bodyAfter) {
+              cy = addWrappedText(doc, bodyAfter, marginX, cy, maxWidth, 13) + 10;
+            }
+            continue;
+          }
+        } catch {
+          // Fall back to text-only.
+        }
+      }
+
       const body = sanitizeExtractedText(p.extracted_text ?? "");
       if (!body) {
         cy = addWrappedText(doc, "(Sin texto extraído)", marginX, cy, maxWidth, 13) + 8;
