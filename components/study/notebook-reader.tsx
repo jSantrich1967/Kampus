@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, BookOpenText, ChevronLeft, ChevronRight, Loader2, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -11,6 +11,7 @@ import { getNotebookSubjectCover } from "@/components/study/notebook-subject-cov
 import { getNotebookSubjectIcon } from "@/components/study/notebook-subject-icon";
 import { Button } from "@/components/ui/button";
 import { initialsFromSubject, notebookCoverGradient } from "@/lib/notebooks/cover-styles";
+import { generateNotebookBookPdf } from "@/lib/notebooks/book-pdf";
 import { buildNotebookIndexGroups } from "@/lib/notebooks/notebook-index";
 import { subjectToPathSegment } from "@/lib/notebooks/paths";
 import { formatNotebookCloudError } from "@/lib/notebooks/storage-errors";
@@ -57,6 +58,7 @@ export function NotebookReader({ subjectSlug }: Props) {
   const [mediaBusy, setMediaBusy] = useState(false);
   const [indexOpen, setIndexOpen] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [bookBusy, setBookBusy] = useState(false);
   const [tagOpen, setTagOpen] = useState(false);
   const [editTopic, setEditTopic] = useState("");
   const [editLessonPoint, setEditLessonPoint] = useState("");
@@ -181,6 +183,28 @@ export function NotebookReader({ subjectSlug }: Props) {
       return;
     }
     window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  }
+
+  async function downloadNotebookBookPdf() {
+    if (bookBusy) return;
+    setBookBusy(true);
+    setError(null);
+    try {
+      const blob = generateNotebookBookPdf({ subjectLabel, pages });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${(subjectLabel || "cuaderno").replace(/[\\/:*?\"<>|]+/g, " ").trim()}_libro.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 4000);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "No se pudo generar el PDF.";
+      setError(formatNotebookCloudError(msg));
+    } finally {
+      setBookBusy(false);
+    }
   }
 
   async function removeDoc(doc: NotebookDocumentRow) {
@@ -483,6 +507,17 @@ export function NotebookReader({ subjectSlug }: Props) {
                           onChange={(e) => void uploadMoreFiles(e.target.files)}
                         />
                       </label>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        disabled={bookBusy || pages.length === 0}
+                        onClick={() => void downloadNotebookBookPdf()}
+                        title="Compila el texto extraído del cuaderno y lo descarga como un solo PDF."
+                      >
+                        <BookOpenText className="h-4 w-4" />
+                        {bookBusy ? "Generando…" : "Libro (PDF)"}
+                      </Button>
                       <Button type="button" size="sm" variant="secondary" disabled={!current} onClick={() => void signedDownload(current)}>
                         Descargar
                       </Button>
