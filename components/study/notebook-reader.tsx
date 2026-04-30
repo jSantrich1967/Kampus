@@ -22,6 +22,16 @@ import { cn } from "@/lib/cn";
 
 type Props = { subjectSlug: string };
 
+function prettyClassLabelFromFilename(filename: string): string {
+  const raw = (filename ?? "").trim();
+  if (!raw) return "";
+  // Remove last extension: "apuntes_2.pdf" -> "apuntes_2"
+  const noExt = raw.replace(/\.[^.]+$/, "");
+  // Replace separators with spaces and collapse whitespace.
+  const spaced = noExt.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+  return spaced;
+}
+
 export function NotebookReader({ subjectSlug }: Props) {
   const { authUserId } = useKampus();
   const [pages, setPages] = useState<NotebookDocumentRow[]>([]);
@@ -373,7 +383,8 @@ export function NotebookReader({ subjectSlug }: Props) {
                       {indexGroups.map((g) => {
                         const first = g.items[0]?.page ?? null;
                         const rawTitle = (first?.topic ?? "").trim();
-                        const classTitle = rawTitle || (first?.filename ?? "").trim() || "Clase";
+                        const fileLabel = prettyClassLabelFromFilename((first?.filename ?? "").trim());
+                        const classTitle = rawTitle || fileLabel || "Clase";
                         const isCurrentGroup = g.items.some((it) => it.index0 === pageIndex);
                         return (
                           <button
