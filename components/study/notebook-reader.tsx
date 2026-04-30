@@ -202,6 +202,24 @@ export function NotebookReader({ subjectSlug }: Props) {
           if (!res.ok) return null;
           return await res.blob();
         },
+        resolveExtractedText: async (page) => {
+          // Re-OCR for images during PDF generation (improves quality vs cached extracted_text).
+          const isImg =
+            Boolean(page.mime_type?.startsWith("image/")) || Boolean(page.filename?.toLowerCase().match(/\.(png|jpe?g|webp)$/));
+          if (!isImg) return null;
+          const { data, error: uErr } = await supabase.storage.from("notebooks").createSignedUrl(page.storage_path, 3600);
+          if (uErr || !data?.signedUrl) return null;
+          const res = await fetch(data.signedUrl);
+          if (!res.ok) return null;
+          const blob = await res.blob();
+          const file = new File([blob], page.filename || "image", { type: blob.type || page.mime_type || "image/png" });
+          const fd = new FormData();
+          fd.append("files", file);
+          const ocr = await fetch("/api/rescue/extract", { method: "POST", body: fd });
+          if (!ocr.ok) return null;
+          const json = (await ocr.json()) as { combinedText?: string; error?: string };
+          return json.combinedText?.trim() ? json.combinedText.trim() : null;
+        },
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");

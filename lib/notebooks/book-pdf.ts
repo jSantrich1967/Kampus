@@ -26,10 +26,23 @@ function sanitizeExtractedText(raw: string): string {
       if (low === "response" || low === "completed" || low === "developer") return false;
       if (low.startsWith("resp_") || low.startsWith("msg_")) return false;
       if (low.startsWith("gpt-") || low.startsWith("openai") || low.startsWith("model:")) return false;
+      if (low === "output_text" || low === "assistant" || low === "in_memory" || low === "default" || low === "text" || low === "auto" || low === "disabled")
+        return false;
+      // Drop lines that look like broken OCR encoding / symbol soup.
+      const trimmed = l.trim();
+      const alphaNum = (trimmed.match(/[A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ]/g) ?? []).length;
+      const symbols = (trimmed.match(/[^A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ\s]/g) ?? []).length;
+      if (symbols >= 8 && alphaNum <= 6) return false;
+      if (/^(&-){3,}/.test(trimmed.replace(/\s+/g, ""))) return false;
+      if (trimmed.includes("&&") && symbols > alphaNum * 1.5) return false;
       return true;
     });
 
-  return lines.join("\n").trim();
+  // Collapse huge blank gaps.
+  return lines
+    .join("\n")
+    .replace(/\n{4,}/g, "\n\n\n")
+    .trim();
 }
 
 function prettyClassLabelFromFilename(filename: string): string {
@@ -100,6 +113,7 @@ export async function generateNotebookBookPdf(args: {
   subjectLabel: string;
   pages: NotebookDocumentRow[];
   resolveImageBlob?: (page: NotebookDocumentRow) => Promise<Blob | null>;
+  resolveExtractedText?: (page: NotebookDocumentRow) => Promise<string | null>;
 }): Promise<Blob> {
   const subject = args.subjectLabel.trim() || "Cuaderno";
   const groups = buildNotebookIndexGroups(args.pages);
@@ -166,7 +180,13 @@ export async function generateNotebookBookPdf(args: {
           if (blob) {
             const dataUrl = await blobToDataUrl(blob);
             cy = addImageScaled(doc, dataUrl, marginX, cy, maxWidth) + 10;
-            const bodyAfter = sanitizeExtractedText(p.extracted_text ?? "");
+            let bodyAfter = sanitizeExtractedText(p.extracted_text ?? "");
+            if (args.resolveExtractedText) {
+              const fresh = await args.resolveExtractedText(p);
+              const cleaned = sanitizeExtractedText(fresh ?? "");
+              // Prefer the fresher OCR if it looks more meaningful.
+              if (cleaned && cleaned.length > bodyAfter.length) bodyAfter = cleaned;
+            }
             if (bodyAfter) {
               cy = addWrappedText(doc, bodyAfter, marginX, cy, maxWidth, 13) + 10;
             }
@@ -177,7 +197,16 @@ export async function generateNotebookBookPdf(args: {
         }
       }
 
-      const body = sanitizeExtractedText(p.extracted_text ?? "");
+      let body = sanitizeExtractedText(p.extracted_text ?? "");
+      if (args.resolveExtractedText) {
+        try {
+          const fresh = await args.resolveExtractedText(p);
+          const cleaned = sanitizeExtractedText(fresh ?? "");
+          if (cleaned && cleaned.length > body.length) body = cleaned;
+        } catch {
+          // ignore
+        }
+      }
       if (!body) {
         cy = addWrappedText(doc, "(Sin texto extraído)", marginX, cy, maxWidth, 13) + 8;
       } else {
