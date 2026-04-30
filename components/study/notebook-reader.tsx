@@ -32,6 +32,21 @@ function prettyClassLabelFromFilename(filename: string): string {
   return spaced;
 }
 
+function pageRangeLabel(index0List: number[]): string {
+  if (!index0List.length) return "";
+  const nums = Array.from(new Set(index0List.map((i) => i + 1))).sort((a, b) => a - b);
+  if (nums.length === 1) return String(nums[0]);
+  // Most common: a contiguous block => show "1–3".
+  const first = nums[0]!;
+  const last = nums[nums.length - 1]!;
+  const isContiguous = nums.every((n, idx) => idx === 0 || n === nums[idx - 1]! + 1);
+  if (isContiguous) return `${first}–${last}`;
+  // Fallback: show up to 3 items, then "+N".
+  const head = nums.slice(0, 3).join(", ");
+  if (nums.length <= 3) return head;
+  return `${head} +${nums.length - 3}`;
+}
+
 export function NotebookReader({ subjectSlug }: Props) {
   const { authUserId } = useKampus();
   const [pages, setPages] = useState<NotebookDocumentRow[]>([]);
@@ -385,6 +400,7 @@ export function NotebookReader({ subjectSlug }: Props) {
                         const rawTitle = (first?.topic ?? "").trim();
                         const fileLabel = prettyClassLabelFromFilename((first?.filename ?? "").trim());
                         const classTitle = rawTitle || fileLabel || "Clase";
+                        const pagesLabel = pageRangeLabel(g.items.map((it) => it.index0));
                         const isCurrentGroup = g.items.some((it) => it.index0 === pageIndex);
                         return (
                           <button
@@ -398,7 +414,7 @@ export function NotebookReader({ subjectSlug }: Props) {
                           >
                             <div className="font-medium text-white">{g.dateKey}</div>
                             <div className="truncate text-slate-200">{classTitle}</div>
-                            <div className="text-right font-medium text-slate-200">{g.items.length}</div>
+                            <div className="text-right font-medium text-slate-200">{pagesLabel}</div>
                           </button>
                         );
                       })}
