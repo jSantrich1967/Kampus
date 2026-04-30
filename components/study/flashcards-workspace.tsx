@@ -7,21 +7,23 @@ import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { navCopy } from "@/lib/i18n/nav";
 
 export function FlashcardsWorkspace() {
   const { profile, locale } = useKampus();
   const es = locale === "es";
+  const t = navCopy.es;
   const focus = profile.weakTopics[0] ?? profile.subjects[0] ?? (es ? "General" : "General");
 
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow={es ? "Estudiar" : "Study"}
+        eyebrow={t.groups.learn}
         title={es ? "Tarjetas adaptativas" : "Adaptive flashcards"}
         description={
           es
-            ? "Sesiones cortas conectadas a tus temas débiles y a Modo aprobar (MVP)."
-            : "Short sessions tied to weak topics and Pass Mode (MVP)."
+            ? "Repaso breve ligado a tus temas débiles y al Modo aprobar."
+            : "Short review tied to weak topics and Pass Mode."
         }
         actions={
           <ShareLinkButton

@@ -2,34 +2,33 @@
 
 import Link from "next/link";
 import { Video } from "lucide-react";
+import { useMemo } from "react";
 
+import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { navCopy } from "@/lib/i18n/nav";
 import { buildVirtualClassSessions } from "@/lib/virtual-classroom-mock";
-import { useMemo } from "react";
 
 export function VirtualClassroomHub() {
   const { profile, locale } = useKampus();
   const es = locale === "es";
+  const t = navCopy.es;
   const sessions = useMemo(() => buildVirtualClassSessions(profile), [profile]);
 
   return (
     <div className="space-y-8">
-      <div>
-        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-200/80">
-          {es ? "En vivo" : "Live"}
-        </div>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white md:text-4xl">
-          {es ? "Aula virtual" : "Virtual classroom"}
-        </h1>
-        <p className="mt-2 max-w-3xl text-base text-slate-300">
-          {es
-            ? "Ve qué clase hay, con quién, el tema del día, si hay cupo y entra. La videollamada y la presentación son enlaces de demo hasta conectar tu proveedor institucional."
-            : "See what class is on, with whom, today’s topic, seats left, and join. Video and slides are demo links until your institution connects a provider."}
-        </p>
-      </div>
+      <PageHeader
+        eyebrow={t.groups.work}
+        title={es ? "Aula virtual" : "Virtual classroom"}
+        description={
+          es
+            ? "Sesiones demo: horario, tema y cupo. La videollamada real depende de tu institución."
+            : "Demo sessions: schedule, topic, seats. Live video depends on your institution."
+        }
+      />
 
       <div className="grid gap-4 md:grid-cols-2">
         {sessions.map((s) => {

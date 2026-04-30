@@ -1,6 +1,53 @@
 import { NextResponse } from "next/server";
 
+import { repairSpuriousAmpersandOcrText } from "@/lib/notebooks/ocr-text-repair";
+
 export const runtime = "nodejs";
+
+async function preprocessImageForOcrDataUrl(file: File): Promise<string> {
+  const inputMime = file.type || "image/png";
+  const buf = Buffer.from(await file.arrayBuffer());
+
+  // If sharp isn't available (should be in Node runtime), fall back to the original image.
+  try {
+    type SharpLike = (input: Buffer, options?: unknown) => {
+      rotate: () => unknown;
+      resize: (opts: unknown) => unknown;
+      grayscale: () => unknown;
+      normalize: () => unknown;
+      sharpen: () => unknown;
+      png: (opts: unknown) => unknown;
+      toBuffer: () => Promise<Buffer>;
+    };
+
+    const mod = (await import("sharp")) as unknown as { default: SharpLike };
+    const sharp = mod.default;
+
+    // Goals:
+    // - normalize orientation (photos)
+    // - increase contrast slightly
+    // - upscale small scans a bit, downscale huge images
+    // - mild sharpening to help small text
+    const processed = await sharp(buf, { failOn: "none" })
+      .rotate()
+      .resize({
+        width: 2000,
+        withoutEnlargement: false,
+        fit: "inside",
+      })
+      .grayscale()
+      .normalize()
+      .sharpen()
+      .png({ compressionLevel: 9, adaptiveFiltering: true })
+      .toBuffer();
+
+    const base64 = processed.toString("base64");
+    return `data:image/png;base64,${base64}`;
+  } catch {
+    const base64 = buf.toString("base64");
+    return `data:${inputMime};base64,${base64}`;
+  }
+}
 
 type ExtractedFile = {
   name: string;
@@ -33,10 +80,7 @@ async function ocrImageWithOpenAI(file: File): Promise<string> {
     return "[Missing OPENAI_API_KEY on the server. Add it in Vercel env vars to enable OCR for images.]";
   }
 
-  const mime = file.type || "image/png";
-  const buf = Buffer.from(await file.arrayBuffer());
-  const base64 = buf.toString("base64");
-  const dataUrl = `data:${mime};base64,${base64}`;
+  const dataUrl = await preprocessImageForOcrDataUrl(file);
 
   const res = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
@@ -46,6 +90,8 @@ async function ocrImageWithOpenAI(file: File): Promise<string> {
     },
     body: JSON.stringify({
       model,
+      temperature: 0,
+      max_output_tokens: 8192,
       input: [
         {
           role: "user",
@@ -53,13 +99,20 @@ async function ocrImageWithOpenAI(file: File): Promise<string> {
             {
               type: "input_text",
               text:
-                "Eres un motor de OCR. Extrae el texto de la imagen y devuelve SOLO el texto (sin explicaciones, sin JSON, sin etiquetas, sin metadatos). " +
-                "Reglas: " +
-                "1) Mantén la estructura: títulos, numeración, viñetas y saltos de línea. " +
-                "2) No inventes contenido. Si una parte no se entiende, omítela. " +
-                "3) Evita basura tipo IDs, tokens, 'output_text', 'assistant', 'in_memory', etc. " +
-                "4) Si hay fórmulas, escríbelas en texto plano lo mejor posible. " +
-                "Si la imagen no tiene texto legible, responde exactamente: SIN_TEXTO",
+                "Eres un motor OCR de alta precisión. Transcribe TODO el texto visible en la imagen.\n\n" +
+                "SALIDA:\n" +
+                "- Devuelve SOLO la transcripción. Sin explicaciones, sin JSON, sin etiquetas, sin metadatos ni IDs.\n" +
+                "- Prosa y listas: español normal con tildes y puntuación correctas.\n" +
+                "- Ecuaciones y fórmulas matemáticas: usa LaTeX entre $...$ (en línea) o $$...$$ (bloque).\n" +
+                "  Ejemplos: $E(y_t)=\\mu$, $\\operatorname{Var}(y_t)=\\sigma^2$, " +
+                "$\\operatorname{Cov}(y_t,y_{t+k})=\\gamma_k$, $\\Delta y_t = y_t - y_{t-1}$, " +
+                "$y_t = y_{t-1} + \\varepsilon_t$.\n" +
+                "- PROHIBIDO colocar el carácter & entre letras o símbolos para separar caracteres " +
+                "(nada como &E&(&y&t&) ni &-& al inicio de línea).\n" +
+                "- PROHIBIDO deletrear fórmulas con &; escribe LaTeX legible.\n" +
+                "- Mantén títulos, numeración y viñetas; respeta saltos de línea razonables.\n" +
+                "- No inventes: si algo es ilegible, omite solo esa parte.\n" +
+                "- Si no hay texto legible, responde exactamente: SIN_TEXTO",
             },
             // `detail: high` improves OCR for small text (supported by vision models).
             { type: "input_image", image_url: dataUrl, detail: "high" },
@@ -90,7 +143,7 @@ async function ocrImageWithOpenAI(file: File): Promise<string> {
   }
 
   const json = (await res.json()) as unknown;
-  const extracted = extractTextFromOpenAIResponses(json);
+  const extracted = repairSpuriousAmpersandOcrText(extractTextFromOpenAIResponses(json));
   const trimmed = extracted.trim();
   if (!trimmed || trimmed === "SIN_TEXTO") {
     return "(sin texto legible en la imagen)";
