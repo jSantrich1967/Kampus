@@ -116,9 +116,8 @@ export async function generateNotebookBookPdf(args: {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(11);
   doc.text("Compilación del cuaderno (texto extraído)", marginX, 112);
-  doc.setDrawColor(255, 255, 255);
-  doc.setTextColor(210, 210, 220);
-  doc.setTextColor(255, 255, 255);
+  // Keep PDF readable on white background (default page is white).
+  doc.setTextColor(25, 25, 35);
 
   // Index
   doc.addPage();
