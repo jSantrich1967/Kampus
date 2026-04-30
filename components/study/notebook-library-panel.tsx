@@ -1,6 +1,6 @@
 "use client";
 
-import { BookMarked, Loader2, MoreVertical, Plus, Trash2 } from "lucide-react";
+import { BookMarked, Loader2, LogIn, MoreVertical, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -185,6 +185,14 @@ export function NotebookLibraryPanel() {
           </CardTitle>
           <CardDescription>Inicia sesión para crear cuadernos y conservarlos (se sincronizan en la nube).</CardDescription>
         </CardHeader>
+        <div className="px-6 pb-6">
+          <Link href="/login">
+            <Button className="gap-2" size="sm">
+              <LogIn className="h-4 w-4" />
+              Iniciar sesión
+            </Button>
+          </Link>
+        </div>
       </Card>
     );
   }
