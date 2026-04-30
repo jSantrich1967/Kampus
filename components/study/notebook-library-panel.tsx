@@ -1,6 +1,6 @@
 "use client";
 
-import { BookMarked, Loader2, Plus, Trash2 } from "lucide-react";
+import { BookMarked, Loader2, MoreVertical, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -25,6 +25,22 @@ export function NotebookLibraryPanel() {
   const [creatingNotebook, setCreatingNotebook] = useState(false);
   const [newNotebookSubject, setNewNotebookSubject] = useState("");
   const [deletingNotebook, setDeletingNotebook] = useState<string | null>(null);
+  const [openMenuForSubject, setOpenMenuForSubject] = useState<string | null>(null);
+
+  useEffect(() => {
+    function onDocPointerDown() {
+      setOpenMenuForSubject(null);
+    }
+    function onDocKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpenMenuForSubject(null);
+    }
+    document.addEventListener("pointerdown", onDocPointerDown);
+    document.addEventListener("keydown", onDocKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onDocPointerDown);
+      document.removeEventListener("keydown", onDocKeyDown);
+    };
+  }, []);
 
   const effectiveNewNotebookSubject = useMemo(() => {
     const s = newNotebookSubject.trim();
@@ -230,7 +246,7 @@ export function NotebookLibraryPanel() {
                 <Link
                   key={nb.subject}
                   href={`/study/notebook/${subjectToPathSegment(nb.subject)}`}
-                  className="group flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-slate-950/40 p-4 transition hover:border-white/20 hover:bg-slate-950/55"
+                  className="group relative flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-slate-950/40 p-4 transition hover:border-white/20 hover:bg-slate-950/55"
                 >
                   <div className="flex items-center gap-4">
                     <KampusNotebookCover subject={nb.subject} className="h-16 w-14 shrink-0 shadow-inner shadow-black/20" />
@@ -241,22 +257,52 @@ export function NotebookLibraryPanel() {
                       </div>
                     </div>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="shrink-0 text-slate-300 opacity-70 hover:bg-white/5 group-hover:opacity-100"
-                    disabled={Boolean(deletingNotebook)}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      void deleteNotebook(nb.subject);
-                    }}
-                    aria-label={`Eliminar cuaderno ${nb.subject}`}
-                    title="Eliminar"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="shrink-0">
+                    <button
+                      type="button"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-300 opacity-70 ring-1 ring-white/10 transition hover:bg-white/5 hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/70 group-hover:opacity-100"
+                      aria-label="Menú del cuaderno"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setOpenMenuForSubject((prev) => (prev === nb.subject ? null : nb.subject));
+                      }}
+                      onPointerDown={(e) => {
+                        // Prevent the global pointerdown handler from closing immediately.
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                    >
+                      <MoreVertical className="h-5 w-5" />
+                    </button>
+
+                    {openMenuForSubject === nb.subject ? (
+                      <div
+                        className="absolute right-4 top-14 z-20 w-56 overflow-hidden rounded-xl border border-white/10 bg-slate-950/95 shadow-2xl shadow-black/50 ring-1 ring-white/5"
+                        role="menu"
+                        onPointerDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                      >
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-rose-200 hover:bg-rose-500/10 disabled:opacity-60"
+                          disabled={Boolean(deletingNotebook)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setOpenMenuForSubject(null);
+                            void deleteNotebook(nb.subject);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Eliminar cuaderno
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
                 </Link>
               );
             })}
