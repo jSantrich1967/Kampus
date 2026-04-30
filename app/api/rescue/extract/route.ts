@@ -10,15 +10,17 @@ async function preprocessImageForOcrDataUrl(file: File): Promise<string> {
 
   // If sharp isn't available (should be in Node runtime), fall back to the original image.
   try {
-    type SharpLike = (input: Buffer, options?: unknown) => {
-      rotate: () => unknown;
-      resize: (opts: unknown) => unknown;
-      grayscale: () => unknown;
-      normalize: () => unknown;
-      sharpen: () => unknown;
-      png: (opts: unknown) => unknown;
+    type SharpChain = {
+      rotate: () => SharpChain;
+      resize: (opts: unknown) => SharpChain;
+      grayscale: () => SharpChain;
+      normalize: () => SharpChain;
+      sharpen: () => SharpChain;
+      png: (opts: unknown) => SharpChain;
       toBuffer: () => Promise<Buffer>;
     };
+
+    type SharpLike = (input: Buffer, options?: unknown) => SharpChain;
 
     const mod = (await import("sharp")) as unknown as { default: SharpLike };
     const sharp = mod.default;
