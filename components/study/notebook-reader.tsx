@@ -363,54 +363,35 @@ export function NotebookReader({ subjectSlug }: Props) {
 
               {indexOpen ? (
                 <div className="border-t border-white/10 px-4 py-4">
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {indexGroups.map((g) => (
-                      <div key={g.dateKey} className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <div className="text-sm font-semibold text-white">
-                            {g.dateKey === "Sin fecha" ? "Clase (sin fecha)" : `Clase · ${g.dateKey}`}
-                          </div>
-                          <div className="text-xs text-slate-500">
-                            {g.items.length} página{g.items.length === 1 ? "" : "s"}
-                          </div>
-                        </div>
-                        <ul className="mt-2 space-y-1.5">
-                          {g.items.map((it, localIdx) => {
-                            const isCurrent = it.index0 === pageIndex;
-                            return (
-                              <li key={it.page.id}>
-                                <button
-                                  type="button"
-                                  onClick={() => setPageIndex(it.index0)}
-                                  className={cn(
-                                    "flex w-full items-start justify-between gap-2 rounded-lg border px-2 py-2 text-left text-xs transition",
-                                    isCurrent
-                                      ? "border-indigo-400/40 bg-indigo-500/10 text-indigo-100"
-                                      : "border-white/10 bg-slate-950/40 text-slate-200 hover:border-white/20 hover:bg-slate-950/55",
-                                  )}
-                                >
-                                  <div className="min-w-0">
-                                    <div className="font-medium">
-                                      Página {localIdx + 1}
-                                      <span className="ml-2 font-normal text-slate-400">· {it.page.filename}</span>
-                                    </div>
-                                    {(it.page.topic ?? "").trim() || (it.page.lesson_point ?? "").trim() ? (
-                                      <div className="mt-0.5 text-[11px] text-slate-500">
-                                        {(it.page.topic ?? "").trim() ? `Tema: ${(it.page.topic ?? "").trim()}` : ""}
-                                        {(it.page.lesson_point ?? "").trim()
-                                          ? `${(it.page.topic ?? "").trim() ? " · " : ""}Punto: ${(it.page.lesson_point ?? "").trim()}`
-                                          : ""}
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                  <div className="shrink-0 text-[11px] text-slate-500">#{it.index0 + 1}</div>
-                                </button>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </div>
-                    ))}
+                  <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-950/60">
+                    <div className="grid grid-cols-[1.1fr_1.6fr_0.6fr] gap-3 border-b border-white/10 px-4 py-3 text-xs font-semibold text-slate-400">
+                      <div>Fecha</div>
+                      <div>Clase</div>
+                      <div className="text-right">Páginas</div>
+                    </div>
+                    <div className="divide-y divide-white/10">
+                      {indexGroups.map((g) => {
+                        const first = g.items[0]?.page ?? null;
+                        const rawTitle = (first?.topic ?? "").trim();
+                        const classTitle = rawTitle || (first?.filename ?? "").trim() || "Clase";
+                        const isCurrentGroup = g.items.some((it) => it.index0 === pageIndex);
+                        return (
+                          <button
+                            key={g.dateKey}
+                            type="button"
+                            onClick={() => setPageIndex(g.items[0]?.index0 ?? 0)}
+                            className={cn(
+                              "grid w-full grid-cols-[1.1fr_1.6fr_0.6fr] items-center gap-3 px-4 py-4 text-left text-sm transition",
+                              isCurrentGroup ? "bg-indigo-500/10" : "hover:bg-white/5",
+                            )}
+                          >
+                            <div className="font-medium text-white">{g.dateKey}</div>
+                            <div className="truncate text-slate-200">{classTitle}</div>
+                            <div className="text-right font-medium text-slate-200">{g.items.length}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               ) : null}
