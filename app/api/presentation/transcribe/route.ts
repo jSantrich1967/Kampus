@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
+import { presentationTranscribeRateLimits } from "@/lib/rate-limit/openai-defaults";
+
 export const runtime = "nodejs";
 
 function clip(text: string, max: number): string {
@@ -9,6 +12,16 @@ function clip(text: string, max: number): string {
 }
 
 export async function POST(req: Request) {
+  const ip = getClientIpKey(req);
+  const limits = presentationTranscribeRateLimits();
+  const rl = tryConsumeRateToken(`presentation_transcribe:${ip}`, limits.max, limits.windowMs);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Demasiadas peticiones. Espera un momento e inténtalo de nuevo." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+    );
+  }
+
   try {
     const apiKey = process.env.OPENAI_API_KEY?.trim();
     const model = process.env.OPENAI_TRANSCRIBE_MODEL?.trim() || "gpt-4o-mini-transcribe";

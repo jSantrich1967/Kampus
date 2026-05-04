@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 
 import { stripOpenAiResponseLeakage } from "@/lib/notebooks/openai-extract-cleanup";
 import { repairSpuriousAmpersandOcrText } from "@/lib/notebooks/ocr-text-repair";
+import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
+import { rescueExtractRateLimits } from "@/lib/rate-limit/openai-defaults";
 
 export const runtime = "nodejs";
 
@@ -232,6 +234,16 @@ function collectOpenAIOutputTextOnly(node: unknown, out: string[]): void {
 }
 
 export async function POST(req: Request) {
+  const ip = getClientIpKey(req);
+  const limits = rescueExtractRateLimits();
+  const rl = tryConsumeRateToken(`rescue_extract:${ip}`, limits.max, limits.windowMs);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Demasiadas peticiones. Espera un momento e inténtalo de nuevo." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+    );
+  }
+
   try {
     const form = await req.formData();
     const raw = form.getAll("files");

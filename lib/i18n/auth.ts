@@ -22,6 +22,8 @@ export const authCopy = {
       "Ese correo ya tiene una cuenta. Ve a «Entrar» (o usa «Olvidé mi contraseña» si la agregamos / si no recuerdas la clave).",
     errorInvalidLoginCredentials:
       "Correo o contraseña incorrectos. Si acabas de registrarte y no confirmaste el correo, desactiva «Confirm email» para pruebas o espera/reenviar la confirmación.",
+    errorFailedToFetch:
+      "No se pudo conectar con Supabase (red bloqueada o URL mal configurada). Prueba otra red o ventana de incógnito; desactiva VPN/antivirus que inspeccione HTTPS. En Vercel: revisa NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY en Production y haz Redeploy. En Supabase: confirma que el proyecto no esté pausado.",
     checkEmail: "Si tu proyecto requiere confirmación, revisa tu correo para activar la cuenta.",
     registerSuccess: "Cuenta creada. Si pide confirmación por correo, ábrelo antes de entrar.",
     resendConfirmation: "Reenviar correo de confirmación",

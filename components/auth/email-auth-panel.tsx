@@ -50,11 +50,24 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
 
   function formatSupabaseAuthErrorMessage(raw: string | undefined): string {
     const msg = (raw ?? "").toLowerCase();
+    if (msg.includes("failed to fetch") || msg.includes("network error") || msg.includes("load failed")) {
+      return t.errorFailedToFetch;
+    }
     if (msg.includes("email") && msg.includes("confirm")) return t.errorEmailNotConfirmed;
     if (msg.includes("not confirmed")) return t.errorEmailNotConfirmed;
     if (msg.includes("user already registered")) return t.errorUserAlreadyRegistered;
     if (msg.includes("invalid login credentials")) return t.errorInvalidLoginCredentials;
     return raw || t.errorGeneric;
+  }
+
+  function authNetworkErrorMessage(err: unknown): string | null {
+    if (!(err instanceof Error)) return null;
+    const m = err.message.toLowerCase();
+    if (err instanceof TypeError && m.includes("fetch")) return t.errorFailedToFetch;
+    if (m.includes("failed to fetch") || m.includes("networkerror") || m.includes("load failed")) {
+      return t.errorFailedToFetch;
+    }
+    return null;
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -104,6 +117,9 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
       }
       setPendingEmailVerification(true);
       setMessage(`${t.registerSuccess} ${t.checkEmail}`);
+    } catch (err) {
+      const net = authNetworkErrorMessage(err);
+      setError(net ?? t.errorGeneric);
     } finally {
       setBusy(false);
     }
@@ -132,6 +148,9 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
         return;
       }
       setMessage(t.resendSent);
+    } catch (err) {
+      const net = authNetworkErrorMessage(err);
+      setError(net ?? t.errorGeneric);
     } finally {
       setBusy(false);
     }

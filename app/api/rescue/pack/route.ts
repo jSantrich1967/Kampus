@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { rescuePackSchema } from "@/lib/schemas/rescue-pack";
+import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
+import { rescuePackRateLimits } from "@/lib/rate-limit/openai-defaults";
 
 export const runtime = "nodejs";
 
@@ -143,6 +145,16 @@ function tryParseJsonObject(text: string): unknown {
 }
 
 export async function POST(req: Request) {
+  const ip = getClientIpKey(req);
+  const limits = rescuePackRateLimits();
+  const rl = tryConsumeRateToken(`rescue_pack:${ip}`, limits.max, limits.windowMs);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Demasiadas peticiones. Espera un momento e inténtalo de nuevo." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+    );
+  }
+
   try {
     const apiKey = process.env.OPENAI_API_KEY?.trim();
     const model = process.env.OPENAI_MODEL?.trim() || "gpt-4.1-mini";
