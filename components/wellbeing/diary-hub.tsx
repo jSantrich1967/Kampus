@@ -14,7 +14,7 @@ import {
   SunMedium,
   Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
@@ -130,6 +130,9 @@ export function DiaryHub() {
   const [intention, setIntention] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
+  const [draftBanner, setDraftBanner] = useState<string | null>(null);
+  const [draftKey, setDraftKey] = useState(0);
+  const formAnchorRef = useRef<HTMLDivElement | null>(null);
 
   const loadEntries = useCallback(async () => {
     if (!hydrated || !kampusHydrated) return;
@@ -185,6 +188,17 @@ export function DiaryHub() {
     setTags([]);
     setFormError(null);
   }
+
+  /** Reinicia el borrador, hace scroll al formulario y muestra feedback (el botón hace algo aunque ya estuviera vacío). */
+  const startNewEntry = useCallback(() => {
+    resetForm();
+    setDraftKey((k) => k + 1);
+    setDraftBanner("Borrador nuevo: campos vacíos. Si no ves el formulario, baja un poco en la página.");
+    window.setTimeout(() => setDraftBanner(null), 6000);
+    requestAnimationFrame(() => {
+      formAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, []);
 
   function loadEntryForEdit(e: DiaryEntry) {
     setEditingId(e.id);
@@ -299,17 +313,34 @@ export function DiaryHub() {
         title="Mi Diario"
         description="Un ritual privado para ordenar el día: ánimo, gratitud breve, reflexión con pregunta guía e intención para mañana. Pensado como un diario de cabecera, no como una red social."
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="secondary" size="sm" onClick={resetForm}>
-              Entrada nueva
-            </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={() => bump()} disabled={loading}>
-              <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
-              Actualizar
-            </Button>
+          <div className="relative z-20 flex flex-col items-end gap-1">
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={(e) => {
+                  e.preventDefault();
+                  startNewEntry();
+                }}
+              >
+                Entrada nueva
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => bump()} disabled={loading}>
+                <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
+                Actualizar
+              </Button>
+            </div>
+            <span className="max-w-[14rem] text-right text-[10px] text-slate-500 md:max-w-xs">
+              Vacía el borrador y te lleva al bloque del formulario abajo.
+            </span>
           </div>
         }
       />
+
+      {draftBanner ? (
+        <p className="rounded-xl border border-indigo-400/30 bg-indigo-950/40 px-4 py-3 text-sm text-indigo-100">{draftBanner}</p>
+      ) : null}
 
       {loadError ? <p className="text-sm text-rose-300">{loadError}</p> : null}
       {loading ? (
@@ -392,14 +423,29 @@ export function DiaryHub() {
       </Card>
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-start">
-        <Card className="p-0">
-          <CardHeader className="border-b border-white/5 px-5 pb-4 pt-5">
-            <CardTitle>{editingId ? "Editar entrada" : "Nueva entrada"}</CardTitle>
-            <CardDescription>
-              Fecha del día que quieres registrar. Puedes escribir “para ayer” si te encaja más el ritual nocturno.
-            </CardDescription>
-          </CardHeader>
-          <div className="space-y-6 px-5 py-5">
+        <div ref={formAnchorRef} className="scroll-mt-24">
+          <Card className="p-0">
+            <CardHeader className="flex flex-col gap-3 border-b border-white/5 px-5 pb-4 pt-5 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <CardTitle>{editingId ? "Editar entrada" : "Escribir en el diario"}</CardTitle>
+                <CardDescription>
+                  Fecha del día que quieres registrar. Puedes escribir “para ayer” si te encaja más el ritual nocturno.
+                </CardDescription>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="shrink-0"
+                onClick={(e) => {
+                  e.preventDefault();
+                  startNewEntry();
+                }}
+              >
+                Limpiar borrador
+              </Button>
+            </CardHeader>
+            <div key={draftKey} className="space-y-6 px-5 py-5">
             <label className="block space-y-1 text-xs">
               <span className="text-slate-500">Día de la entrada</span>
               <input
@@ -573,7 +619,8 @@ export function DiaryHub() {
               ) : null}
             </div>
           </div>
-        </Card>
+          </Card>
+        </div>
 
         <Card className="p-0">
           <CardHeader className="border-b border-white/5 px-5 pb-4 pt-5">
