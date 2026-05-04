@@ -18,6 +18,15 @@ export function formatNotebookCloudError(message: string): string {
 /** Mensajes claros cuando faltan tablas del calendario / agenda en Supabase. */
 export function formatAgendaCloudError(message: string): string {
   const low = message.trim().toLowerCase();
+  if (low.includes("student_works") && low.includes("completed_at")) {
+    return (
+      "Falta la columna `completed_at` en `student_works` (función «entregado» en Mis investigaciones). " +
+      "En el SQL Editor de Supabase abre y ejecuta `supabase/migrations/20260504120000_student_works_completed_at.sql` del repo, " +
+      "o ejecuta: `alter table public.student_works add column if not exists completed_at timestamptz null;` " +
+      "Detalle técnico: " +
+      message.trim()
+    );
+  }
   if (
     low.includes("user_exams") ||
     low.includes("user_exam_attempts") ||
@@ -26,9 +35,10 @@ export function formatAgendaCloudError(message: string): string {
     low.includes("user_presentation_decks")
   ) {
     return (
-      "Faltan tablas de agenda en Supabase (exámenes, intentos, trabajos o exposiciones). " +
-      "En el SQL Editor ejecuta las migraciones `20260426140000_agenda_supabase.sql` y `20260429103000_user_presentation_decks.sql` " +
-      "y vuelve a intentar. Detalle técnico: " +
+      "Faltan tablas o columnas de agenda en Supabase (exámenes, intentos, trabajos o exposiciones). " +
+      "En el SQL Editor ejecuta, en este orden si aplica: `20260426140000_agenda_supabase.sql`, " +
+      "`20260429103000_user_presentation_decks.sql` y `20260504120000_student_works_completed_at.sql` " +
+      "(esta última añade `completed_at` en trabajos). Vuelve a intentar. Detalle técnico: " +
       message.trim()
     );
   }
