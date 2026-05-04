@@ -12,6 +12,8 @@ import { filterNavForRole, type NavItem } from "@/lib/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cn } from "@/lib/cn";
+import { useOpenExamsCount } from "@/hooks/use-open-exams-count";
+import { usePendingStudentWorksCount } from "@/hooks/use-pending-student-works-count";
 
 type AppSidebarProps = {
   onNavigate?: () => void;
@@ -32,6 +34,8 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           ? "Autodidacta"
           : "Institución";
   const groups = filterNavForRole(profile.role);
+  const pendingResearchCount = usePendingStudentWorksCount();
+  const openExamsCount = useOpenExamsCount();
 
   function pathMatchesNavItem(item: NavItem, pathname: string): boolean {
     if (item.key === "library" && pathname.startsWith("/study/notebook")) return true;
@@ -84,6 +88,30 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                   >
                     <Icon className="h-4 w-4 shrink-0 opacity-80" />
                     <span className="flex-1">{t.items[item.key]}</span>
+                    {item.key === "exams" && openExamsCount > 0 ? (
+                      <span
+                        className="min-w-[1.25rem] rounded-full bg-amber-500/25 px-1.5 py-0.5 text-center text-[10px] font-semibold tabular-nums text-amber-100 ring-1 ring-amber-400/35"
+                        aria-label={
+                          openExamsCount === 1
+                            ? "1 examen abierto"
+                            : `${openExamsCount} exámenes abiertos`
+                        }
+                      >
+                        {openExamsCount > 99 ? "99+" : openExamsCount}
+                      </span>
+                    ) : null}
+                    {item.key === "myResearch" && pendingResearchCount > 0 ? (
+                      <span
+                        className="min-w-[1.25rem] rounded-full bg-rose-500/25 px-1.5 py-0.5 text-center text-[10px] font-semibold tabular-nums text-rose-100 ring-1 ring-rose-400/30"
+                        aria-label={
+                          pendingResearchCount === 1
+                            ? "1 entrega pendiente en investigaciones"
+                            : `${pendingResearchCount} entregas pendientes en investigaciones`
+                        }
+                      >
+                        {pendingResearchCount > 99 ? "99+" : pendingResearchCount}
+                      </span>
+                    ) : null}
                     {item.premium && profile.plan === "free" ? (
                       <span className="text-[10px] font-semibold uppercase text-amber-200/90">{t.badges.premium}</span>
                     ) : null}

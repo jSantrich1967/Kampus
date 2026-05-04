@@ -37,13 +37,23 @@ export function saveStudentWorks(rows: StudentWork[]) {
 
 export function addStudentWork(input: Omit<StudentWork, "id" | "createdAt">): StudentWork {
   const row: StudentWork = {
-    ...input,
+    title: input.title,
+    subject: input.subject,
+    dueDate: input.dueDate,
+    notes: input.notes,
+    completedAt: input.completedAt,
     id: uid(),
     createdAt: new Date().toISOString(),
   };
   const next = [row, ...loadStudentWorks()];
   saveStudentWorks(next);
   return row;
+}
+
+export function setStudentWorkCompleted(id: string, completed: boolean) {
+  const ts = completed ? new Date().toISOString() : undefined;
+  const next = loadStudentWorks().map((w) => (w.id === id ? { ...w, completedAt: ts } : w));
+  saveStudentWorks(next);
 }
 
 export function removeStudentWork(id: string) {

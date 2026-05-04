@@ -1,5 +1,5 @@
 import type { Exam } from "@/lib/schemas/exams";
-import type { StudentWork } from "@/lib/schemas/student-work";
+import { isStudentWorkCompleted, type StudentWork } from "@/lib/schemas/student-work";
 
 export type AgendaKind = "exam" | "presentation" | "work" | "class";
 
@@ -63,6 +63,7 @@ export function buildAgendaEvents(params: {
   }
 
   for (const w of params.works) {
+    if (isStudentWorkCompleted(w)) continue;
     out.push({
       id: `work:${w.id}`,
       kind: "work",

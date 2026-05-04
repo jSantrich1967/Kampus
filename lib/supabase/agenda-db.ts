@@ -43,6 +43,8 @@ type WorkRow = {
   due_date: string;
   notes: string;
   created_at: string;
+  /** Presente tras migración; ausente en respuestas antiguas. */
+  completed_at?: string | null;
 };
 
 type PresentationDeckRow = {
@@ -152,6 +154,7 @@ function mapAttemptRow(row: AttemptRow): ExamAttempt {
 }
 
 function mapWorkRow(row: WorkRow): StudentWork {
+  const completedRaw = row.completed_at;
   return {
     id: row.id,
     title: row.title,
@@ -159,6 +162,7 @@ function mapWorkRow(row: WorkRow): StudentWork {
     dueDate: row.due_date,
     notes: row.notes ?? "",
     createdAt: row.created_at,
+    completedAt: completedRaw ? String(completedRaw) : undefined,
   };
 }
 
@@ -276,7 +280,7 @@ export async function updateAttemptFeedbackRemote(
 export async function fetchStudentWorksRemote(client: SupabaseClient, userId: string): Promise<StudentWork[]> {
   const { data, error } = await client
     .from("student_works")
-    .select("id,title,subject,due_date,notes,created_at")
+    .select("id,title,subject,due_date,notes,created_at,completed_at")
     .eq("user_id", userId)
     .order("due_date", { ascending: true });
   if (error) throw new Error(formatAgendaCloudError(error.message));
@@ -296,11 +300,26 @@ export async function insertStudentWorkRemote(
       subject: input.subject,
       due_date: input.dueDate,
       notes: input.notes,
+      completed_at: input.completedAt?.trim() ? input.completedAt : null,
     })
-    .select("id,title,subject,due_date,notes,created_at")
+    .select("id,title,subject,due_date,notes,created_at,completed_at")
     .single();
   if (error) throw new Error(formatAgendaCloudError(error.message));
   return mapWorkRow(data as WorkRow);
+}
+
+export async function updateStudentWorkCompletedRemote(
+  client: SupabaseClient,
+  userId: string,
+  workId: string,
+  completed: boolean,
+): Promise<void> {
+  const { error } = await client
+    .from("student_works")
+    .update({ completed_at: completed ? new Date().toISOString() : null })
+    .eq("id", workId)
+    .eq("user_id", userId);
+  if (error) throw new Error(formatAgendaCloudError(error.message));
 }
 
 export async function deleteStudentWorkRemote(client: SupabaseClient, userId: string, workId: string): Promise<void> {

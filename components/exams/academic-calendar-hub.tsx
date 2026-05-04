@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Loader2, Trash2 } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, RotateCcw, Trash2 } from "lucide-react";
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PageHeader } from "@/components/layout/page-header";
@@ -21,7 +21,7 @@ import { localIsoDate } from "@/lib/calendar/local-iso-date";
 import { cn } from "@/lib/cn";
 import { formatAgendaCloudError } from "@/lib/notebooks/storage-errors";
 import type { Exam } from "@/lib/schemas/exams";
-import type { StudentWork } from "@/lib/schemas/student-work";
+import { isStudentWorkCompleted, type StudentWork } from "@/lib/schemas/student-work";
 import type { ClassCancellation, ClassScheduleRow } from "@/lib/schemas/class-schedule";
 import { subjectToPathSegment } from "@/lib/notebooks/paths";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
@@ -30,7 +30,7 @@ import { postRescuePack } from "@/lib/rescue/post-rescue-pack";
 import type { RescuePack } from "@/lib/class-rescue";
 import { seedDemoExamsIfEmpty, loadExams } from "@/lib/storage/exams-storage";
 import { loadPresentation } from "@/lib/storage/presentation-storage";
-import { addStudentWork, loadStudentWorks, removeStudentWork } from "@/lib/storage/student-work-storage";
+import { addStudentWork, loadStudentWorks, removeStudentWork, setStudentWorkCompleted } from "@/lib/storage/student-work-storage";
 import { addClassScheduleRow, loadClassSchedule, removeClassScheduleRow } from "@/lib/storage/class-schedule-storage";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -44,10 +44,12 @@ import {
   fetchUserExams,
   insertClassScheduleRemote,
   insertStudentWorkRemote,
+  updateStudentWorkCompletedRemote,
   deleteClassScheduleRemote,
   upsertClassCancellationRemote,
   deleteClassCancellationRemote,
 } from "@/lib/supabase/agenda-db";
+import { notifyStudentWorksChanged } from "@/hooks/use-pending-student-works-count";
 
 const WEEKDAYS_ES = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
@@ -514,6 +516,15 @@ export function AcademicCalendarHub() {
     [exams, presentationSlices, works],
   );
 
+  /** Misma prioridad que en Mis investigaciones: fecha límite ascendente, luego más reciente por creación. */
+  const sortedWorksForCalendarList = useMemo(() => {
+    return [...works].sort((a, b) => {
+      const byDue = a.dueDate.localeCompare(b.dueDate);
+      if (byDue !== 0) return byDue;
+      return (b.createdAt ?? "").localeCompare(a.createdAt ?? "");
+    });
+  }, [works]);
+
   const classEvents = useMemo(() => {
     if (classes.length === 0) return [] as AgendaEvent[];
     const year = cursor.getFullYear();
@@ -692,6 +703,7 @@ export function AcademicCalendarHub() {
       setWorkDue("");
       setWorkNotes("");
       refresh();
+      notifyStudentWorksChanged();
     } catch (err) {
       setLoadError(formatAgendaCloudError(err instanceof Error ? err.message : "Error al guardar."));
     }
@@ -706,8 +718,24 @@ export function AcademicCalendarHub() {
         removeStudentWork(id);
       }
       refresh();
+      notifyStudentWorksChanged();
     } catch (err) {
       setLoadError(formatAgendaCloudError(err instanceof Error ? err.message : "Error al eliminar."));
+    }
+  }
+
+  async function toggleWorkCompleted(id: string, completed: boolean) {
+    try {
+      if (useCloud) {
+        const supabase = createSupabaseBrowserClient();
+        await updateStudentWorkCompletedRemote(supabase, authUserId!, id, completed);
+      } else {
+        setStudentWorkCompleted(id, completed);
+      }
+      refresh();
+      notifyStudentWorksChanged();
+    } catch (err) {
+      setLoadError(formatAgendaCloudError(err instanceof Error ? err.message : "Error al actualizar el trabajo."));
     }
   }
 
@@ -1253,27 +1281,49 @@ export function AcademicCalendarHub() {
             {works.length === 0 ? (
               <li className="text-sm text-slate-500">Aún no hay trabajos registrados.</li>
             ) : (
-              works.map((w) => (
-                <li key={w.id} className="flex items-start justify-between gap-2 rounded-lg border border-white/10 bg-slate-950/30 px-3 py-2 text-sm">
-                  <div className="min-w-0">
-                    <div className="font-medium text-slate-100">{w.title}</div>
-                    <div className="text-xs text-slate-500">
-                      {w.dueDate} · {w.subject}
-                    </div>
-                    {w.notes ? <div className="mt-1 text-xs text-slate-400">{w.notes}</div> : null}
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="shrink-0 text-rose-300 hover:text-rose-200"
-                    aria-label="Eliminar trabajo"
-                    onClick={() => void removeWork(w.id)}
+              sortedWorksForCalendarList.map((w) => {
+                const done = isStudentWorkCompleted(w);
+                return (
+                  <li
+                    key={w.id}
+                    className={cn(
+                      "flex items-start justify-between gap-2 rounded-lg border border-white/10 bg-slate-950/30 px-3 py-2 text-sm",
+                      done && "border-teal-500/20 opacity-90",
+                    )}
                   >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </li>
-              ))
+                    <div className="min-w-0">
+                      <div className={cn("font-medium text-slate-100", done && "line-through decoration-slate-500/70")}>{w.title}</div>
+                      <div className="text-xs text-slate-500">
+                        {w.dueDate} · {w.subject}
+                        {done ? <span className="ml-2 text-teal-300/90">· Entregado</span> : null}
+                      </div>
+                      {w.notes ? <div className="mt-1 text-xs text-slate-400">{w.notes}</div> : null}
+                    </div>
+                    <div className="flex shrink-0 gap-1">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className={done ? "text-teal-200 hover:text-teal-100" : "text-emerald-200/90 hover:text-emerald-100"}
+                        aria-label={done ? "Marcar como pendiente" : "Marcar como entregado"}
+                        onClick={() => void toggleWorkCompleted(w.id, !done)}
+                      >
+                        {done ? <RotateCcw className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="text-rose-300 hover:text-rose-200"
+                        aria-label="Eliminar trabajo"
+                        onClick={() => void removeWork(w.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </li>
+                );
+              })
             )}
           </ul>
         </Card>

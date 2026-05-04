@@ -8,5 +8,14 @@ export const studentWorkSchema = z.object({
   dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   notes: z.string().default(""),
   createdAt: z.string().min(1),
+  /** ISO timestamp cuando el usuario marcó la entrega como hecha; ausente = pendiente. */
+  completedAt: z.preprocess(
+    (v) => (v === null || v === "" ? undefined : v),
+    z.string().min(1).optional(),
+  ),
 });
 export type StudentWork = z.infer<typeof studentWorkSchema>;
+
+export function isStudentWorkCompleted(w: Pick<StudentWork, "completedAt">): boolean {
+  return Boolean(w.completedAt?.trim());
+}
