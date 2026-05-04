@@ -1,4 +1,20 @@
 /**
+ * Removes the legacy combined-extract first line `# filename.ext` when it matches the source file.
+ * (Upload used to store `combinedText`, which always prefixed that header.)
+ */
+export function stripLeadingNotebookFilenameHeader(raw: string, sourceFilename?: string | null): string {
+  const fn = (sourceFilename ?? "").trim();
+  const s = (raw ?? "").replace(/^\uFEFF/, "").replace(/\r\n/g, "\n");
+  if (!fn) return s;
+  const lines = s.split("\n");
+  const first = lines[0]?.trim();
+  if (first === `# ${fn}`) {
+    return lines.slice(1).join("\n");
+  }
+  return s;
+}
+
+/**
  * Strip lines that sometimes leak from OpenAI Responses payloads into OCR output
  * (response ids, message ids, model slugs, status labels). Does not rewrite note content.
  */
@@ -36,8 +52,8 @@ export function stripOpenAiResponseLeakage(raw: string): string {
 
     const low = t.toLowerCase();
 
-    if (/^resp_[a-z0-9_\-]+$/i.test(t)) continue;
-    if (/^msg_[a-z0-9_\-]+$/i.test(t)) continue;
+    // OpenAI response / message ids (allow mixed-case hex tail).
+    if (/^(resp|msg)_[A-Za-z0-9_\-]+$/i.test(t)) continue;
     if (/^chatcmpl-[a-z0-9_\-]+$/i.test(t)) continue;
     if (/^gpt-[0-9a-z.\-]+$/i.test(low)) continue;
     if (noiseWords.has(low)) continue;

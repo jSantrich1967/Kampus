@@ -24,11 +24,13 @@ import {
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import type { PresentationTutorFeedback } from "@/lib/schemas/presentation-tutor";
+import { presentationDueBadgeLabel } from "@/lib/calendar/presentation-due-label";
 import {
   deletePresentationDeckRemote,
   fetchPresentationDeckByIdRemote,
   fetchPresentationDeckSummariesRemote,
   insertPresentationDeckRemote,
+  sortPresentationDeckSummaries,
   updatePresentationDeckRemote,
   type PresentationDeckSummary,
 } from "@/lib/supabase/agenda-db";
@@ -58,6 +60,9 @@ export function PresentationPlanner() {
   const [tutorError, setTutorError] = useState<string | null>(null);
   const [tutorFeedback, setTutorFeedback] = useState<PresentationTutorFeedback | null>(null);
   const [tutorLevel, setTutorLevel] = useState<"school" | "university">("university");
+  const [newDeckFormOpen, setNewDeckFormOpen] = useState(false);
+  const [newDeckTitle, setNewDeckTitle] = useState("");
+  const [newDeckDue, setNewDeckDue] = useState("");
 
   const liveVideoRef = useRef<HTMLVideoElement | null>(null);
   const liveStreamRef = useRef<MediaStream | null>(null);
@@ -135,17 +140,18 @@ export function PresentationPlanner() {
         }
 
         if (cancelled) return;
-        setDeckSummaries(summaries);
+        setDeckSummaries(sortPresentationDeckSummaries(summaries));
 
         const url = typeof window !== "undefined" ? new URL(window.location.href) : null;
         const paramDeck = url?.searchParams.get("deck")?.trim() ?? null;
         const stored = loadActivePresentationDeckId();
+        const ordered = sortPresentationDeckSummaries(summaries);
         const pick =
-          paramDeck && summaries.some((s) => s.id === paramDeck)
+          paramDeck && ordered.some((s) => s.id === paramDeck)
             ? paramDeck
-            : stored && summaries.some((s) => s.id === stored)
+            : stored && ordered.some((s) => s.id === stored)
               ? stored
-              : summaries[0]!.id;
+              : ordered[0]!.id;
 
         const record = await fetchPresentationDeckByIdRemote(supabase, authUserId!, pick);
         if (cancelled) return;
@@ -204,7 +210,7 @@ export function PresentationPlanner() {
       qs.set("deck", id);
       router.replace(`${pathname}?${qs.toString()}`, { scroll: false });
       const fresh = await fetchPresentationDeckSummariesRemote(supabase, authUserId);
-      setDeckSummaries(fresh);
+      setDeckSummaries(sortPresentationDeckSummaries(fresh));
     } catch (e) {
       console.error(e);
     }
@@ -225,7 +231,7 @@ export function PresentationPlanner() {
     try {
       const supabase = createSupabaseBrowserClient();
       await deletePresentationDeckRemote(supabase, authUserId, activeDeckId);
-      const nextSummaries = deckSummaries.filter((s) => s.id !== activeDeckId);
+      const nextSummaries = sortPresentationDeckSummaries(deckSummaries.filter((s) => s.id !== activeDeckId));
       setDeckSummaries(nextSummaries);
       const newId = nextSummaries[0]!.id;
       const record = await fetchPresentationDeckByIdRemote(supabase, authUserId, newId);
@@ -241,40 +247,44 @@ export function PresentationPlanner() {
     }
   }
 
-  /** Lienzo nuevo: título vacío, una sección y código de equipo nuevo. */
-  async function startNewPresentation() {
+  /** Crea un deck nuevo con título y fecha opcionales (se guarda la exposición actual en la nube antes). */
+  async function submitNewDeck() {
+    const title = newDeckTitle.trim();
+    const due = newDeckDue.trim() || undefined;
     const next = ensurePresentationTeamCode({
       ...createBlankPresentationState(),
+      deckTitle: title,
+      presentationDueDate: due,
       teamSessionCode: generateTeamSessionCode(),
     });
+
     if (!useCloud || !authUserId) {
-      const ok = window.confirm(
-        es
-          ? "¿Crear una exposición nueva? Se guardará en este dispositivo y reemplazará el borrador actual de Mis exposiciones."
-          : "Start a new presentation? This will replace the current draft saved on this device.",
-      );
-      if (!ok) return;
       setState(next);
       savePresentation(next);
       resetPlannerUi();
+      setNewDeckFormOpen(false);
+      setNewDeckTitle("");
+      setNewDeckDue("");
       return;
     }
-    const ok = window.confirm(
-      es
-        ? "¿Crear otra exposición en tu cuenta? La actual se guarda antes de abrir la nueva."
-        : "Create another presentation in your account? The current one is saved first.",
-    );
-    if (!ok) return;
+
     try {
       const supabase = createSupabaseBrowserClient();
       if (activeDeckId) {
         await updatePresentationDeckRemote(supabase, authUserId, activeDeckId, state);
       }
       const row = await insertPresentationDeckRemote(supabase, authUserId, next);
-      setDeckSummaries((prev) => [
-        { id: row.id, deckTitle: row.deckTitle, presentationDueDate: row.presentationDueDate, updatedAt: row.updatedAt },
-        ...prev,
-      ]);
+      setDeckSummaries((prev) =>
+        sortPresentationDeckSummaries([
+          {
+            id: row.id,
+            deckTitle: row.deckTitle,
+            presentationDueDate: row.presentationDueDate,
+            updatedAt: row.updatedAt,
+          },
+          ...prev.filter((p) => p.id !== row.id),
+        ]),
+      );
       setActiveDeckId(row.id);
       saveActivePresentationDeckId(row.id);
       setState(row.state);
@@ -282,6 +292,9 @@ export function PresentationPlanner() {
       const qs = new URLSearchParams(window.location.search);
       qs.set("deck", row.id);
       router.replace(`${pathname}?${qs.toString()}`, { scroll: false });
+      setNewDeckFormOpen(false);
+      setNewDeckTitle("");
+      setNewDeckDue("");
     } catch (e) {
       console.error(e);
     }
@@ -593,20 +606,24 @@ export function PresentationPlanner() {
             ? "Aquí creas y organizas tus exposiciones: puedes tener varias en tu cuenta (cada una con título, fecha en el calendario, equipo y guiones). Usa Nueva exposición para otra más, o la plantilla de ejemplo para ver el flujo. Comparte enlace y código; en Aula virtual ensayan en vivo."
             : "Create and organize multiple presentations in your account. Use New presentation for another deck, or Example template to learn the flow. Share link and code; use Virtual classroom to rehearse live."}
         </p>
-        {useCloud && deckSummaries.length > 0 ? (
+        {useCloud && sortedDeckSummaries.length > 0 ? (
           <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3">
             <label className="flex flex-wrap items-center gap-2 text-sm text-slate-200">
               <span className="text-slate-500">{es ? "Exposición activa" : "Active presentation"}</span>
               <select
-                className="min-w-[12rem] rounded-lg border border-white/15 bg-slate-950/80 px-2 py-1.5 text-sm outline-none ring-indigo-400/30 focus:ring"
+                className="min-w-[12rem] max-w-[min(100%,28rem)] rounded-lg border border-white/15 bg-slate-950/80 px-2 py-1.5 text-sm outline-none ring-indigo-400/30 focus:ring"
                 value={activeDeckId ?? ""}
                 onChange={(e) => void selectDeckById(e.target.value)}
               >
-                {deckSummaries.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.deckTitle.trim() || (es ? "(sin título)" : "(untitled)")}
-                  </option>
-                ))}
+                {sortedDeckSummaries.map((s) => {
+                  const label = s.deckTitle.trim() || (es ? "(sin título)" : "(untitled)");
+                  const when = presentationDueBadgeLabel(s.presentationDueDate, es);
+                  return (
+                    <option key={s.id} value={s.id}>
+                      {`${label} · ${when}`}
+                    </option>
+                  );
+                })}
               </select>
             </label>
             <Button
@@ -623,7 +640,17 @@ export function PresentationPlanner() {
           </div>
         ) : null}
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button type="button" size="sm" variant="primary" className="gap-2" onClick={() => void startNewPresentation()}>
+          <Button
+            type="button"
+            size="sm"
+            variant="primary"
+            className="gap-2"
+            onClick={() => {
+              setNewDeckFormOpen(true);
+              setNewDeckTitle("");
+              setNewDeckDue("");
+            }}
+          >
             <Sparkles className="h-4 w-4" />
             {es ? "Nueva exposición" : "New presentation"}
           </Button>
@@ -646,6 +673,49 @@ export function PresentationPlanner() {
             {es ? "Aula virtual (vivo)" : "Virtual classroom (live)"}
           </Link>
         </div>
+
+        {newDeckFormOpen ? (
+          <div className="mt-4 max-w-xl space-y-3 rounded-xl border border-indigo-400/20 bg-slate-950/60 p-4">
+            <p className="text-sm font-semibold text-slate-100">{es ? "Crear otra exposición" : "Create another presentation"}</p>
+            <p className="text-xs text-slate-500">
+              {es
+                ? "El plan actual se guarda antes de crear la nueva. La fecha es opcional y aparece en Evaluación → Mi calendario."
+                : "Your current deck is saved first. Date is optional and appears under Evaluation → My calendar."}
+            </p>
+            <input
+              className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm outline-none ring-indigo-400/40 focus:ring"
+              value={newDeckTitle}
+              onChange={(e) => setNewDeckTitle(e.target.value)}
+              placeholder={es ? "Título (opcional)" : "Title (optional)"}
+            />
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs text-slate-500">{es ? "Fecha en calendario" : "Calendar date"}</span>
+              <input
+                type="date"
+                className="rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-slate-200 outline-none ring-indigo-400/40 focus:ring"
+                value={newDeckDue}
+                onChange={(e) => setNewDeckDue(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" size="sm" variant="primary" className="gap-2" onClick={() => void submitNewDeck()}>
+                {es ? "Crear" : "Create"}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setNewDeckFormOpen(false);
+                  setNewDeckTitle("");
+                  setNewDeckDue("");
+                }}
+              >
+                {es ? "Cancelar" : "Cancel"}
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <Card className="border-indigo-400/25 bg-indigo-500/[0.06]">

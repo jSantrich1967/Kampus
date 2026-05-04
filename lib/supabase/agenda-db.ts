@@ -12,7 +12,7 @@ import {
 import type { StudentWork } from "@/lib/schemas/student-work";
 import { formatAgendaCloudError } from "@/lib/notebooks/storage-errors";
 import type { PresentationState } from "@/lib/storage/presentation-storage";
-import { presentationStateFromRemoteJson } from "@/lib/storage/presentation-storage";
+import { ensurePresentationTeamCode, presentationStateFromRemoteJson } from "@/lib/storage/presentation-storage";
 
 type UserExamRow = {
   id: string;
@@ -71,14 +71,36 @@ export type PresentationDeckRecord = {
 };
 
 function mapPresentationDeckRow(row: PresentationDeckRow): PresentationDeckRecord {
+  const fromJson = presentationStateFromRemoteJson(row.state);
+  const deckTitle = (row.deck_title ?? "").trim() || fromJson.deckTitle;
+  const presentationDueDate =
+    row.presentation_due_date?.trim() || fromJson.presentationDueDate?.trim() || undefined;
+  const state = ensurePresentationTeamCode({
+    ...fromJson,
+    deckTitle,
+    presentationDueDate,
+  });
   return {
     id: row.id,
     userId: row.user_id,
-    deckTitle: row.deck_title ?? "",
-    presentationDueDate: row.presentation_due_date ?? undefined,
-    state: presentationStateFromRemoteJson(row.state),
+    deckTitle,
+    presentationDueDate,
+    state,
     updatedAt: row.updated_at,
   };
+}
+
+/** Próximas fechas primero; sin fecha al final; mismo día por updatedAt. */
+export function sortPresentationDeckSummaries(list: PresentationDeckSummary[]): PresentationDeckSummary[] {
+  return [...list].sort((a, b) => {
+    const da = a.presentationDueDate?.trim() ?? "";
+    const db = b.presentationDueDate?.trim() ?? "";
+    if (!da && !db) return (b.updatedAt ?? "").localeCompare(a.updatedAt ?? "");
+    if (!da) return 1;
+    if (!db) return -1;
+    if (da !== db) return da.localeCompare(db);
+    return (b.updatedAt ?? "").localeCompare(a.updatedAt ?? "");
+  });
 }
 
 type ClassScheduleDbRow = {
@@ -397,15 +419,18 @@ export async function fetchPresentationDeckSummariesRemote(
     .from("user_presentation_decks")
     .select("id,deck_title,presentation_due_date,updated_at")
     .eq("user_id", userId)
+    .order("presentation_due_date", { ascending: true, nullsFirst: false })
     .order("updated_at", { ascending: false });
   if (error) throw new Error(formatAgendaCloudError(error.message));
   const rows = (data ?? []) as Pick<PresentationDeckRow, "id" | "deck_title" | "presentation_due_date" | "updated_at">[];
-  return rows.map((r) => ({
-    id: r.id,
-    deckTitle: r.deck_title ?? "",
-    presentationDueDate: r.presentation_due_date ?? undefined,
-    updatedAt: r.updated_at,
-  }));
+  return sortPresentationDeckSummaries(
+    rows.map((r) => ({
+      id: r.id,
+      deckTitle: r.deck_title ?? "",
+      presentationDueDate: r.presentation_due_date ?? undefined,
+      updatedAt: r.updated_at,
+    })),
+  );
 }
 
 export async function fetchPresentationDeckByIdRemote(
