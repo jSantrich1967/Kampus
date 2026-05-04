@@ -27,6 +27,14 @@ export function formatAgendaCloudError(message: string): string {
       message.trim()
     );
   }
+  if (low.includes("diary_entries")) {
+    return (
+      "Falta la tabla `diary_entries` en Supabase (Mi Diario en la nube). " +
+      "En el SQL Editor ejecuta `supabase/migrations/20260505140000_diary_entries.sql` del repo y vuelve a intentar. " +
+      "Detalle técnico: " +
+      message.trim()
+    );
+  }
   if (
     low.includes("user_exams") ||
     low.includes("user_exam_attempts") ||
