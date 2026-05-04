@@ -89,6 +89,8 @@ export function PresentationPlanner() {
     });
   }, [searchParams]);
 
+  const sortedDeckSummaries = useMemo(() => sortPresentationDeckSummaries(deckSummaries), [deckSummaries]);
+
   function resetPlannerUi() {
     setTutorNotes("");
     setTutorFeedback(null);
