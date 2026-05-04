@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { initialsFromSubject, notebookCoverGradient } from "@/lib/notebooks/cover-styles";
 import { generateNotebookBookPdf } from "@/lib/notebooks/book-pdf";
 import { buildNotebookIndexGroups } from "@/lib/notebooks/notebook-index";
-import { stripOpenAiResponseLeakage } from "@/lib/notebooks/openai-extract-cleanup";
 import { subjectToPathSegment } from "@/lib/notebooks/paths";
 import { formatNotebookCloudError } from "@/lib/notebooks/storage-errors";
 import { uploadNotebookDocuments } from "@/lib/notebooks/upload-documents";
@@ -124,10 +123,6 @@ export function NotebookReader({ subjectSlug }: Props) {
   }, [load]);
 
   const current = pages[pageIndex] ?? null;
-  const displayExtractedText = useMemo(
-    () => stripOpenAiResponseLeakage(current?.extracted_text ?? ""),
-    [current?.extracted_text],
-  );
   const total = pages.length;
   const sessionNum = total > 0 ? pageIndex + 1 : 0;
 
@@ -548,7 +543,7 @@ export function NotebookReader({ subjectSlug }: Props) {
                         variant="secondary"
                         disabled={bookBusy || pages.length === 0}
                         onClick={() => void downloadNotebookBookPdf()}
-                        title="Compila el texto extraído del cuaderno y lo descarga como un solo PDF."
+                        title="Genera un PDF con las páginas del cuaderno (texto e imágenes cuando aplique)."
                       >
                         <BookOpenText className="h-4 w-4" />
                         {bookBusy ? "Generando…" : "Libro (PDF)"}
@@ -657,29 +652,10 @@ export function NotebookReader({ subjectSlug }: Props) {
                       </div>
                     ) : (
                       <div className="flex h-48 items-center justify-center px-4 text-center text-sm text-slate-500">
-                        Vista previa no disponible. Usa el texto extraído abajo o abre el archivo.
+                        Vista previa no disponible. Puedes descargar el archivo o volver a subirlo con Agregar.
                       </div>
                     )}
                   </div>
-
-                  {displayExtractedText ? (
-                    <div
-                      className={cn(
-                        "rounded-xl border border-white/10 bg-slate-900/50 px-4 py-3",
-                        "bg-[linear-gradient(transparent_1.45rem,rgba(148,163,184,0.12)_1px)] bg-[length:100%_1.5rem]",
-                      )}
-                    >
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Apuntes (texto extraído)</p>
-                      <pre className="max-h-64 overflow-auto whitespace-pre-wrap font-sans text-sm leading-[1.5rem] text-slate-200">
-                        {displayExtractedText}
-                      </pre>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-slate-500">
-                      No hay texto extraído para esta hoja. Puedes usar <strong className="text-slate-300">Agregar</strong> arriba para volver a subir el
-                      archivo y reintentar OCR.
-                    </p>
-                  )}
 
                   <p className="text-center text-[11px] text-slate-600">Tip: usa las flechas del teclado ← → para pasar de clase.</p>
 
