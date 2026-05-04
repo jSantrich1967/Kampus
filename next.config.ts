@@ -1,5 +1,6 @@
 import path from "path";
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   // Dev only: use a separate folder so Windows/AV lock issues on `.next` are easier to recover from.
@@ -21,4 +22,18 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Optional: upload source maps to Sentry during build (better stack traces in Issues).
+// Requires SENTRY_AUTH_TOKEN + SENTRY_ORG + SENTRY_PROJECT in the build environment (e.g. Vercel).
+const hasSentrySourceMaps =
+  Boolean(process.env.SENTRY_AUTH_TOKEN) &&
+  Boolean(process.env.SENTRY_ORG) &&
+  Boolean(process.env.SENTRY_PROJECT);
+
+export default hasSentrySourceMaps
+  ? withSentryConfig(nextConfig, {
+      org: process.env.SENTRY_ORG!,
+      project: process.env.SENTRY_PROJECT!,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      silent: !process.env.CI,
+    })
+  : nextConfig;
