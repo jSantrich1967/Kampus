@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { extractResponsesOutputText } from "@/lib/openai/extract-responses-output-text";
+
 export const runtime = "nodejs";
 
 const messageSchema = z.object({
@@ -16,41 +18,6 @@ function clip(text: string, max: number): string {
   const t = text.trim();
   if (t.length <= max) return t;
   return `${t.slice(0, max)}\n\n…`;
-}
-
-function extractTextFromOpenAIResponses(payload: unknown): string {
-  if (!payload || typeof payload !== "object") return "";
-  const root = payload as Record<string, unknown>;
-  if (typeof root.output_text === "string" && root.output_text.trim()) return root.output_text.trim();
-
-  const parts: string[] = [];
-  collectOpenAIResponseText(payload, parts);
-  return parts
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .join("\n")
-    .trim();
-}
-
-function collectOpenAIResponseText(node: unknown, out: string[]): void {
-  if (!node) return;
-  if (typeof node === "string") {
-    if (node.trim()) out.push(node);
-    return;
-  }
-  if (Array.isArray(node)) {
-    node.forEach((n) => collectOpenAIResponseText(n, out));
-    return;
-  }
-  if (typeof node !== "object") return;
-
-  const obj = node as Record<string, unknown>;
-  const type = obj.type;
-  const text = obj.text;
-  if (typeof type === "string" && typeof text === "string" && text.trim()) {
-    if (type.endsWith("text")) out.push(text);
-  }
-  Object.values(obj).forEach((v) => collectOpenAIResponseText(v, out));
 }
 
 const SYSTEM_ES = clip(
@@ -142,7 +109,7 @@ export async function POST(req: Request) {
     }
 
     const payload = (await res.json()) as unknown;
-    const text = extractTextFromOpenAIResponses(payload);
+    const text = extractResponsesOutputText(payload);
     if (!text.trim()) {
       return NextResponse.json({ error: "La respuesta del modelo llegó vacía." }, { status: 502 });
     }
