@@ -1,0 +1,53 @@
+/**
+ * Strip lines that sometimes leak from OpenAI Responses payloads into OCR output
+ * (response ids, message ids, model slugs, status labels). Does not rewrite note content.
+ */
+export function stripOpenAiResponseLeakage(raw: string): string {
+  const text = (raw ?? "").replace(/\r\n/g, "\n");
+  const lines = text.split("\n");
+  const out: string[] = [];
+
+  const noiseWords = new Set([
+    "response",
+    "completed",
+    "developer",
+    "message",
+    "assistant",
+    "user",
+    "system",
+    "output_text",
+    "input_text",
+    "tool_calls",
+    "reasoning",
+    "pending",
+    "failed",
+    "in_progress",
+    "incomplete",
+    "cancelled",
+    "canceled",
+  ]);
+
+  for (const line of lines) {
+    const t = line.trim();
+    if (!t) {
+      out.push(line);
+      continue;
+    }
+
+    const low = t.toLowerCase();
+
+    if (/^resp_[a-z0-9_\-]+$/i.test(t)) continue;
+    if (/^msg_[a-z0-9_\-]+$/i.test(t)) continue;
+    if (/^chatcmpl-[a-z0-9_\-]+$/i.test(t)) continue;
+    if (/^gpt-[0-9a-z.\-]+$/i.test(low)) continue;
+    if (noiseWords.has(low)) continue;
+    if (/^"(response|message|id|object|created|model|choices|status|type)"\s*:/i.test(t)) continue;
+
+    out.push(line);
+  }
+
+  return out
+    .join("\n")
+    .replace(/\n{4,}/g, "\n\n\n")
+    .trim();
+}

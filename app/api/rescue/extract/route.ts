@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { stripOpenAiResponseLeakage } from "@/lib/notebooks/openai-extract-cleanup";
 import { repairSpuriousAmpersandOcrText } from "@/lib/notebooks/ocr-text-repair";
 
 export const runtime = "nodejs";
@@ -158,9 +159,6 @@ function extractTextFromOpenAIResponses(payload: unknown): string {
 
   const root = payload as Record<string, unknown>;
 
-  // Some SDKs / API versions expose a convenience field.
-  if (typeof root.output_text === "string" && root.output_text.trim()) return root.output_text;
-
   // Prefer strictly reading only "output_text" content blocks from the Responses API structure,
   // instead of recursively collecting every string (which can include ids, model names, etc.).
   const output = root.output;
@@ -178,38 +176,41 @@ function extractTextFromOpenAIResponses(payload: unknown): string {
         if (typeof text === "string" && text.trim()) chunks.push(text.trim());
       }
     }
-    if (chunks.length) return chunks.join("\n\n").trim();
+    if (chunks.length) return stripOpenAiResponseLeakage(chunks.join("\n\n").trim());
   }
 
-  // Fallback: if the payload doesn't match expected structure, use conservative collector.
+  // Some API versions expose a convenience field; it may include leaked metadata — sanitize.
+  if (typeof root.output_text === "string" && root.output_text.trim()) {
+    return stripOpenAiResponseLeakage(root.output_text.trim());
+  }
+
+  // Fallback: if the payload doesn't match expected structure, collect ONLY output_text blocks.
   const parts: string[] = [];
-  collectOpenAIResponseText(payload, parts);
+  collectOpenAIOutputTextOnly(payload, parts);
   const seen = new Set<string>();
   const deduped: string[] = [];
   for (const p of parts) {
     const t = p.trim();
     if (!t) continue;
     if (seen.has(t)) continue;
-    // Avoid obvious metadata strings in fallback mode.
     if (/^(resp|msg)_[a-z0-9]+$/i.test(t)) continue;
     if (/^gpt-\S+$/i.test(t)) continue;
     if (t.toLowerCase() === "output_text") continue;
     seen.add(t);
     deduped.push(t);
   }
-  return deduped.join("\n").trim();
+  return stripOpenAiResponseLeakage(deduped.join("\n").trim());
 }
 
-function collectOpenAIResponseText(node: unknown, out: string[]): void {
+function collectOpenAIOutputTextOnly(node: unknown, out: string[]): void {
   if (!node) return;
 
   if (typeof node === "string") {
-    if (node.trim()) out.push(node);
     return;
   }
 
   if (Array.isArray(node)) {
-    for (const item of node) collectOpenAIResponseText(item, out);
+    for (const item of node) collectOpenAIOutputTextOnly(item, out);
     return;
   }
 
@@ -220,14 +221,13 @@ function collectOpenAIResponseText(node: unknown, out: string[]): void {
   const type = obj.type;
   const text = obj.text;
   if (typeof type === "string" && typeof text === "string" && text.trim()) {
-    // Most text-bearing blocks in Responses API use types like output_text / input_text.
-    if (type.endsWith("text")) {
+    if (type === "output_text") {
       out.push(text);
     }
   }
 
   for (const value of Object.values(obj)) {
-    collectOpenAIResponseText(value, out);
+    collectOpenAIOutputTextOnly(value, out);
   }
 }
 

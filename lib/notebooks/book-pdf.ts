@@ -1,6 +1,7 @@
 import { jsPDF } from "jspdf";
 
 import { buildNotebookIndexGroups } from "@/lib/notebooks/notebook-index";
+import { stripOpenAiResponseLeakage } from "@/lib/notebooks/openai-extract-cleanup";
 import { repairSpuriousAmpersandOcrText } from "@/lib/notebooks/ocr-text-repair";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 
@@ -14,7 +15,9 @@ async function blobToDataUrl(blob: Blob): Promise<string> {
 }
 
 function sanitizeExtractedText(raw: string): string {
-  const text = repairSpuriousAmpersandOcrText((raw ?? "").replace(/\r\n/g, "\n")).trim();
+  const text = stripOpenAiResponseLeakage(
+    repairSpuriousAmpersandOcrText((raw ?? "").replace(/\r\n/g, "\n")),
+  ).trim();
   if (!text) return "";
 
   // Some extractors may leak debug-like lines (ids, model strings). Remove common patterns.

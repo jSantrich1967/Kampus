@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { initialsFromSubject, notebookCoverGradient } from "@/lib/notebooks/cover-styles";
 import { generateNotebookBookPdf } from "@/lib/notebooks/book-pdf";
 import { buildNotebookIndexGroups } from "@/lib/notebooks/notebook-index";
+import { stripOpenAiResponseLeakage } from "@/lib/notebooks/openai-extract-cleanup";
 import { subjectToPathSegment } from "@/lib/notebooks/paths";
 import { formatNotebookCloudError } from "@/lib/notebooks/storage-errors";
 import { uploadNotebookDocuments } from "@/lib/notebooks/upload-documents";
@@ -123,6 +124,10 @@ export function NotebookReader({ subjectSlug }: Props) {
   }, [load]);
 
   const current = pages[pageIndex] ?? null;
+  const displayExtractedText = useMemo(
+    () => stripOpenAiResponseLeakage(current?.extracted_text ?? ""),
+    [current?.extracted_text],
+  );
   const total = pages.length;
   const sessionNum = total > 0 ? pageIndex + 1 : 0;
 
@@ -657,7 +662,7 @@ export function NotebookReader({ subjectSlug }: Props) {
                     )}
                   </div>
 
-                  {current.extracted_text ? (
+                  {displayExtractedText ? (
                     <div
                       className={cn(
                         "rounded-xl border border-white/10 bg-slate-900/50 px-4 py-3",
@@ -666,7 +671,7 @@ export function NotebookReader({ subjectSlug }: Props) {
                     >
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Apuntes (texto extraído)</p>
                       <pre className="max-h-64 overflow-auto whitespace-pre-wrap font-sans text-sm leading-[1.5rem] text-slate-200">
-                        {current.extracted_text}
+                        {displayExtractedText}
                       </pre>
                     </div>
                   ) : (
