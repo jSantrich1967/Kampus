@@ -11,6 +11,12 @@ import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  EmptyState,
+  EmptyStateIllustrationCommunity,
+  EmptyStatePrimaryCta,
+  EmptyStateSecondaryCta,
+} from "@/components/ui/empty-state";
 import { Progress } from "@/components/ui/progress";
 import { StatBlock } from "@/components/ui/stat-block";
 import type { CommunityContext } from "@/lib/community-types";
@@ -543,7 +549,36 @@ export function CommunityHub() {
           </CardHeader>
           <div className="space-y-3 px-6 pb-6">
             {posts.filter((p) => p.channel_id === selectedChannelId).length === 0 ? (
-              <p className="text-sm text-slate-400">{es ? "Aún no hay posts. Sé el primero." : "No posts yet. Be the first."}</p>
+              <EmptyState
+                icon={<EmptyStateIllustrationCommunity />}
+                title={es ? "Todavía no hay conversación aquí" : "No conversation yet"}
+                description={
+                  es
+                    ? "Haz una pregunta concreta o comparte un resumen corto. Un buen primer post desbloquea respuestas útiles (y reduce el ruido)."
+                    : "Ask a concrete question or share a short summary. A good first post unlocks useful answers."
+                }
+                actions={
+                  authUserId ? (
+                    <>
+                      <EmptyStatePrimaryCta onClick={() => (document.querySelector("textarea") as HTMLTextAreaElement | null)?.focus()}>
+                        {es ? "Escribir el primer post" : "Write the first post"}
+                      </EmptyStatePrimaryCta>
+                      <Link href="/collaborate/aula-virtual">
+                        <EmptyStateSecondaryCta>{es ? "Crear grupo de estudio" : "Start a study group"}</EmptyStateSecondaryCta>
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <Link href="/login">
+                        <EmptyStatePrimaryCta>{es ? "Iniciar sesión para publicar" : "Sign in to post"}</EmptyStatePrimaryCta>
+                      </Link>
+                      <Link href="/register">
+                        <EmptyStateSecondaryCta>{es ? "Crear cuenta" : "Create account"}</EmptyStateSecondaryCta>
+                      </Link>
+                    </>
+                  )
+                }
+              />
             ) : (
               posts
                 .filter((p) => p.channel_id === selectedChannelId)

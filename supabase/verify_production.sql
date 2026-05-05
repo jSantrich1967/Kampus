@@ -87,6 +87,44 @@ with
       end::text as resultado
     from expected_tables e
     left join policy_agg pa on pa.table_name = e.table_name
+  ),
+  expected_functions (fn_name) as (
+    values
+      ('consume_api_quota'),
+      ('handle_new_user'),
+      ('set_profiles_updated_at')
+  ),
+  fn_report as (
+    select
+      '4_funciones_criticas'::text as seccion,
+      e.fn_name::text as item,
+      case
+        when p.proname is null then 'FALTA — revisa migración'
+        else 'OK'
+      end::text as resultado
+    from expected_functions e
+    left join pg_proc p on p.proname = e.fn_name
+    left join pg_namespace n on n.oid = p.pronamespace and n.nspname = 'public'
+  ),
+  expected_indexes (idx_name, hint) as (
+    values
+      ('student_works_user_due_pending_idx', 'migrations/20260505180000_perf_indexes.sql'),
+      ('student_works_user_completed_at_idx', 'migrations/20260505180000_perf_indexes.sql'),
+      ('user_exams_user_open_due_idx', 'migrations/20260505180000_perf_indexes.sql'),
+      ('api_usage_quotas_user_key_day_idx', 'migrations/20260505180000_perf_indexes.sql')
+  ),
+  idx_report as (
+    select
+      '5_indices_performance'::text as seccion,
+      e.idx_name::text as item,
+      case
+        when i.indexname is null then 'FALTA — ejecuta ' || e.hint
+        else 'OK'
+      end::text as resultado
+    from expected_indexes e
+    left join pg_indexes i
+      on i.schemaname = 'public'
+      and i.indexname = e.idx_name
   )
 select *
 from rls_report
@@ -96,6 +134,12 @@ from completed_at_report
 union all
 select *
 from policy_report
+union all
+select *
+from fn_report
+union all
+select *
+from idx_report
 order by
   seccion,
   item;

@@ -10,6 +10,7 @@ import { NotebookStudyKitPanel } from "@/components/study/notebook-study-kit-pan
 import { getNotebookSubjectCover } from "@/components/study/notebook-subject-cover";
 import { getNotebookSubjectIcon } from "@/components/study/notebook-subject-icon";
 import { Button } from "@/components/ui/button";
+import { EmptyState, EmptyStateIllustrationNotebook } from "@/components/ui/empty-state";
 import { initialsFromSubject, notebookCoverGradient } from "@/lib/notebooks/cover-styles";
 import { generateNotebookBookPdf } from "@/lib/notebooks/book-pdf";
 import { buildNotebookIndexGroups } from "@/lib/notebooks/notebook-index";
@@ -388,34 +389,36 @@ export function NotebookReader({ subjectSlug }: Props) {
       ) : null}
 
       {!loading && total === 0 ? (
-        <div className="mx-auto max-w-2xl space-y-3 rounded-2xl border border-white/10 bg-slate-950/60 p-5 text-sm text-slate-300">
-          <p className="font-medium text-slate-100">Este cuaderno está vacío</p>
-          <p className="text-xs text-slate-400">
-            <strong className="text-slate-200">Subida rápida:</strong> los archivos entran sin enlace al calendario. Luego puedes usar{" "}
-            <strong className="text-slate-200">Etiquetas</strong> y el <strong className="text-slate-200">Índice</strong>. Si necesitas que el material
-            quede en un día concreto del calendario, sube desde <strong className="text-slate-200">Mis cuadernos</strong> marcando “clase del
-            calendario”.
-          </p>
-          <div className="flex flex-wrap items-center gap-3">
-            <label
-              className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-indigo-500/20 px-4 py-2 text-sm font-semibold text-indigo-100 ring-1 ring-indigo-400/30 hover:bg-indigo-500/30"
-              title="Subida rápida (sin horario ni fecha de clase). Para calendario, usa Mis cuadernos."
-            >
-              <Upload className="h-4 w-4" />
-              {uploading ? "Subiendo…" : "Subir primeros archivos"}
-              <input
-                type="file"
-                className="hidden"
-                multiple
-                accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md,application/pdf,image/*,text/plain,text/markdown"
-                disabled={uploading}
-                onChange={(e) => void uploadMoreFiles(e.target.files)}
-              />
-            </label>
-            <Link href="/study/library" className="text-xs text-indigo-200 underline-offset-2 hover:underline">
-              Mis cuadernos — subir enlazado al calendario
-            </Link>
-          </div>
+        <div className="mx-auto max-w-2xl">
+          <EmptyState
+            icon={<EmptyStateIllustrationNotebook />}
+            title="Este cuaderno está vacío"
+            description="Sube tus primeros archivos (PDF/imagen/texto). Esta subida es rápida (sin calendario). Si necesitas vincular a una fecha de clase, súbelos desde Mis cuadernos marcando “clase del calendario”."
+            actions={
+              <>
+                <label
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-indigo-500/20 px-4 py-2 text-sm font-semibold text-indigo-100 ring-1 ring-indigo-400/30 hover:bg-indigo-500/30"
+                  title="Subida rápida (sin horario ni fecha de clase). Para calendario, usa Mis cuadernos."
+                >
+                  <Upload className="h-4 w-4" />
+                  {uploading ? "Subiendo…" : "Subir primeros archivos"}
+                  <input
+                    type="file"
+                    className="hidden"
+                    multiple
+                    accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md,application/pdf,image/*,text/plain,text/markdown"
+                    disabled={uploading}
+                    onChange={(e) => void uploadMoreFiles(e.target.files)}
+                  />
+                </label>
+                <Link href="/study/library">
+                  <Button variant="secondary" size="sm">
+                    Mis cuadernos (con calendario)
+                  </Button>
+                </Link>
+              </>
+            }
+          />
         </div>
       ) : null}
 

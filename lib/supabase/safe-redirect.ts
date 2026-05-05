@@ -70,9 +70,11 @@ export function getSafeInternalRedirect(next: string | null, fallback = "/today"
 
 /**
  * Paths reachable without a Supabase session when auth protection is on.
- * `/` and `/onboarding` are not public: otherwise guests hit `/` → client redirect to onboarding and never see login.
+ * Keep this list minimal to reduce anonymous surface area.
  */
 export function isAuthPublicPath(pathname: string): boolean {
+  // Landing page: allow organic visitors to understand the product before logging in.
+  if (pathname === "/") return true;
   if (pathname === "/login" || pathname === "/register") return true;
   if (pathname.startsWith("/auth/")) return true;
   return false;

@@ -8,6 +8,12 @@ import { KampusNotebookCover } from "@/components/brand/kampus-notebook-cover";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  EmptyState,
+  EmptyStateIllustrationNotebook,
+  EmptyStatePrimaryCta,
+  EmptyStateSecondaryCta,
+} from "@/components/ui/empty-state";
 import { subjectToPathSegment } from "@/lib/notebooks/paths";
 import { formatNotebookCloudError } from "@/lib/notebooks/storage-errors";
 import type { NotebookDocumentRow, UserNotebookRow } from "@/lib/notebooks/types";
@@ -240,8 +246,22 @@ export function NotebookLibraryPanel() {
           ) : null}
 
           {!loading && createdNotebooks.length === 0 ? (
-            <div className="mt-3 rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-400">
-              Aún no tienes cuadernos. Crea el primero arriba.
+            <div className="mt-3">
+              <EmptyState
+                icon={<EmptyStateIllustrationNotebook />}
+                title="Tu biblioteca está vacía"
+                description="Crea tu primer cuaderno por materia. Luego sube apuntes (PDF/imagen/texto) y Kampus te arma un índice y kits de estudio."
+                actions={
+                  <>
+                    <EmptyStatePrimaryCta onClick={() => void createNotebook(effectiveNewNotebookSubject)}>
+                      Crear mi primer cuaderno
+                    </EmptyStatePrimaryCta>
+                    <Link href="/study/library/rescue">
+                      <EmptyStateSecondaryCta>Probar Rescue (desde un archivo)</EmptyStateSecondaryCta>
+                    </Link>
+                  </>
+                }
+              />
             </div>
           ) : null}
 
