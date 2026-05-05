@@ -2,14 +2,41 @@
 
 import Link from "next/link";
 import { ArrowLeft, ExternalLink, Presentation } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { buildVirtualClassSessions } from "@/lib/virtual-classroom-mock";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 type Props = { sessionId: string };
+
+type SessionRow = {
+  id: string;
+  course: string;
+  professor_name: string;
+  topic: string;
+  capacity: number;
+  starts_at: string;
+  room_label: string;
+  join_url: string | null;
+  embed_video_url: string | null;
+  virtual_class_roster?: { count: number }[] | null;
+};
+
+type UiSession = {
+  id: string;
+  course: string;
+  professor: string;
+  topic: string;
+  capacity: number;
+  enrolled: number;
+  startsAt: string;
+  roomLabel: string;
+  joinUrl: string | null;
+  embedVideoUrl: string | null;
+};
 
 function formatTime(total: number) {
   const m = String(Math.floor(total / 60)).padStart(2, "0");
@@ -18,19 +45,87 @@ function formatTime(total: number) {
 }
 
 export function VirtualClassroomSession({ sessionId }: Props) {
-  const { profile, locale } = useKampus();
+  const { locale, authUserId } = useKampus();
   const es = locale === "es";
-  const sessions = useMemo(() => buildVirtualClassSessions(profile), [profile]);
-  const session = useMemo(() => sessions.find((x) => x.id === sessionId) ?? null, [sessions, sessionId]);
+  const [session, setSession] = useState<UiSession | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [focusSeconds, setFocusSeconds] = useState(0);
   const [running, setRunning] = useState(false);
+
+  useEffect(() => {
+    if (!authUserId || !isSupabaseConfigured()) {
+      setSession(null);
+      setLoadError(null);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+    void (async () => {
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from("virtual_class_sessions")
+          .select(
+            "id,course,professor_name,topic,capacity,starts_at,room_label,join_url,embed_video_url,virtual_class_roster(count)",
+          )
+          .eq("id", sessionId)
+          .maybeSingle();
+        if (error) throw error;
+        if (cancelled) return;
+        if (!data) {
+          setSession(null);
+          return;
+        }
+        const row = data as SessionRow;
+        setSession({
+          id: row.id,
+          course: row.course,
+          professor: row.professor_name,
+          topic: row.topic,
+          capacity: row.capacity,
+          enrolled: row.virtual_class_roster?.[0]?.count ?? 0,
+          startsAt: row.starts_at,
+          roomLabel: row.room_label,
+          joinUrl: row.join_url ?? null,
+          embedVideoUrl: row.embed_video_url ?? null,
+        });
+      } catch (e) {
+        const msg = e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : null;
+        setLoadError(msg || (es ? "No se pudo cargar la sesión." : "Could not load session."));
+        setSession(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, es, sessionId]);
 
   useEffect(() => {
     if (!running) return;
     const id = window.setInterval(() => setFocusSeconds((t) => t + 1), 1000);
     return () => window.clearInterval(id);
   }, [running]);
+
+  if (!isSupabaseConfigured()) {
+    return <p className="text-sm text-amber-200/90">{es ? "Falta configurar Supabase." : "Supabase is not configured."}</p>;
+  }
+
+  if (!authUserId) {
+    return <p className="text-sm text-slate-400">{es ? "Inicia sesión para ver la sesión." : "Sign in to view this session."}</p>;
+  }
+
+  if (loadError) {
+    return <p className="text-sm text-rose-200/90">{loadError}</p>;
+  }
+
+  if (loading) {
+    return <p className="text-sm text-slate-400">{es ? "Cargando sesión…" : "Loading session…"}</p>;
+  }
 
   if (!session) {
     return (
