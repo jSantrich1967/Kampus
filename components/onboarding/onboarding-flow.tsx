@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 
 import { KampusLogo } from "@/components/brand/kampus-logo";
 import { useKampus } from "@/components/kampus/kampus-provider";
@@ -16,6 +16,22 @@ import { cn } from "@/lib/cn";
 type ExamRow = { subject: string; date: string };
 
 const TOTAL_STEPS = 8;
+/** Student-style “weak topics” step — not shown for teacher / institution. */
+const WEAK_TOPICS_STEP = 4;
+
+function skipsWeakTopicsStep(role: UserRole): boolean {
+  return role === "teacher" || role === "institution";
+}
+
+function onboardingProgress(role: UserRole, step: number): { current: number; total: number } {
+  if (!skipsWeakTopicsStep(role)) {
+    return { current: step + 1, total: TOTAL_STEPS };
+  }
+  const order = [0, 1, 2, 3, 5, 6, 7] as const;
+  const idx = order.indexOf(step as (typeof order)[number]);
+  const current = idx === -1 ? 1 : idx + 1;
+  return { current, total: 7 };
+}
 
 export function OnboardingFlow() {
   const router = useRouter();
@@ -44,7 +60,17 @@ export function OnboardingFlow() {
     if (profile.onboardingFinished) router.replace("/today");
   }, [hydrated, profile.onboardingFinished, router]);
 
-  const progressValue = useMemo(() => ((step + 1) / TOTAL_STEPS) * 100, [step]);
+  useEffect(() => {
+    if (step === WEAK_TOPICS_STEP && skipsWeakTopicsStep(role)) {
+      setStep(5);
+    }
+  }, [step, role]);
+
+  const { current: progressCurrent, total: progressTotal } = onboardingProgress(role, step);
+  const progressValue = useMemo(
+    () => (progressCurrent / progressTotal) * 100,
+    [progressCurrent, progressTotal],
+  );
 
   const canContinue = useMemo(() => {
     if (step === 0) return true;
@@ -53,13 +79,17 @@ export function OnboardingFlow() {
     if (step === 3) {
       return exams.every((e) => (e.subject.trim() === "" && e.date === "") || (e.subject.trim() && e.date));
     }
-    if (step === 4) return weakTopics.length > 0;
+    if (step === WEAK_TOPICS_STEP) {
+      if (skipsWeakTopicsStep(role)) return true;
+      return weakTopics.length > 0;
+    }
     if (step === 5) return weeklyAvailabilityHours >= 1 && weeklyAvailabilityHours <= 80 && missedClassesApprox >= 0;
     if (step === 6) return learningGoals.trim().length > 6;
     if (step === 7) return true;
     return false;
   }, [
     step,
+    role,
     major,
     semester,
     subjects.length,
@@ -69,6 +99,20 @@ export function OnboardingFlow() {
     missedClassesApprox,
     learningGoals,
   ]);
+
+  const goNext = useCallback(() => {
+    setStep((s) => {
+      if (s === 3 && skipsWeakTopicsStep(role)) return 5;
+      return Math.min(TOTAL_STEPS - 1, s + 1);
+    });
+  }, [role]);
+
+  const goPrev = useCallback(() => {
+    setStep((s) => {
+      if (s === 5 && skipsWeakTopicsStep(role)) return 3;
+      return Math.max(0, s - 1);
+    });
+  }, [role]);
 
   function addSubject() {
     const next = subjectDraft.trim();
@@ -97,7 +141,7 @@ export function OnboardingFlow() {
       semester: semester.trim(),
       subjects,
       upcomingExams: exams.filter((e) => e.subject.trim() && e.date).map((e) => ({ subject: e.subject.trim(), date: e.date })),
-      weakTopics,
+      weakTopics: skipsWeakTopicsStep(role) ? [] : weakTopics,
       missedClassesApprox,
       weeklyAvailabilityHours,
       preferredLanguage,
@@ -132,7 +176,7 @@ export function OnboardingFlow() {
       </header>
 
       <div className="relative mx-auto flex max-w-3xl flex-col gap-6 px-4 pt-6 pb-[max(2.5rem,env(safe-area-inset-bottom,0px))] sm:px-6">
-        <div className="text-sm text-slate-400">{t.progress(step + 1, TOTAL_STEPS)}</div>
+        <div className="text-sm text-slate-400">{t.progress(progressCurrent, progressTotal)}</div>
 
         <Progress value={progressValue} />
 
@@ -325,7 +369,7 @@ export function OnboardingFlow() {
             </>
           ) : null}
 
-          {step === 4 ? (
+          {step === WEAK_TOPICS_STEP && !skipsWeakTopicsStep(role) ? (
             <>
               <CardHeader>
                 <CardTitle>{t.fields.weakTopics}</CardTitle>
@@ -371,7 +415,9 @@ export function OnboardingFlow() {
               <CardHeader>
                 <CardTitle>Carga y tiempo real</CardTitle>
                 <CardDescription>
-                  Modo aprobar usa esto para evitar sobrecarga y armar bloques alcanzables.
+                  {skipsWeakTopicsStep(role)
+                    ? "Tu disponibilidad y ritmo declarados afinan recordatorios, calendario y sugerencias en tu espacio docente o de gestión."
+                    : "Modo aprobar usa esto para evitar sobrecarga y armar bloques alcanzables."}
                 </CardDescription>
               </CardHeader>
               <div className="grid gap-4 md:grid-cols-2">
@@ -431,7 +477,11 @@ export function OnboardingFlow() {
                     className="min-h-28 w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 outline-none ring-indigo-400/40 focus:ring"
                     value={learningGoals}
                     onChange={(e) => setLearningGoals(e.target.value)}
-                    placeholder="Ej. Aprobar cálculo sin sacrificar sueño."
+                    placeholder={
+                      skipsWeakTopicsStep(role)
+                        ? "Ej. Dar feedback oportuno y alinear evaluaciones con el programa."
+                        : "Ej. Aprobar cálculo sin sacrificar sueño."
+                    }
                   />
                 </label>
               </div>
@@ -471,11 +521,11 @@ export function OnboardingFlow() {
           ) : null}
 
           <div className="mt-8 flex flex-col-reverse gap-3 border-t border-white/5 pt-6 sm:flex-row sm:items-center sm:justify-between">
-            <Button type="button" variant="ghost" disabled={step === 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>
+            <Button type="button" variant="ghost" disabled={step === 0} onClick={goPrev}>
               {t.actions.back}
             </Button>
             {step < TOTAL_STEPS - 1 ? (
-              <Button type="button" disabled={!canContinue} onClick={() => setStep((s) => Math.min(TOTAL_STEPS - 1, s + 1))}>
+              <Button type="button" disabled={!canContinue} onClick={goNext}>
                 {t.actions.next}
               </Button>
             ) : (
