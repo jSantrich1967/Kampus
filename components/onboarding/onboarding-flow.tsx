@@ -16,21 +16,22 @@ import { cn } from "@/lib/cn";
 type ExamRow = { subject: string; date: string };
 
 const TOTAL_STEPS = 8;
-/** Student-style “weak topics” step — not shown for teacher / institution. */
+/** Student / learner-only steps — skipped for teacher & institution. */
 const WEAK_TOPICS_STEP = 4;
+const LOAD_SCHEDULE_STEP = 5;
 
-function skipsWeakTopicsStep(role: UserRole): boolean {
+function skipsStudentCentricSteps(role: UserRole): boolean {
   return role === "teacher" || role === "institution";
 }
 
 function onboardingProgress(role: UserRole, step: number): { current: number; total: number } {
-  if (!skipsWeakTopicsStep(role)) {
+  if (!skipsStudentCentricSteps(role)) {
     return { current: step + 1, total: TOTAL_STEPS };
   }
-  const order = [0, 1, 2, 3, 5, 6, 7] as const;
+  const order = [0, 1, 2, 3, 6, 7] as const;
   const idx = order.indexOf(step as (typeof order)[number]);
   const current = idx === -1 ? 1 : idx + 1;
-  return { current, total: 7 };
+  return { current, total: 6 };
 }
 
 export function OnboardingFlow() {
@@ -61,8 +62,9 @@ export function OnboardingFlow() {
   }, [hydrated, profile.onboardingFinished, router]);
 
   useEffect(() => {
-    if (step === WEAK_TOPICS_STEP && skipsWeakTopicsStep(role)) {
-      setStep(5);
+    if (!skipsStudentCentricSteps(role)) return;
+    if (step === WEAK_TOPICS_STEP || step === LOAD_SCHEDULE_STEP) {
+      setStep(6);
     }
   }, [step, role]);
 
@@ -80,10 +82,13 @@ export function OnboardingFlow() {
       return exams.every((e) => (e.subject.trim() === "" && e.date === "") || (e.subject.trim() && e.date));
     }
     if (step === WEAK_TOPICS_STEP) {
-      if (skipsWeakTopicsStep(role)) return true;
+      if (skipsStudentCentricSteps(role)) return true;
       return weakTopics.length > 0;
     }
-    if (step === 5) return weeklyAvailabilityHours >= 1 && weeklyAvailabilityHours <= 80 && missedClassesApprox >= 0;
+    if (step === LOAD_SCHEDULE_STEP) {
+      if (skipsStudentCentricSteps(role)) return true;
+      return weeklyAvailabilityHours >= 1 && weeklyAvailabilityHours <= 80 && missedClassesApprox >= 0;
+    }
     if (step === 6) return learningGoals.trim().length > 6;
     if (step === 7) return true;
     return false;
@@ -102,14 +107,14 @@ export function OnboardingFlow() {
 
   const goNext = useCallback(() => {
     setStep((s) => {
-      if (s === 3 && skipsWeakTopicsStep(role)) return 5;
+      if (s === 3 && skipsStudentCentricSteps(role)) return 6;
       return Math.min(TOTAL_STEPS - 1, s + 1);
     });
   }, [role]);
 
   const goPrev = useCallback(() => {
     setStep((s) => {
-      if (s === 5 && skipsWeakTopicsStep(role)) return 3;
+      if (s === 6 && skipsStudentCentricSteps(role)) return 3;
       return Math.max(0, s - 1);
     });
   }, [role]);
@@ -141,9 +146,11 @@ export function OnboardingFlow() {
       semester: semester.trim(),
       subjects,
       upcomingExams: exams.filter((e) => e.subject.trim() && e.date).map((e) => ({ subject: e.subject.trim(), date: e.date })),
-      weakTopics: skipsWeakTopicsStep(role) ? [] : weakTopics,
-      missedClassesApprox,
-      weeklyAvailabilityHours,
+      weakTopics: skipsStudentCentricSteps(role) ? [] : weakTopics,
+      missedClassesApprox: skipsStudentCentricSteps(role) ? defaultProfile.missedClassesApprox : missedClassesApprox,
+      weeklyAvailabilityHours: skipsStudentCentricSteps(role)
+        ? defaultProfile.weeklyAvailabilityHours
+        : weeklyAvailabilityHours,
       preferredLanguage,
       interestedInCommunity,
       learningGoals: learningGoals.trim(),
@@ -369,7 +376,7 @@ export function OnboardingFlow() {
             </>
           ) : null}
 
-          {step === WEAK_TOPICS_STEP && !skipsWeakTopicsStep(role) ? (
+          {step === WEAK_TOPICS_STEP && !skipsStudentCentricSteps(role) ? (
             <>
               <CardHeader>
                 <CardTitle>{t.fields.weakTopics}</CardTitle>
@@ -410,14 +417,12 @@ export function OnboardingFlow() {
             </>
           ) : null}
 
-          {step === 5 ? (
+          {step === LOAD_SCHEDULE_STEP && !skipsStudentCentricSteps(role) ? (
             <>
               <CardHeader>
                 <CardTitle>Carga y tiempo real</CardTitle>
                 <CardDescription>
-                  {skipsWeakTopicsStep(role)
-                    ? "Tu disponibilidad y ritmo declarados afinan recordatorios, calendario y sugerencias en tu espacio docente o de gestión."
-                    : "Modo aprobar usa esto para evitar sobrecarga y armar bloques alcanzables."}
+                  Modo aprobar usa esto para evitar sobrecarga y armar bloques alcanzables.
                 </CardDescription>
               </CardHeader>
               <div className="grid gap-4 md:grid-cols-2">
@@ -478,7 +483,7 @@ export function OnboardingFlow() {
                     value={learningGoals}
                     onChange={(e) => setLearningGoals(e.target.value)}
                     placeholder={
-                      skipsWeakTopicsStep(role)
+                      skipsStudentCentricSteps(role)
                         ? "Ej. Dar feedback oportuno y alinear evaluaciones con el programa."
                         : "Ej. Aprobar cálculo sin sacrificar sueño."
                     }
