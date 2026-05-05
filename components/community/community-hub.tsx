@@ -13,17 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { StatBlock } from "@/components/ui/stat-block";
-import {
-  buildChannels,
-  buildClassAlerts,
-  buildCommonQuestions,
-  buildTopNotes,
-  buildPeerExplanations,
-  buildTrendingThreads,
-  resolveChannelNavigation,
-  type CommunityContext,
-} from "@/lib/community-mock";
-import { loadSavedNoteIds, saveSavedNoteIds } from "@/lib/storage/community-saved-storage";
+import type { CommunityContext } from "@/lib/community-mock";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cn } from "@/lib/cn";
@@ -37,6 +27,16 @@ const contexts: { id: CommunityContext; es: string; en: string }[] = [
   { id: "university", es: "Universidad", en: "University" },
 ];
 
+type Heat = "quiet" | "active" | "hot";
+
+type CommunityChannel = {
+  id: string;
+  title: string;
+  subtitle: string;
+  heat: Heat;
+  membersApprox: number;
+};
+
 function heatLabel(heat: "quiet" | "active" | "hot", es: boolean) {
   if (heat === "hot") return es ? "Caliente" : "Hot";
   if (heat === "active") return es ? "Activo" : "Active";
@@ -49,6 +49,151 @@ function heatTone(heat: "quiet" | "active" | "hot") {
   return "neutral" as const;
 }
 
+function stableHeatFromId(id: string): Heat {
+  let h = 0;
+  for (let i = 0; i < id.length; i += 1) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  const m = h % 3;
+  if (m === 0) return "hot";
+  if (m === 1) return "active";
+  return "quiet";
+}
+
+function buildRealChannels(profile: { subjects?: string[]; upcomingExams?: { subject: string; date: string }[]; university?: string; semester?: string }, context: CommunityContext, es: boolean): CommunityChannel[] {
+  const subjects = profile.subjects ?? [];
+  const upcomingExams = profile.upcomingExams ?? [];
+  const uni = profile.university || (es ? "Campus" : "Campus");
+  const sem = profile.semester || (es ? "2026-1" : "2026-1");
+
+  if (context === "university") {
+    return [
+      {
+        id: `uni:${uni}:boletin`,
+        title: es ? `${uni} · boletín` : `${uni} · bulletin`,
+        subtitle: es ? "Anuncios generales y avisos." : "General announcements and notices.",
+        heat: "active",
+        membersApprox: 0,
+      },
+    ];
+  }
+
+  if (context === "semester") {
+    return [
+      {
+        id: `sem:${sem}:general`,
+        title: es ? `${sem} · general` : `${sem} · general`,
+        subtitle: es ? "Organización, fechas y hábitos." : "Planning, dates, and habits.",
+        heat: "active",
+        membersApprox: 0,
+      },
+    ];
+  }
+
+  if (context === "exam") {
+    if (upcomingExams.length === 0) {
+      return [
+        {
+          id: "exam:sin-examenes",
+          title: es ? "Exámenes (sin fechas)" : "Exams (no dates)",
+          subtitle: es ? "Agrega fechas de examen en Ajustes para habilitar canales por examen." : "Add exam dates in Settings to enable exam channels.",
+          heat: "quiet",
+          membersApprox: 0,
+        },
+      ];
+    }
+    return upcomingExams.slice(0, 12).map((e) => {
+      const id = `exam:${e.subject}:${e.date}`;
+      return {
+        id,
+        title: es ? `${e.subject} · examen` : `${e.subject} · exam`,
+        subtitle: es ? `Fecha: ${e.date}` : `Date: ${e.date}`,
+        heat: stableHeatFromId(id),
+        membersApprox: 0,
+      };
+    });
+  }
+
+  if (context === "professor") {
+    if (subjects.length === 0) {
+      return [
+        {
+          id: "prof:sin-materias",
+          title: es ? "Profesores (sin materias)" : "Professors (no subjects)",
+          subtitle: es ? "Agrega materias en Ajustes para organizar por profesor." : "Add subjects in Settings to organize by professor.",
+          heat: "quiet",
+          membersApprox: 0,
+        },
+      ];
+    }
+    return subjects.slice(0, 12).map((s) => {
+      const id = `prof:${s}`;
+      return {
+        id,
+        title: es ? `${s} · cohorte` : `${s} · cohort`,
+        subtitle: es ? "Preguntas frecuentes y estilo de evaluación." : "FAQs and evaluation style.",
+        heat: stableHeatFromId(id),
+        membersApprox: 0,
+      };
+    });
+  }
+
+  if (context === "topic") {
+    const weakTopics = (profile as { weakTopics?: string[] }).weakTopics ?? [];
+    const topics = weakTopics.length ? weakTopics : [];
+    if (topics.length === 0) {
+      return [
+        {
+          id: "topic:sin-temas",
+          title: es ? "Temas (sin lista)" : "Topics (empty)",
+          subtitle: es ? "Agrega temas débiles en onboarding para organizar por tema." : "Add weak topics in onboarding to organize by topic.",
+          heat: "quiet",
+          membersApprox: 0,
+        },
+      ];
+    }
+    return topics.slice(0, 12).map((t) => {
+      const id = `topic:${t}`;
+      return {
+        id,
+        title: es ? `${t}` : `${t}`,
+        subtitle: es ? "Dudas y recursos del tema." : "Questions and resources for the topic.",
+        heat: stableHeatFromId(id),
+        membersApprox: 0,
+      };
+    });
+  }
+
+  // subject (default)
+  if (subjects.length === 0) {
+    return [
+      {
+        id: "sub:general",
+        title: es ? "General" : "General",
+        subtitle: es ? "Publicaciones generales mientras configuras tus materias." : "General posts while you configure your subjects.",
+        heat: "quiet",
+        membersApprox: 0,
+      },
+    ];
+  }
+  return subjects.slice(0, 12).map((s) => {
+    const id = `sub:${s}`;
+    return {
+      id,
+      title: es ? s : s,
+      subtitle: es ? "Sala de estudio" : "Study hall",
+      heat: stableHeatFromId(id),
+      membersApprox: 0,
+    };
+  });
+}
+
+function resolveChannelNavigation(profile: { subjects?: string[]; upcomingExams?: { subject: string; date: string }[]; university?: string; semester?: string; weakTopics?: string[] }, channelId: string): { context: CommunityContext } | null {
+  const es = true;
+  for (const ctx of contexts.map((c) => c.id)) {
+    if (buildRealChannels(profile, ctx, es).some((c) => c.id === channelId)) return { context: ctx };
+  }
+  return null;
+}
+
 export function CommunityHub() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -56,7 +201,6 @@ export function CommunityHub() {
   const es = locale === "es";
 
   const [context, setContext] = useState<CommunityContext>("subject");
-  const [savedIds, setSavedIds] = useState<string[]>([]);
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
 
   const [postBody, setPostBody] = useState("");
@@ -74,10 +218,6 @@ export function CommunityHub() {
   >({});
 
   useEffect(() => {
-    setSavedIds(loadSavedNoteIds());
-  }, []);
-
-  useEffect(() => {
     const raw = searchParams.get("channel");
     if (!raw) return;
     let id = raw;
@@ -93,12 +233,7 @@ export function CommunityHub() {
     }
   }, [searchParams, profile]);
 
-  const channels = useMemo(() => buildChannels(profile, context, locale), [profile, context, locale]);
-  const notes = useMemo(() => buildTopNotes(profile, locale), [profile, locale]);
-  const questions = useMemo(() => buildCommonQuestions(profile, locale), [profile, locale]);
-  const threads = useMemo(() => buildTrendingThreads(profile, locale), [profile, locale]);
-  const peers = useMemo(() => buildPeerExplanations(profile, locale), [profile, locale]);
-  const alerts = useMemo(() => buildClassAlerts(profile, locale), [profile, locale]);
+  const channels = useMemo(() => buildRealChannels(profile, context, es), [profile, context, es]);
 
   useEffect(() => {
     if (!selectedChannelId) return;
@@ -222,14 +357,6 @@ export function CommunityHub() {
     router.replace("/community");
   }
 
-  function toggleSave(id: string) {
-    setSavedIds((prev) => {
-      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
-      saveSavedNoteIds(next);
-      return next;
-    });
-  }
-
   return (
     <div className="space-y-10">
       <PageHeader
@@ -299,9 +426,9 @@ export function CommunityHub() {
           hint={es ? "Cada canal acelera señal y reduce ruido." : "Each channel increases signal and cuts noise."}
         />
         <StatBlock
-          label={es ? "Notas guardadas" : "Saved notes"}
-          value={savedIds.length}
-          hint={es ? "Persistencia local (demo)." : "Local persistence (demo)."}
+          label={es ? "Contenido" : "Content"}
+          value={posts.length}
+          hint={es ? "Posts reales en Supabase." : "Real Supabase posts."}
         />
         <StatBlock
           label={es ? "Universidad" : "University"}
@@ -443,178 +570,19 @@ export function CommunityHub() {
         </Card>
       ) : null}
 
-      <Card>
+      <Card className="border-white/10 bg-slate-950/40">
         <CardHeader>
-          <CardTitle>{es ? "Explicaciones entre pares" : "Peer explanations"}</CardTitle>
-          <CardDescription>{es ? "Cortas, accionables, con voto de utilidad." : "Short, actionable, usefulness-voted."}</CardDescription>
+          <CardTitle>{es ? "Más funciones de comunidad" : "More community features"}</CardTitle>
+          <CardDescription>
+            {es
+              ? "Ya puedes publicar y responder (contenido real en Supabase). Lo siguiente será: recursos compartidos, hilos en tendencia, votos y moderación."
+              : "You can already post and answer (real Supabase content). Next: shared resources, trending threads, voting, and moderation."}
+          </CardDescription>
         </CardHeader>
-        <div className="grid gap-3 md:grid-cols-3">
-          {peers.map((p) => (
-            <div key={p.id} className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-              <div className="text-xs text-slate-400">
-                {p.author} · <span className="text-indigo-200">{p.subject}</span>
-              </div>
-              <p className="mt-2 text-sm text-slate-100">{p.snippet}</p>
-              <div className="mt-3 text-xs text-slate-500">{p.helpfulVotes} {es ? "útil" : "helpful"}</div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="inline-flex items-center gap-2">
-              <Bookmark className="h-5 w-5 text-cyan-200" />
-              {es ? "Top notas (ranking)" : "Top notes (ranked)"}
-            </CardTitle>
-            <CardDescription>{es ? "Utilidad + cercanía a examen + tiempo." : "Usefulness + exam proximity + time."}</CardDescription>
-          </CardHeader>
-          <div className="space-y-4">
-            {notes.length === 0 ? (
-              <p className="text-sm text-slate-400">
-                {es ? "Agrega materias para ver notas rankeadas." : "Add subjects to see ranked notes."}
-              </p>
-            ) : null}
-            {notes.map((n) => (
-              <div key={n.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="text-sm font-semibold text-white">{n.title}</div>
-                    <div className="mt-1 text-xs text-slate-400">
-                      {n.subject} · {n.minutesToConsume} min
-                    </div>
-                  </div>
-                  <Button type="button" size="sm" variant={savedIds.includes(n.id) ? "secondary" : "ghost"} onClick={() => toggleSave(n.id)}>
-                    {savedIds.includes(n.id) ? (es ? "Guardado" : "Saved") : es ? "Guardar" : "Save"}
-                  </Button>
-                </div>
-                <p className="mt-2 text-sm text-slate-300">{n.excerpt}</p>
-                <div className="mt-3 grid gap-2 md:grid-cols-2">
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wide text-slate-500">{es ? "Utilidad" : "Usefulness"}</div>
-                    <Progress value={n.usefulness} />
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wide text-slate-500">{es ? "Examen" : "Exam usefulness"}</div>
-                    <Progress value={n.examRelevance} />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        <div className="space-y-5">
-          <Card>
-            <CardHeader>
-              <CardTitle className="inline-flex items-center gap-2">
-                <MessageCircle className="h-5 w-5 text-indigo-200" />
-                {es ? "Preguntas comunes" : "Common questions"}
-              </CardTitle>
-              <CardDescription>{es ? "Vota con utilidad, no con drama." : "Vote with usefulness, not drama."}</CardDescription>
-            </CardHeader>
-            <ul className="space-y-3">
-              {questions.map((q) => (
-                <li key={q.id} className="rounded-2xl border border-white/10 bg-slate-950/40 p-3">
-                  <div className="text-sm text-slate-100">{q.question}</div>
-                  <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-400">
-                    <span>
-                      {q.votes} {es ? "votos" : "votes"}
-                    </span>
-                    <span>
-                      ~{(answersByQuestion[q.id]?.length ?? 0) || q.answersApprox} {es ? "respuestas" : "answers"}
-                    </span>
-                    <Link href="/pass-mode" className="text-indigo-200 hover:text-white">
-                      {es ? "Convertir en plan →" : "Turn into plan →"}
-                    </Link>
-                  </div>
-
-                  {authUserId && isSupabaseConfigured() ? (
-                    <div className="mt-3 space-y-2">
-                      <textarea
-                        className="min-h-[70px] w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
-                        placeholder={es ? "Escribe una respuesta…" : "Write an answer…"}
-                        value={answerDrafts[q.id] ?? ""}
-                        onChange={(e) => setAnswerDrafts((prev) => ({ ...prev, [q.id]: e.target.value }))}
-                      />
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          disabled={answerBusyId === q.id || !(answerDrafts[q.id] ?? "").trim()}
-                          onClick={() => void submitAnswer(q.id)}
-                        >
-                          {answerBusyId === q.id ? (es ? "Enviando…" : "Sending…") : es ? "Responder" : "Answer"}
-                        </Button>
-                        {answerError ? <span className="text-xs text-rose-300">{answerError}</span> : null}
-                      </div>
-
-                      {(answersByQuestion[q.id] ?? []).length > 0 ? (
-                        <div className="space-y-2">
-                          {(answersByQuestion[q.id] ?? []).slice(0, 3).map((a) => (
-                            <div key={a.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
-                              <div className="text-[11px] text-slate-500">
-                                {es ? "Respuesta" : "Answer"}{" "}
-                                <span suppressHydrationWarning>
-                                  {new Date(a.created_at).toLocaleString("es", { dateStyle: "medium", timeStyle: "short" })}
-                                </span>
-                              </div>
-                              <p className="mt-2 whitespace-pre-wrap text-sm text-slate-100">{a.body}</p>
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <p className="mt-3 text-xs text-slate-500">{es ? "Inicia sesión para responder." : "Sign in to answer."}</p>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="inline-flex items-center gap-2">
-                <Flame className="h-5 w-5 text-amber-200" />
-                {es ? "Discusiones en tendencia" : "Trending discussions"}
-              </CardTitle>
-              <CardDescription>{es ? "Señales de retención social." : "Social retention signals."}</CardDescription>
-            </CardHeader>
-            <ul className="space-y-3">
-              {threads.map((t) => (
-                <li key={t.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/40 px-3 py-3">
-                  <div className="text-sm text-slate-100">{t.title}</div>
-                  <div className="flex items-center gap-2 text-xs text-slate-400">
-                    {t.replies} replies
-                    <Badge tone={t.trend === "up" ? "warning" : "neutral"}>{t.trend === "up" ? "▲" : "—"}</Badge>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </Card>
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{es ? "Alertas de clase" : "Class alerts"}</CardTitle>
-          <CardDescription>{es ? "Cercanas a tus fechas y ritmo." : "Close to your dates and cadence."}</CardDescription>
-        </CardHeader>
-        <div className="space-y-3">
-          {alerts.map((a) => (
-            <div
-              key={a.id}
-              className={cn(
-                "rounded-2xl border px-4 py-3 text-sm",
-                a.severity === "warning" ? "border-amber-300/25 bg-amber-400/5 text-amber-50" : "border-white/10 bg-white/5 text-slate-200",
-              )}
-            >
-              <div className="font-semibold text-white">{a.title}</div>
-              <div className="mt-1 text-slate-300">{a.body}</div>
-            </div>
-          ))}
+        <div className="px-6 pb-6 text-sm text-slate-400">
+          {es
+            ? "Por ahora removimos los datos demo para evitar mocks en producción."
+            : "For now we removed demo data to avoid mocks in production."}
         </div>
       </Card>
     </div>
