@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
@@ -8,12 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatBlock } from "@/components/ui/stat-block";
-import {
-  buildCourseSignals,
-  buildDifficultTopics,
-  buildEngagementSeries,
-  buildInstitutionKpis,
-} from "@/lib/institution-mock";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 function BarRow({ label, value }: { label: string; value: number }) {
   return (
@@ -30,7 +27,7 @@ function BarRow({ label, value }: { label: string; value: number }) {
 }
 
 export function InstitutionConsole() {
-  const { profile, locale } = useKampus();
+  const { profile, locale, authUserId } = useKampus();
   const es = locale === "es";
 
   if (profile.role !== "institution") {
@@ -58,12 +55,135 @@ export function InstitutionConsole() {
     );
   }
 
-  const kpis = buildInstitutionKpis(profile);
-  const courses = buildCourseSignals(profile);
-  const series = buildEngagementSeries();
-  const topics = buildDifficultTopics(profile);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [kpis, setKpis] = useState<{
+    activeStudents: number;
+    coursesMonitored: number;
+    atRiskStudents: number;
+    avgEngagement: number;
+    gradingConsistency: number;
+    retentionRisk: "low" | "medium" | "high";
+  } | null>(null);
+  const [courses, setCourses] = useState<
+    {
+      courseCode: string;
+      courseName: string;
+      students: number;
+      atRiskPct: number;
+      avgScore: number;
+      engagementIndex: number;
+      hardestTopic: string;
+      intervention: string;
+    }[]
+  >([]);
 
-  const retentionTone = kpis.retentionRisk === "high" ? "danger" : kpis.retentionRisk === "medium" ? "warning" : "success";
+  const series = useMemo(() => {
+    // Placeholder real: once you store time-series, replace this with a Supabase query.
+    return [
+      { label: "W-4", value: 0 },
+      { label: "W-3", value: 0 },
+      { label: "W-2", value: 0 },
+      { label: "W-1", value: 0 },
+      { label: "Now", value: 0 },
+    ];
+  }, []);
+
+  const topics = useMemo(() => {
+    // Placeholder real: future table for aggregated topics.
+    return [] as { topic: string; mentions: number; courses: number }[];
+  }, []);
+
+  useEffect(() => {
+    if (!authUserId || !isSupabaseConfigured()) {
+      setKpis(null);
+      setCourses([]);
+      setLoadError(null);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+    void (async () => {
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data: kData, error: kErr } = await supabase
+          .from("institution_kpis")
+          .select("payload")
+          .eq("user_id", authUserId)
+          .maybeSingle();
+        if (kErr) throw kErr;
+
+        const payload = (kData?.payload ?? {}) as Partial<{
+          activeStudents: number;
+          coursesMonitored: number;
+          atRiskStudents: number;
+          avgEngagement: number;
+          gradingConsistency: number;
+          retentionRisk: "low" | "medium" | "high";
+        }>;
+
+        const fallback = {
+          activeStudents: 0,
+          coursesMonitored: 0,
+          atRiskStudents: 0,
+          avgEngagement: 0,
+          gradingConsistency: 0,
+          retentionRisk: "low" as const,
+        };
+
+        const nextKpis = {
+          activeStudents: payload.activeStudents ?? fallback.activeStudents,
+          coursesMonitored: payload.coursesMonitored ?? fallback.coursesMonitored,
+          atRiskStudents: payload.atRiskStudents ?? fallback.atRiskStudents,
+          avgEngagement: payload.avgEngagement ?? fallback.avgEngagement,
+          gradingConsistency: payload.gradingConsistency ?? fallback.gradingConsistency,
+          retentionRisk: payload.retentionRisk ?? fallback.retentionRisk,
+        };
+
+        const { data: cData, error: cErr } = await supabase
+          .from("institution_course_signals")
+          .select(
+            "course_code,course_name,students,at_risk_pct,avg_score,engagement_index,hardest_topic,intervention",
+          )
+          .eq("user_id", authUserId)
+          .order("created_at", { ascending: false })
+          .limit(50);
+        if (cErr) throw cErr;
+
+        if (cancelled) return;
+        setKpis(nextKpis);
+        setCourses(
+          (cData ?? []).map((r) => ({
+            courseCode: r.course_code,
+            courseName: r.course_name,
+            students: r.students,
+            atRiskPct: r.at_risk_pct,
+            avgScore: r.avg_score,
+            engagementIndex: r.engagement_index,
+            hardestTopic: r.hardest_topic,
+            intervention: r.intervention,
+          })),
+        );
+      } catch (e) {
+        const msg = e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : null;
+        if (!cancelled) {
+          setLoadError(msg || (es ? "No se pudo cargar el panel institucional." : "Could not load institution console."));
+          setKpis(null);
+          setCourses([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, es]);
+
+  const retentionTone =
+    kpis?.retentionRisk === "high" ? "danger" : kpis?.retentionRisk === "medium" ? "warning" : "success";
 
   return (
     <div className="space-y-10">
@@ -77,22 +197,55 @@ export function InstitutionConsole() {
         }
         actions={
           <Badge tone={retentionTone}>
-            {es ? "Riesgo retención" : "Retention risk"}: {kpis.retentionRisk}
+            {es ? "Riesgo retención" : "Retention risk"}: {kpis?.retentionRisk ?? "low"}
           </Badge>
         }
       />
 
+      {!isSupabaseConfigured() ? (
+        <p className="text-sm text-amber-200/90">{es ? "Falta configurar Supabase." : "Supabase is not configured."}</p>
+      ) : !authUserId ? (
+        <p className="text-sm text-slate-400">{es ? "Inicia sesión para ver el panel." : "Sign in to view this console."}</p>
+      ) : loadError ? (
+        <p className="text-sm text-rose-200/90">{loadError}</p>
+      ) : loading ? (
+        <p className="text-sm text-slate-400">{es ? "Cargando métricas…" : "Loading metrics…"}</p>
+      ) : null}
+
+      {!loading && authUserId && isSupabaseConfigured() && !kpis ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>{es ? "Sin datos aún" : "No data yet"}</CardTitle>
+            <CardDescription>
+              {es
+                ? "Este panel ya no usa mocks. Debes cargar KPIs y señales en Supabase para ver métricas reales."
+                : "This console no longer uses mocks. Load KPIs and signals into Supabase to see real metrics."}
+            </CardDescription>
+          </CardHeader>
+          <div className="px-6 pb-6">
+            <p className="text-sm text-slate-400">
+              {es
+                ? "Siguiente paso: crear un flujo de ingestión (LMS/CSV) o un panel interno para ingresar métricas."
+                : "Next: build an ingestion flow (LMS/CSV) or an internal tool to enter metrics."}
+            </p>
+          </div>
+        </Card>
+      ) : null}
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatBlock label={es ? "Estudiantes activos (30d)" : "Active students (30d)"} value={kpis.activeStudents.toLocaleString()} />
-        <StatBlock label={es ? "Cursos monitoreados" : "Courses monitored"} value={kpis.coursesMonitored} />
+        <StatBlock
+          label={es ? "Estudiantes activos (30d)" : "Active students (30d)"}
+          value={(kpis?.activeStudents ?? 0).toLocaleString()}
+        />
+        <StatBlock label={es ? "Cursos monitoreados" : "Courses monitored"} value={kpis?.coursesMonitored ?? 0} />
         <StatBlock
           label={es ? "Estudiantes en riesgo" : "At-risk students"}
-          value={kpis.atRiskStudents.toLocaleString()}
+          value={(kpis?.atRiskStudents ?? 0).toLocaleString()}
           hint={es ? "Heurística multi-señal (demo)." : "Multi-signal heuristic (demo)."}
         />
         <StatBlock
           label={es ? "Engagement promedio" : "Avg engagement"}
-          value={`${kpis.avgEngagement}%`}
+          value={`${kpis?.avgEngagement ?? 0}%`}
           hint={es ? "Basado en sesiones + entregas." : "Based on sessions + submissions."}
         />
       </div>
@@ -186,10 +339,10 @@ export function InstitutionConsole() {
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/5">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400"
-                  style={{ width: `${kpis.gradingConsistency}%` }}
+                  style={{ width: `${kpis?.gradingConsistency ?? 0}%` }}
                 />
               </div>
-              <div className="mt-1 text-xs text-slate-400">{kpis.gradingConsistency}/100</div>
+              <div className="mt-1 text-xs text-slate-400">{kpis?.gradingConsistency ?? 0}/100</div>
             </div>
             <ul className="list-disc space-y-2 pl-5 text-slate-300">
               <li>{es ? "Menos varianza entre secciones en rúbricas compartidas." : "Lower variance across sections when rubrics are shared."}</li>

@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { StatBlock } from "@/components/ui/stat-block";
-import type { CommunityContext } from "@/lib/community-mock";
+import type { CommunityContext } from "@/lib/community-types";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cn } from "@/lib/cn";
