@@ -105,7 +105,17 @@ export async function POST(req: Request) {
         { role: "system" as const, content: [{ type: "input_text" as const, text: SYSTEM_ES }] },
         ...body.messages.map((m) => ({
           role: m.role as "user" | "assistant",
-          content: [{ type: "input_text" as const, text: clip(m.content, 12000) }],
+          // Responses API enforces role-based content types:
+          // - user: input_text
+          // - assistant: output_text (or refusal)
+          content: [
+            {
+              type: (m.role === "assistant"
+                ? ("output_text" as "output_text" | "input_text")
+                : ("input_text" as "output_text" | "input_text")),
+              text: clip(m.content, 12000),
+            },
+          ],
         })),
       ],
       temperature: 0.55,
