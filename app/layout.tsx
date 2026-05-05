@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 
 import { KampusProvider } from "@/components/kampus/kampus-provider";
+import { SwrProvider } from "@/components/providers/swr-provider";
 
 import "./globals.css";
 
@@ -29,7 +30,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" className={`${inter.variable} ${jetbrains.variable}`}>
       <body className="min-h-dvh antialiased">
-        <KampusProvider>{children}</KampusProvider>
+        <KampusProvider>
+          <SwrProvider>{children}</SwrProvider>
+        </KampusProvider>
       </body>
     </html>
   );

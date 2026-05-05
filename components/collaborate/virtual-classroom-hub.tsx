@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Video } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
@@ -10,8 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { navCopy } from "@/lib/i18n/nav";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { useSupabaseSWR } from "@/lib/hooks/use-supabase-swr";
 
 type SessionRow = {
   id: string;
@@ -43,59 +43,34 @@ export function VirtualClassroomHub() {
   const { locale, authUserId } = useKampus();
   const es = locale === "es";
   const t = navCopy.es;
-  const [sessions, setSessions] = useState<UiSession[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const { data, error: loadError, isLoading } = useSupabaseSWR<UiSession[]>(
+    authUserId ? `vc_sessions:${authUserId}` : null,
+    async (supabase) => {
+      const { data, error } = await supabase
+        .from("virtual_class_sessions")
+        .select(
+          "id,course,professor_name,topic,capacity,starts_at,room_label,join_url,embed_video_url,virtual_class_roster(count)",
+        )
+        .order("starts_at", { ascending: true })
+        .limit(30);
+      if (error) throw error;
+      const mapped = ((data as SessionRow[]) ?? []).map((row) => ({
+        id: row.id,
+        course: row.course,
+        professor: row.professor_name,
+        topic: row.topic,
+        capacity: row.capacity,
+        enrolled: row.virtual_class_roster?.[0]?.count ?? 0,
+        startsAt: row.starts_at,
+        roomLabel: row.room_label,
+        joinUrl: row.join_url ?? null,
+        embedVideoUrl: row.embed_video_url ?? null,
+      }));
+      return mapped;
+    },
+  );
 
-  useEffect(() => {
-    if (!authUserId || !isSupabaseConfigured()) {
-      setSessions([]);
-      setLoadError(null);
-      return;
-    }
-
-    let cancelled = false;
-    setLoading(true);
-    setLoadError(null);
-    void (async () => {
-      try {
-        const supabase = createSupabaseBrowserClient();
-        const { data, error } = await supabase
-          .from("virtual_class_sessions")
-          .select(
-            "id,course,professor_name,topic,capacity,starts_at,room_label,join_url,embed_video_url,virtual_class_roster(count)",
-          )
-          .order("starts_at", { ascending: true })
-          .limit(30);
-        if (error) throw error;
-        if (cancelled) return;
-
-        const mapped = ((data as SessionRow[]) ?? []).map((row) => ({
-          id: row.id,
-          course: row.course,
-          professor: row.professor_name,
-          topic: row.topic,
-          capacity: row.capacity,
-          enrolled: row.virtual_class_roster?.[0]?.count ?? 0,
-          startsAt: row.starts_at,
-          roomLabel: row.room_label,
-          joinUrl: row.join_url ?? null,
-          embedVideoUrl: row.embed_video_url ?? null,
-        }));
-        setSessions(mapped);
-      } catch (e) {
-        const msg = e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : null;
-        setLoadError(msg || (es ? "No se pudo cargar el aula virtual." : "Could not load virtual classroom."));
-        setSessions([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authUserId, es]);
+  const sessions = useMemo(() => data ?? [], [data]);
 
   return (
     <div className="space-y-8">
@@ -121,12 +96,12 @@ export function VirtualClassroomHub() {
         </p>
       ) : loadError ? (
         <p className="text-sm text-rose-200/90">{loadError}</p>
-      ) : loading ? (
+      ) : isLoading ? (
         <p className="text-sm text-slate-400">{es ? "Cargando sesiones…" : "Loading sessions…"}</p>
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2">
-        {!loading && sessions.length === 0 && authUserId ? (
+        {!isLoading && sessions.length === 0 && authUserId ? (
           <Card className="border-white/10 bg-slate-950/40">
             <CardHeader>
               <CardTitle>{es ? "Sin sesiones" : "No sessions"}</CardTitle>

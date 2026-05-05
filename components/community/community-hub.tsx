@@ -17,6 +17,7 @@ import type { CommunityContext } from "@/lib/community-types";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cn } from "@/lib/cn";
+import { useSupabaseSWR } from "@/lib/hooks/use-supabase-swr";
 
 const contexts: { id: CommunityContext; es: string; en: string }[] = [
   { id: "subject", es: "Materia", en: "Subject" },
@@ -249,51 +250,44 @@ export function CommunityHub() {
     setSelectedChannelId(channels[0]!.id);
   }, [channels, selectedChannelId]);
 
+  const { data: swrPosts } = useSupabaseSWR<
+    { id: string; channel_id: string; body: string; created_at: string; user_id: string }[]
+  >(authUserId ? `community_posts:${authUserId}` : null, async (supabase) => {
+    const { data, error } = await supabase
+      .from("community_posts")
+      .select("id,channel_id,body,created_at,user_id")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) throw error;
+    return (data as typeof posts) ?? [];
+  });
+
+  const { data: swrAnswers } = useSupabaseSWR<
+    { id: string; question_id: string; body: string; created_at: string; user_id: string }[]
+  >(authUserId ? `community_answers:${authUserId}` : null, async (supabase) => {
+    const { data, error } = await supabase
+      .from("community_question_answers")
+      .select("id,question_id,body,created_at,user_id")
+      .order("created_at", { ascending: false })
+      .limit(80);
+    if (error) throw error;
+    return (data as { id: string; question_id: string; body: string; created_at: string; user_id: string }[]) ?? [];
+  });
+
   useEffect(() => {
     if (!authUserId || !isSupabaseConfigured()) {
       setPosts([]);
       setAnswersByQuestion({});
       return;
     }
-
-    let cancelled = false;
-    void (async () => {
-      try {
-        const supabase = createSupabaseBrowserClient();
-
-        const { data: pData, error: pErr } = await supabase
-          .from("community_posts")
-          .select("id,channel_id,body,created_at,user_id")
-          .order("created_at", { ascending: false })
-          .limit(50);
-        if (pErr) throw pErr;
-
-        const { data: aData, error: aErr } = await supabase
-          .from("community_question_answers")
-          .select("id,question_id,body,created_at,user_id")
-          .order("created_at", { ascending: false })
-          .limit(80);
-        if (aErr) throw aErr;
-
-        if (cancelled) return;
-        setPosts((pData as typeof posts) ?? []);
-        const grouped: typeof answersByQuestion = {};
-        ((aData as { id: string; question_id: string; body: string; created_at: string; user_id: string }[]) ?? []).forEach(
-          (row) => {
-            if (!grouped[row.question_id]) grouped[row.question_id] = [];
-            grouped[row.question_id]!.push(row);
-          },
-        );
-        setAnswersByQuestion(grouped);
-      } catch (e) {
-        console.error("[CommunityHub] load community content", e);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authUserId]);
+    setPosts(swrPosts ?? []);
+    const grouped: typeof answersByQuestion = {};
+    (swrAnswers ?? []).forEach((row) => {
+      if (!grouped[row.question_id]) grouped[row.question_id] = [];
+      grouped[row.question_id]!.push(row);
+    });
+    setAnswersByQuestion(grouped);
+  }, [authUserId, swrPosts, swrAnswers]);
 
   async function submitPost() {
     if (!authUserId) return;
