@@ -4,6 +4,7 @@ import { z } from "zod";
 import { extractResponsesOutputText } from "@/lib/openai/extract-responses-output-text";
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
 import { psychologistChatRateLimits } from "@/lib/rate-limit/openai-defaults";
+import { consumeDailyUserQuota } from "@/lib/rate-limit/user-quota";
 
 export const runtime = "nodejs";
 
@@ -59,6 +60,23 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { error: "Demasiadas peticiones. Espera un momento e inténtalo de nuevo." },
       { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+    );
+  }
+
+  const quota = await consumeDailyUserQuota(
+    "psychologist_chat",
+    parseInt(process.env.API_DAILY_LIMIT_PSYCHOLOGIST_CHAT ?? "10", 10),
+  );
+  if (!quota.ok) {
+    return NextResponse.json(
+      { error: quota.message },
+      {
+        status: quota.status,
+        headers:
+          quota.status === 429 && quota.retryAfterSec
+            ? { "Retry-After": String(quota.retryAfterSec) }
+            : undefined,
+      },
     );
   }
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
 import { presentationTranscribeRateLimits } from "@/lib/rate-limit/openai-defaults";
+import { consumeDailyUserQuota } from "@/lib/rate-limit/user-quota";
 
 export const runtime = "nodejs";
 
@@ -19,6 +20,23 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { error: "Demasiadas peticiones. Espera un momento e inténtalo de nuevo." },
       { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+    );
+  }
+
+  const quota = await consumeDailyUserQuota(
+    "presentation_transcribe",
+    parseInt(process.env.API_DAILY_LIMIT_PRESENTATION_TRANSCRIBE ?? "1", 10),
+  );
+  if (!quota.ok) {
+    return NextResponse.json(
+      { error: quota.message },
+      {
+        status: quota.status,
+        headers:
+          quota.status === 429 && quota.retryAfterSec
+            ? { "Retry-After": String(quota.retryAfterSec) }
+            : undefined,
+      },
     );
   }
 
