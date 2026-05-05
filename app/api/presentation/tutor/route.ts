@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
 import { presentationTutorFeedbackSchema } from "@/lib/schemas/presentation-tutor";
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
 import { presentationTutorRateLimits } from "@/lib/rate-limit/openai-defaults";
@@ -150,46 +151,47 @@ export async function POST(req: Request) {
   }
 
   try {
-    const apiKey = process.env.OPENAI_API_KEY?.trim();
-    const model = process.env.OPENAI_MODEL?.trim() || "gpt-4.1-mini";
+    return await runOpenAiRoute("presentation_tutor", async () => {
+      const apiKey = process.env.OPENAI_API_KEY?.trim();
+      const model = process.env.OPENAI_MODEL?.trim() || "gpt-4.1-mini";
 
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "Falta OPENAI_API_KEY en el servidor para usar el tutor calificador." },
-        { status: 400 },
-      );
-    }
+      if (!apiKey) {
+        return NextResponse.json(
+          { error: "Falta OPENAI_API_KEY en el servidor para usar el tutor calificador." },
+          { status: 400 },
+        );
+      }
 
-    const body = requestSchema.parse(await req.json().catch(() => ({})));
-    const hasContent =
-      body.rehearsalNotes.trim().length > 20 ||
-      body.masterScript.trim().length > 20 ||
-      body.sectionsSummary.trim().length > 20;
+      const body = requestSchema.parse(await req.json().catch(() => ({})));
+      const hasContent =
+        body.rehearsalNotes.trim().length > 20 ||
+        body.masterScript.trim().length > 20 ||
+        body.sectionsSummary.trim().length > 20;
 
-    if (!hasContent) {
-      return NextResponse.json(
-        { error: "Añade notas del ensayo, transcripción o resumen de guiones antes de pedir calificación." },
-        { status: 400 },
-      );
-    }
+      if (!hasContent) {
+        return NextResponse.json(
+          { error: "Añade notas del ensayo, transcripción o resumen de guiones antes de pedir calificación." },
+          { status: 400 },
+        );
+      }
 
-    const system = [
+      const system = [
       "Eres un tutor académico amable y exigente que califica ENSAYOS DE EXPOSICIÓN en español.",
       "Responde SOLO con un JSON válido (sin markdown, sin texto fuera del objeto).",
       "Último carácter debe ser `}`.",
       "No inventes hechos que no aparezcan en el material del alumno; si falta contexto, dilo en tips generales de presentación oral.",
       "Sé específico: cada punto debe citar evidencia breve (frases exactas) tomada de la transcripción/notas o del guion.",
       "Evita frases genéricas tipo 'mejorar claridad' sin explicar QUÉ y CÓMO.",
-    ].join(" ");
+      ].join(" ");
 
-    const keys = Object.keys(presentationTutorFeedbackSchema.shape).join(", ");
-    const levelLabel = body.level === "school" ? "colegio" : "universidad";
-    const strictness =
-      body.level === "school"
-        ? "Enfoque COLEGIO: explica con tono pedagógico, pasos simples, sin suponer metodología avanzada. Evalúa con exigencia moderada."
-        : "Enfoque UNIVERSIDAD: exige precisión, tesis clara, evidencia, y manejo de preguntas. Señala fallos con claridad y propone mejoras medibles.";
+      const keys = Object.keys(presentationTutorFeedbackSchema.shape).join(", ");
+      const levelLabel = body.level === "school" ? "colegio" : "universidad";
+      const strictness =
+        body.level === "school"
+          ? "Enfoque COLEGIO: explica con tono pedagógico, pasos simples, sin suponer metodología avanzada. Evalúa con exigencia moderada."
+          : "Enfoque UNIVERSIDAD: exige precisión, tesis clara, evidencia, y manejo de preguntas. Señala fallos con claridad y propone mejoras medibles.";
 
-    const user = [
+      const user = [
       `Nivel: ${levelLabel}. ${strictness}`,
       `Título / deck: ${body.deckTitle.trim() || "(sin título)"}`,
       "",
@@ -216,51 +218,53 @@ export async function POST(req: Request) {
       "- strengths: 3–6 bullets de lo bien hecho.",
       "- toImprove: 3–6 bullets de qué falló o está débil.",
       "- concreteTips: 4–8 acciones concretas para la siguiente corrida.",
-      "- closingEncouragement: 1–2 frases de ánimo realista.",
-    ].join("\n");
+        "- closingEncouragement: 1–2 frases de ánimo realista.",
+      ].join("\n");
 
-    const res = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        input: [
-          { role: "system", content: [{ type: "input_text", text: system }] },
-          { role: "user", content: [{ type: "input_text", text: user }] },
-        ],
-        temperature: 0.35,
-      }),
+      const responsesUrl = "https://api.openai.com/v1/responses";
+      const res = await fetchOpenAi("presentation_tutor", responsesUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          input: [
+            { role: "system", content: [{ type: "input_text", text: system }] },
+            { role: "user", content: [{ type: "input_text", text: user }] },
+          ],
+          temperature: 0.35,
+        }),
+      });
+
+      if (!res.ok) {
+        let message = "";
+        try {
+          const json = (await res.json()) as { error?: { message?: string } };
+          message = json.error?.message ?? "";
+        } catch {
+          message = (await res.text()).slice(0, 400);
+        }
+        if (res.status === 429) {
+          return NextResponse.json(
+            {
+              error:
+                "Sin cuota OpenAI ahora (HTTP 429). Revisa facturación en OpenAI Platform e inténtalo de nuevo.",
+            },
+            { status: 429 },
+          );
+        }
+        return NextResponse.json({ error: `OpenAI error (HTTP ${res.status}): ${message || "Unknown"}` }, { status: 502 });
+      }
+
+      const payload = (await res.json()) as unknown;
+      const text = extractTextFromOpenAIResponses(payload);
+      const parsedJson = tryParseJsonObject(text);
+      const feedback = presentationTutorFeedbackSchema.parse(parsedJson);
+
+      return NextResponse.json({ feedback });
     });
-
-    if (!res.ok) {
-      let message = "";
-      try {
-        const json = (await res.json()) as { error?: { message?: string } };
-        message = json.error?.message ?? "";
-      } catch {
-        message = (await res.text()).slice(0, 400);
-      }
-      if (res.status === 429) {
-        return NextResponse.json(
-          {
-            error:
-              "Sin cuota OpenAI ahora (HTTP 429). Revisa facturación en OpenAI Platform e inténtalo de nuevo.",
-          },
-          { status: 429 },
-        );
-      }
-      return NextResponse.json({ error: `OpenAI error (HTTP ${res.status}): ${message || "Unknown"}` }, { status: 502 });
-    }
-
-    const payload = (await res.json()) as unknown;
-    const text = extractTextFromOpenAIResponses(payload);
-    const parsedJson = tryParseJsonObject(text);
-    const feedback = presentationTutorFeedbackSchema.parse(parsedJson);
-
-    return NextResponse.json({ feedback });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

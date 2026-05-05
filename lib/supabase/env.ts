@@ -15,13 +15,9 @@ export function isSupabaseConfigured(): boolean {
  * Session refresh in middleware still runs whenever keys exist.
  */
 export function isAuthRouteProtectionEnabled(): boolean {
-  if (!isSupabaseConfigured()) return false;
-  // Production safety: never allow disabling auth protection via public env var.
-  // This prevents accidental anonymous access if someone sets NEXT_PUBLIC_REQUIRE_AUTH=false.
-  if (process.env.NODE_ENV === "production") return true;
-  const raw = process.env.NEXT_PUBLIC_REQUIRE_AUTH?.trim().toLowerCase();
-  if (raw === "false" || raw === "0" || raw === "no") return false;
-  return true;
+  // Auth protection is always enabled in any environment when Supabase is configured.
+  // This removes the public env var that could disable auth.
+  return isSupabaseConfigured();
 }
 
 /**

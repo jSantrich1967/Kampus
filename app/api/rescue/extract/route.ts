@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
 import { stripOpenAiResponseLeakage } from "@/lib/notebooks/openai-extract-cleanup";
 import { repairSpuriousAmpersandOcrText } from "@/lib/notebooks/ocr-text-repair";
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
@@ -88,7 +89,7 @@ async function ocrImageWithOpenAI(file: File): Promise<string> {
 
   const dataUrl = await preprocessImageForOcrDataUrl(file);
 
-  const res = await fetch("https://api.openai.com/v1/responses", {
+  const res = await fetchOpenAi("rescue_extract.ocr", "https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -263,55 +264,57 @@ export async function POST(req: Request) {
   }
 
   try {
-    const form = await req.formData();
-    const raw = form.getAll("files");
-    const files = raw.filter((x): x is File => x instanceof File);
+    return await runOpenAiRoute("rescue_extract", async () => {
+      const form = await req.formData();
+      const raw = form.getAll("files");
+      const files = raw.filter((x): x is File => x instanceof File);
 
-    if (files.length === 0) {
-      return NextResponse.json({ files: [], combinedText: "" });
-    }
-
-    const extracted: ExtractedFile[] = [];
-    for (const f of files) {
-      const name = f.name || "file";
-      const mime = f.type || "application/octet-stream";
-      const size = f.size ?? 0;
-
-      if (isPdf(mime, name)) {
-        const buf = Buffer.from(await f.arrayBuffer());
-        // `pdf-parse` ESM export is `PDFParse`, not a default export (Next/Turbopack builds are ESM).
-        const mod = (await import("pdf-parse")) as unknown as { PDFParse: (data: Buffer) => Promise<{ text?: string }> };
-        const parsed = await mod.PDFParse(buf);
-        extracted.push({ name, type: mime, size, text: (parsed.text || "").trim() });
-        continue;
+      if (files.length === 0) {
+        return NextResponse.json({ files: [], combinedText: "" });
       }
 
-      if (isImage(mime, name)) {
-        const text = await ocrImageWithOpenAI(f);
-        extracted.push({ name, type: mime, size, text });
-        continue;
+      const extracted: ExtractedFile[] = [];
+      for (const f of files) {
+        const name = f.name || "file";
+        const mime = f.type || "application/octet-stream";
+        const size = f.size ?? 0;
+
+        if (isPdf(mime, name)) {
+          const buf = Buffer.from(await f.arrayBuffer());
+          // `pdf-parse` ESM export is `PDFParse`, not a default export (Next/Turbopack builds are ESM).
+          const mod = (await import("pdf-parse")) as unknown as { PDFParse: (data: Buffer) => Promise<{ text?: string }> };
+          const parsed = await mod.PDFParse(buf);
+          extracted.push({ name, type: mime, size, text: (parsed.text || "").trim() });
+          continue;
+        }
+
+        if (isImage(mime, name)) {
+          const text = await ocrImageWithOpenAI(f);
+          extracted.push({ name, type: mime, size, text });
+          continue;
+        }
+
+        if (isTextLike(mime, name)) {
+          const text = (await f.text()).trim();
+          extracted.push({ name, type: mime, size, text });
+          continue;
+        }
+
+        extracted.push({
+          name,
+          type: mime,
+          size,
+          text: `[Unsupported file type for extraction yet: ${name} (${mime}). Try PDF or TXT for now.]`,
+        });
       }
 
-      if (isTextLike(mime, name)) {
-        const text = (await f.text()).trim();
-        extracted.push({ name, type: mime, size, text });
-        continue;
-      }
+      const combinedText = extracted
+        .map((e) => `# ${e.name}\n${e.text}`.trim())
+        .filter(Boolean)
+        .join("\n\n");
 
-      extracted.push({
-        name,
-        type: mime,
-        size,
-        text: `[Unsupported file type for extraction yet: ${name} (${mime}). Try PDF or TXT for now.]`,
-      });
-    }
-
-    const combinedText = extracted
-      .map((e) => `# ${e.name}\n${e.text}`.trim())
-      .filter(Boolean)
-      .join("\n\n");
-
-    return NextResponse.json({ files: extracted, combinedText });
+      return NextResponse.json({ files: extracted, combinedText });
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

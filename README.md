@@ -10,9 +10,24 @@ npm run dev
 Abre [http://localhost:3002](http://localhost:3002) (puerto definido en `package.json`).
 
 ```bash
-npm run lint   # ESLint
-npm run build  # build de producción (usa `.next`; en dev se puede usar `.next-kampus`)
+npm run lint       # ESLint
+npm run typecheck  # TypeScript (sin emitir JS)
+npm run build      # build de producción (`.next` por defecto)
 ```
+
+**Windows (opcional):** si el antivirus o rutas con espacios bloquean `.next`, copia a `.env.local` las variables `KAMPUS_*` descritas en [`.env.example`](./.env.example) (por ejemplo `KAMPUS_NEXT_DIST_DIR=.next-kampus`).
+
+## CI / CD (GitHub Actions)
+
+- **CI** (`.github/workflows/ci.yml`): en cada push/PR a `main`, ejecuta lint, typecheck y `next build` en **Ubuntu y Windows**.
+- **CD** (`.github/workflows/deploy-vercel.yml`): despliegue **manual** con Vercel CLI (`workflow_dispatch`). Úsalo solo si quieres desplegar desde Actions; si ya conectaste el repo en Vercel, el despliegue automático por Git suele bastar (evita duplicar deploys).
+
+## Monitorización (Sentry + Vercel)
+
+- **Sentry — errores:** `NEXT_PUBLIC_SENTRY_DSN` y (opcional) source maps con `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`. Ver [`.env.example`](./.env.example).
+- **Sentry — rendimiento:** rutas OpenAI envían transacciones `api.openai.*` y spans `openai.http.*` (latencia total y llamada a OpenAI). Ajusta muestreo con `SENTRY_TRACES_SAMPLE_RATE` / `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE`.
+- **Sentry — alertas (en la web de Sentry):** Alerts → Create alert → por ejemplo *New issue*, *Issue frequency* (spike), *Regression*, o umbrales en *Performance*. Conecta email/Slack en **Settings → Integrations**.
+- **Vercel Speed Insights:** el proyecto incluye `<SpeedInsights />` en el layout. Activa **Speed Insights** en el dashboard del proyecto Vercel (plan según tu cuenta) para Core Web Vitals y métricas reales de usuario.
 
 ## Despliegue en Vercel
 

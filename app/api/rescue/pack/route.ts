@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
 import { rescuePackSchema } from "@/lib/schemas/rescue-pack";
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
 import { rescuePackRateLimits } from "@/lib/rate-limit/openai-defaults";
@@ -174,17 +175,18 @@ export async function POST(req: Request) {
   }
 
   try {
-    const apiKey = process.env.OPENAI_API_KEY?.trim();
-    const model = process.env.OPENAI_MODEL?.trim() || "gpt-4.1-mini";
+    return await runOpenAiRoute("rescue_pack", async () => {
+      const apiKey = process.env.OPENAI_API_KEY?.trim();
+      const model = process.env.OPENAI_MODEL?.trim() || "gpt-4.1-mini";
 
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "Falta OPENAI_API_KEY en el servidor. Agrega la variable en Vercel para generar el kit con IA." },
-        { status: 400 },
-      );
-    }
+      if (!apiKey) {
+        return NextResponse.json(
+          { error: "Falta OPENAI_API_KEY en el servidor. Agrega la variable en Vercel para generar el kit con IA." },
+          { status: 400 },
+        );
+      }
 
-    const body = requestSchema.parse(await req.json().catch(() => ({})));
+      const body = requestSchema.parse(await req.json().catch(() => ({})));
     const subject = body.subjectHint.trim() || "la materia";
     const sourceLabel = body.sourceLabel.trim() || "material";
 
@@ -302,7 +304,7 @@ export async function POST(req: Request) {
 
     while (attempts < maxAttempts) {
       attempts += 1;
-      lastRes = await fetch(openaiUrl, {
+      lastRes = await fetchOpenAi("rescue_pack", openaiUrl, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -350,6 +352,7 @@ export async function POST(req: Request) {
     const pack = rescuePackSchema.parse(parsedJson);
 
     return NextResponse.json({ pack });
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

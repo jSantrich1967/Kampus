@@ -2,19 +2,33 @@ import path from "path";
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
+/** Opt-in flags (see `.env.example`). Defaults match Linux/macOS/Vercel/CI. */
+function envFlag(name: string): boolean {
+  const v = process.env[name]?.trim().toLowerCase();
+  return v === "1" || v === "true" || v === "yes";
+}
+
+function devDistDirFromEnv(): string | undefined {
+  const raw = process.env.KAMPUS_NEXT_DIST_DIR?.trim();
+  if (!raw || process.env.NODE_ENV !== "development") return undefined;
+  return raw;
+}
+
+/** Pin Turbopack root to this package so Next does not pick a parent folder when multiple lockfiles exist. */
+function turbopackRoot(): string {
+  const raw = process.env.KAMPUS_TURBOPACK_ROOT?.trim();
+  return raw ? path.resolve(process.cwd(), raw) : path.resolve(process.cwd());
+}
+
+const distDir = devDistDirFromEnv();
+
 const nextConfig: NextConfig = {
-  // Dev only: use a separate folder so Windows/AV lock issues on `.next` are easier to recover from.
-  // Production / Vercel must use the default `.next` so the platform finds the build output.
-  ...(process.env.NODE_ENV === "development" ? { distDir: ".next-kampus" } : {}),
+  ...(distDir ? { distDir } : {}),
   devIndicators: false,
-  // Next 16 locks `.next/dev/lock` via native bindings; on some Windows setups
-  // (paths with spaces, AV, etc.) this throws ENOENT and kills `next dev`.
-  experimental: {
-    lockDistDir: false,
-  },
-  turbopack: {
-    root: path.join(process.cwd()),
-  },
+  ...(envFlag("KAMPUS_NEXT_DISABLE_DIST_LOCK")
+    ? { experimental: { lockDistDir: false } }
+    : {}),
+  turbopack: { root: turbopackRoot() },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "covers.openlibrary.org" },

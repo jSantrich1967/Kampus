@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
 import { extractResponsesOutputText } from "@/lib/openai/extract-responses-output-text";
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
 import { psychologistChatRateLimits } from "@/lib/rate-limit/openai-defaults";
@@ -81,80 +82,82 @@ export async function POST(req: Request) {
   }
 
   try {
-    const apiKey = process.env.OPENAI_API_KEY?.trim();
-    const model = process.env.OPENAI_MODEL?.trim() || "gpt-4.1-mini";
+    return await runOpenAiRoute("psychologist_chat", async () => {
+      const apiKey = process.env.OPENAI_API_KEY?.trim();
+      const model = process.env.OPENAI_MODEL?.trim() || "gpt-4.1-mini";
 
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "Falta OPENAI_API_KEY en el servidor para usar el chat de bienestar." },
-        { status: 400 },
-      );
-    }
-
-    const body = requestSchema.parse(await req.json().catch(() => ({})));
-
-    const last = body.messages[body.messages.length - 1];
-    if (!last || last.role !== "user") {
-      return NextResponse.json({ error: "El último mensaje debe ser del usuario." }, { status: 400 });
-    }
-
-    const openaiUrl = "https://api.openai.com/v1/responses";
-    const openaiPayload = {
-      model,
-      input: [
-        { role: "system" as const, content: [{ type: "input_text" as const, text: SYSTEM_ES }] },
-        ...body.messages.map((m) => ({
-          role: m.role as "user" | "assistant",
-          // Responses API enforces role-based content types:
-          // - user: input_text
-          // - assistant: output_text (or refusal)
-          content: [
-            {
-              type: (m.role === "assistant"
-                ? ("output_text" as "output_text" | "input_text")
-                : ("input_text" as "output_text" | "input_text")),
-              text: clip(m.content, 12000),
-            },
-          ],
-        })),
-      ],
-      temperature: 0.55,
-      max_output_tokens: 1600,
-    };
-
-    const res = await fetch(openaiUrl, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(openaiPayload),
-    });
-
-    if (!res.ok) {
-      let message = "";
-      try {
-        const json = (await res.json()) as { error?: { message?: string } };
-        message = json.error?.message ?? "";
-      } catch {
-        message = (await res.text()).slice(0, 400);
-      }
-      if (res.status === 429) {
+      if (!apiKey) {
         return NextResponse.json(
-          { error: "Sin cuota OpenAI ahora (429). Revisa facturación e inténtalo de nuevo." },
-          { status: 429 },
+          { error: "Falta OPENAI_API_KEY en el servidor para usar el chat de bienestar." },
+          { status: 400 },
         );
       }
-      return NextResponse.json({ error: `OpenAI error (HTTP ${res.status}): ${message || "Unknown"}` }, { status: 502 });
-    }
 
-    const payload = (await res.json()) as unknown;
-    const text = extractResponsesOutputText(payload);
-    if (!text.trim()) {
-      return NextResponse.json({ error: "La respuesta del modelo llegó vacía." }, { status: 502 });
-    }
+      const body = requestSchema.parse(await req.json().catch(() => ({})));
 
-    return NextResponse.json({ reply: text.trim() });
+      const last = body.messages[body.messages.length - 1];
+      if (!last || last.role !== "user") {
+        return NextResponse.json({ error: "El último mensaje debe ser del usuario." }, { status: 400 });
+      }
+
+      const openaiUrl = "https://api.openai.com/v1/responses";
+      const openaiPayload = {
+        model,
+        input: [
+          { role: "system" as const, content: [{ type: "input_text" as const, text: SYSTEM_ES }] },
+          ...body.messages.map((m) => ({
+            role: m.role as "user" | "assistant",
+            // Responses API enforces role-based content types:
+            // - user: input_text
+            // - assistant: output_text (or refusal)
+            content: [
+              {
+                type: (m.role === "assistant"
+                  ? ("output_text" as "output_text" | "input_text")
+                  : ("input_text" as "output_text" | "input_text")),
+                text: clip(m.content, 12000),
+              },
+            ],
+          })),
+        ],
+        temperature: 0.55,
+        max_output_tokens: 1600,
+      };
+
+      const res = await fetchOpenAi("psychologist_chat", openaiUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(openaiPayload),
+      });
+
+      if (!res.ok) {
+        let message = "";
+        try {
+          const json = (await res.json()) as { error?: { message?: string } };
+          message = json.error?.message ?? "";
+        } catch {
+          message = (await res.text()).slice(0, 400);
+        }
+        if (res.status === 429) {
+          return NextResponse.json(
+            { error: "Sin cuota OpenAI ahora (429). Revisa facturación e inténtalo de nuevo." },
+            { status: 429 },
+          );
+        }
+        return NextResponse.json({ error: `OpenAI error (HTTP ${res.status}): ${message || "Unknown"}` }, { status: 502 });
+      }
+
+      const payload = (await res.json()) as unknown;
+      const text = extractResponsesOutputText(payload);
+      if (!text.trim()) {
+        return NextResponse.json({ error: "La respuesta del modelo llegó vacía." }, { status: 502 });
+      }
+
+      return NextResponse.json({ reply: text.trim() });
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     if (err instanceof z.ZodError) {

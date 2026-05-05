@@ -29,31 +29,7 @@ function BarRow({ label, value }: { label: string; value: number }) {
 export function InstitutionConsole() {
   const { profile, locale, authUserId } = useKampus();
   const es = locale === "es";
-
-  if (profile.role !== "institution") {
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          eyebrow={es ? "Institución" : "Institution"}
-          title={es ? "Panel institucional" : "Institution console"}
-          description={
-            es
-              ? "Este panel es para el rol institución. Cambia tu rol en Ajustes (demo) para explorarlo."
-              : "This console is for the institution role. Switch your role in Settings (demo) to explore it."
-          }
-        />
-        <Card>
-          <CardHeader>
-            <CardTitle>{es ? "Acceso restringido" : "Restricted access"}</CardTitle>
-            <CardDescription>{es ? "Evita confundir a estudiantes con métricas B2B." : "Avoid showing B2B metrics to students by mistake."}</CardDescription>
-          </CardHeader>
-          <Link href="/settings">
-            <Button variant="secondary">{es ? "Ir a ajustes" : "Go to settings"}</Button>
-          </Link>
-        </Card>
-      </div>
-    );
-  }
+  const isInstitution = profile.role === "institution";
 
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -95,6 +71,13 @@ export function InstitutionConsole() {
   }, []);
 
   useEffect(() => {
+    if (!isInstitution) {
+      setKpis(null);
+      setCourses([]);
+      setLoadError(null);
+      setLoading(false);
+      return;
+    }
     if (!authUserId || !isSupabaseConfigured()) {
       setKpis(null);
       setCourses([]);
@@ -180,7 +163,32 @@ export function InstitutionConsole() {
     return () => {
       cancelled = true;
     };
-  }, [authUserId, es]);
+  }, [authUserId, es, isInstitution]);
+
+  if (!isInstitution) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          eyebrow={es ? "Institución" : "Institution"}
+          title={es ? "Panel institucional" : "Institution console"}
+          description={
+            es
+              ? "Este panel es para el rol institución. Cambia tu rol en Ajustes (demo) para explorarlo."
+              : "This console is for the institution role. Switch your role in Settings (demo) to explore it."
+          }
+        />
+        <Card>
+          <CardHeader>
+            <CardTitle>{es ? "Acceso restringido" : "Restricted access"}</CardTitle>
+            <CardDescription>{es ? "Evita confundir a estudiantes con métricas B2B." : "Avoid showing B2B metrics to students by mistake."}</CardDescription>
+          </CardHeader>
+          <Link href="/settings">
+            <Button variant="secondary">{es ? "Ir a ajustes" : "Go to settings"}</Button>
+          </Link>
+        </Card>
+      </div>
+    );
+  }
 
   const retentionTone =
     kpis?.retentionRisk === "high" ? "danger" : kpis?.retentionRisk === "medium" ? "warning" : "success";

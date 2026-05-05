@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 
 import { KampusProvider } from "@/components/kampus/kampus-provider";
 import { SwrProvider } from "@/components/providers/swr-provider";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import "./globals.css";
 
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-dvh antialiased">
         <KampusProvider>
           <SwrProvider>{children}</SwrProvider>
+          <SpeedInsights />
         </KampusProvider>
       </body>
     </html>
