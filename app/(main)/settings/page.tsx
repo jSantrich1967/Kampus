@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import * as Sentry from "@sentry/nextjs";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
@@ -21,6 +22,8 @@ export default function SettingsPage() {
   const router = useRouter();
   const { profile, setProfile, authUserId, profileRemoteSyncActive } = useKampus();
   const tAuth = authCopy.es;
+
+  const enableSentryTest = process.env.NEXT_PUBLIC_ENABLE_SENTRY_TEST === "true";
 
   const showAuthBypassBanner = shouldShowAuthBypassWarning();
   const [authBypassDismissed, setAuthBypassDismissed] = useState(false);
@@ -245,6 +248,31 @@ export default function SettingsPage() {
           Reiniciar
         </Button>
       </Card>
+
+      {enableSentryTest ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Sentry (verificación)</CardTitle>
+            <CardDescription>
+              Botón de prueba para enviar el primer error a Sentry. Solo aparece si defines{" "}
+              <span className="font-mono text-xs text-slate-300">NEXT_PUBLIC_ENABLE_SENTRY_TEST=true</span>.
+            </CardDescription>
+          </CardHeader>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                // Captura el error y lo envía a Sentry; también se lanza para ver el GlobalError.
+                Sentry.captureException(new Error("Sentry test: Settings button"));
+                throw new Error("Sentry test: Settings button");
+              }}
+            >
+              Probar Sentry
+            </Button>
+          </div>
+        </Card>
+      ) : null}
     </div>
   );
 }
