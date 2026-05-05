@@ -2,6 +2,11 @@ import { cn } from "@/lib/cn";
 
 type KampusLogoProps = {
   variant?: "sidebar" | "header";
+  /**
+   * When false, skips `mix-blend-lighten` (use on a solid black bar so the PNG matte does not
+   * look like a small floating rectangle).
+   */
+  blend?: boolean;
   className?: string;
 };
 
@@ -9,7 +14,7 @@ type KampusLogoProps = {
  * `/branding/kampus-logo.png`. `mix-blend-lighten` blends away pure black (#000) so a matte
  * export still sits on the dark page; remove the blend when you ship a true RGBA asset.
  */
-export function KampusLogo({ variant = "sidebar", className }: KampusLogoProps) {
+export function KampusLogo({ variant = "sidebar", blend = true, className }: KampusLogoProps) {
   const isHeader = variant === "header";
   return (
     // eslint-disable-next-line @next/next/no-img-element -- preserve PNG alpha; avoid Image optimizer
@@ -21,7 +26,8 @@ export function KampusLogo({ variant = "sidebar", className }: KampusLogoProps) 
       decoding="async"
       fetchPriority={isHeader ? "auto" : "high"}
       className={cn(
-        "block max-w-full bg-transparent object-contain object-left mix-blend-lighten drop-shadow-[0_6px_28px_rgba(15,23,42,0.45)]",
+        "block max-w-full bg-transparent object-contain object-left drop-shadow-[0_6px_28px_rgba(15,23,42,0.45)]",
+        blend && "mix-blend-lighten",
         isHeader ? "h-16 w-auto max-w-[min(100%,320px)] sm:h-[4.5rem]" : "h-36 w-auto max-w-[min(100%,480px)] sm:h-44 md:h-52",
         className,
       )}

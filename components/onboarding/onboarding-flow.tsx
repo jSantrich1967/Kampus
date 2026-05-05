@@ -119,13 +119,14 @@ export function OnboardingFlow() {
   }
 
   return (
-    <div className="relative min-h-dvh overflow-x-hidden text-slate-100">
+    <div className="relative min-h-dvh w-full max-w-[100vw] overflow-x-hidden text-slate-100">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(700px_420px_at_20%_0%,rgba(99,102,241,0.2),rgba(139,92,246,0.12),transparent)]" />
 
-      {/* Full-bleed black bar (edge to edge); logo centered. Rounded top matches card-style shells on mobile. */}
-      <header className="relative z-10 flex w-full justify-center bg-black px-4 pt-[max(1.25rem,env(safe-area-inset-top,0px))] pb-5 sm:pt-[max(1.5rem,env(safe-area-inset-top,0px))] sm:pb-6 rounded-t-2xl sm:rounded-t-3xl">
+      {/* Full-bleed black bar (edge to edge); logo centered. `min-w-full` avoids shrink in flex parents. */}
+      <header className="relative z-10 box-border flex min-h-0 min-w-full w-full shrink-0 justify-center bg-black px-4 pt-[max(1.25rem,env(safe-area-inset-top,0px))] pb-5 sm:pt-[max(1.5rem,env(safe-area-inset-top,0px))] sm:pb-6 rounded-t-2xl sm:rounded-t-3xl">
         <KampusLogo
           variant="header"
+          blend={false}
           className="h-14 max-w-[min(100%,280px)] object-contain object-center sm:h-16 md:h-[4.5rem] md:max-w-[320px]"
         />
       </header>
