@@ -122,24 +122,15 @@ export function OnboardingFlow() {
     <div className="relative min-h-dvh overflow-x-hidden px-4 pb-10 pt-4 text-slate-100 sm:px-6 sm:pt-6">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(700px_400px_at_20%_0%,rgba(99,102,241,0.22),transparent)]" />
 
-      {/* Desktop: dark rail + logo in the left column. On phones this rail stole ~50% width — hide it and use a compact header instead. */}
-      <div
-        className="pointer-events-none absolute inset-y-0 left-0 z-[1] hidden w-[300px] bg-black md:block"
-        aria-hidden
-      />
-
-      <div className="absolute left-0 top-2 z-10 hidden w-[300px] box-border overflow-hidden px-3 pt-1 md:block">
+      {/* Single header on all breakpoints — avoids a full-height black column that broke narrow viewports. */}
+      <header className="relative z-10 mx-auto mb-6 flex max-w-3xl justify-center sm:mb-8 md:justify-start">
         <KampusLogo
-          variant="sidebar"
-          className="h-auto max-h-28 w-full max-w-full object-contain object-left sm:max-h-32 md:max-h-36"
+          variant="header"
+          className="h-14 max-w-[min(100%,280px)] object-contain object-left sm:h-16 md:h-[4.5rem] md:max-w-[320px]"
         />
-      </div>
+      </header>
 
-      <div className="relative z-10 flex justify-center pb-2 md:hidden">
-        <KampusLogo variant="header" className="h-14 max-w-[min(100%,260px)] sm:h-16" />
-      </div>
-
-      <div className="relative mx-auto flex max-w-3xl flex-col gap-6 pt-2 sm:pt-4 md:pt-[13.5rem]">
+      <div className="relative mx-auto flex max-w-3xl flex-col gap-6">
         <div className="text-sm text-slate-400">{t.progress(step + 1, TOTAL_STEPS)}</div>
 
         <Progress value={progressValue} />
