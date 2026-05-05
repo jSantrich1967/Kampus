@@ -21,7 +21,10 @@ with
       ('virtual_class_roster'),
       ('community_posts'),
       ('community_question_answers'),
-      ('diary_entries')
+      ('diary_entries'),
+      ('api_usage_quotas'),
+      ('institution_kpis'),
+      ('institution_course_signals')
   ),
   tables_found as (
     select
