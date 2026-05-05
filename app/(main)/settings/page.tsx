@@ -24,6 +24,9 @@ export default function SettingsPage() {
   const tAuth = authCopy.es;
 
   const enableSentryTest = process.env.NEXT_PUBLIC_ENABLE_SENTRY_TEST === "true";
+  const [sentryTestStatus, setSentryTestStatus] = useState<"idle" | "sending" | "sent" | "error">(
+    "idle",
+  );
 
   const showAuthBypassBanner = shouldShowAuthBypassWarning();
   const [authBypassDismissed, setAuthBypassDismissed] = useState(false);
@@ -262,14 +265,30 @@ export default function SettingsPage() {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => {
-                // Captura el error y lo envía a Sentry; también se lanza para ver el GlobalError.
-                Sentry.captureException(new Error("Sentry test: Settings button"));
-                throw new Error("Sentry test: Settings button");
+              disabled={sentryTestStatus === "sending"}
+              onClick={async () => {
+                setSentryTestStatus("sending");
+                try {
+                  Sentry.captureException(new Error("Sentry test: Settings button"));
+                  // Espera un poco para asegurar envío desde el navegador.
+                  await Sentry.flush(2000);
+                  setSentryTestStatus("sent");
+                } catch {
+                  setSentryTestStatus("error");
+                }
               }}
             >
-              Probar Sentry
+              {sentryTestStatus === "sending" ? "Enviando…" : "Probar Sentry"}
             </Button>
+            {sentryTestStatus === "sent" ? (
+              <p className="text-sm text-emerald-200/90">
+                Enviado. Revisa Sentry → Issues en ~30–90s.
+              </p>
+            ) : sentryTestStatus === "error" ? (
+              <p className="text-sm text-rose-200/90">
+                No pudimos enviar el evento. Prueba sin adblock o en otra red.
+              </p>
+            ) : null}
           </div>
         </Card>
       ) : null}
