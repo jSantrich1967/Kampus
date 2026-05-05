@@ -34,6 +34,9 @@ export default hasSentrySourceMaps
       org: process.env.SENTRY_ORG!,
       project: process.env.SENTRY_PROJECT!,
       authToken: process.env.SENTRY_AUTH_TOKEN,
-      silent: !process.env.CI,
+      // In Vercel, keep logs visible so we can confirm source-map upload.
+      silent: false,
+      widenClientFileUpload: true,
+      telemetry: false,
     })
   : nextConfig;
