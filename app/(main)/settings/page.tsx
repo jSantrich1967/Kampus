@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { authCopy } from "@/lib/i18n/auth";
+import { onboardingCopy } from "@/lib/i18n/onboarding";
+import type { UserRole } from "@/lib/schemas/profile";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured, shouldShowAuthBypassWarning } from "@/lib/supabase/env";
 import {
@@ -22,6 +24,14 @@ export default function SettingsPage() {
   const router = useRouter();
   const { profile, setProfile, authUserId, profileRemoteSyncActive } = useKampus();
   const tAuth = authCopy.es;
+  const tOnboarding = onboardingCopy.es;
+
+  const roleOptions: { value: UserRole; label: string }[] = [
+    { value: "student", label: tOnboarding.roles.student },
+    { value: "teacher", label: tOnboarding.roles.teacher },
+    { value: "learner", label: tOnboarding.roles.learner },
+    { value: "institution", label: tOnboarding.roles.institution },
+  ];
 
   const enableSentryTest = process.env.NEXT_PUBLIC_ENABLE_SENTRY_TEST === "true";
   const [sentryTestStatus, setSentryTestStatus] = useState<"idle" | "sending" | "sent" | "error">(
@@ -143,6 +153,29 @@ export default function SettingsPage() {
           >
             ES
           </Button>
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Rol (demo)</CardTitle>
+          <CardDescription>
+            Prueba la app como docente u otros perfiles sin repetir el onboarding. Afecta “Hoy”, el menú y rutas como{" "}
+            <span className="font-mono text-slate-400">/teaching</span>.
+          </CardDescription>
+        </CardHeader>
+        <div className="flex flex-wrap gap-2">
+          {roleOptions.map(({ value, label }) => (
+            <Button
+              key={value}
+              type="button"
+              size="sm"
+              variant={profile.role === value ? "secondary" : "ghost"}
+              onClick={() => setProfile({ ...profile, role: value })}
+            >
+              {label}
+            </Button>
+          ))}
         </div>
       </Card>
 
