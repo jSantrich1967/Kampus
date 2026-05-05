@@ -40,13 +40,44 @@ function daysUntil(isoDate: string): number | null {
   return diff;
 }
 
+function teacherRiskReasons(
+  nearest: number | undefined,
+  profile: UserProfile,
+  weakLinked: boolean,
+): string[] {
+  const reasons: string[] = [];
+  if (nearest !== undefined) {
+    if (nearest <= 3) {
+      reasons.push("Evaluación muy próxima: alinea rúbrica, entregas y mensaje al alumnado.");
+    } else if (nearest <= 10) {
+      reasons.push("Examen en el horizonte cercano: conviene checkpoint de preparación y criterios explícitos.");
+    } else if (nearest <= 21) {
+      reasons.push("Fecha de evaluación visible: anticipa instrucciones y coherencia de evaluación.");
+    }
+  } else {
+    reasons.push("Sin fecha de examen registrada para esta materia — revisa el calendario académico.");
+  }
+  if (profile.weakTopics.length > 0) {
+    reasons.push("Hay temas marcados como densos: planifica refuerzo, ejemplo guiado o material de apoyo.");
+  }
+  if (weakLinked) {
+    reasons.push("Los temas densos conectan con esta materia — prioriza una aclaración focalizada en clase.");
+  }
+  if (profile.missedClassesApprox >= 4) {
+    reasons.push("Muchas clases perdidas en el perfil de referencia — valora recuperación o avisos al alumnado.");
+  }
+  if (reasons.length === 0) {
+    reasons.push("Rutina estable: mantén canales claros de expectativas.");
+  }
+  return reasons;
+}
+
 function riskForSubject(
   subject: string,
   profile: UserProfile,
 ): { risk: RiskLevel; score: number; reasons: string[]; nextAction: string } {
   const exams = profile.upcomingExams.filter((e) => e.subject === subject);
   let score = 35;
-  const reasons: string[] = [];
 
   const nearest = exams
     .map((e) => daysUntil(e.date))
@@ -56,21 +87,15 @@ function riskForSubject(
   if (nearest !== undefined) {
     if (nearest <= 3) {
       score += 45;
-      reasons.push("La ventana de examen está muy cerca.");
     } else if (nearest <= 10) {
       score += 28;
-      reasons.push("El examen próximo aumenta la presión.");
     } else if (nearest <= 21) {
       score += 12;
-      reasons.push("El examen ya aparece en el horizonte.");
     }
-  } else {
-    reasons.push("No hay fecha de examen registrada — asumimos mantenimiento constante.");
   }
 
   if (profile.weakTopics.length > 0) {
     score += Math.min(18, profile.weakTopics.length * 4);
-    reasons.push("Marcaste temas débiles — la recuperación espaciada te ayudará.");
   }
   const weakLinked = profile.weakTopics.some(
     (t) =>
@@ -79,17 +104,50 @@ function riskForSubject(
   );
   if (weakLinked) {
     score += 10;
-    reasons.push("Los temas débiles conectan con esta materia — prioriza repeticiones de reparación.");
   }
 
   if (profile.missedClassesApprox >= 4) {
     score += 10;
-    reasons.push("Las clases perdidas se acumulan — un kit de estudios del cuaderno cierra la brecha.");
   }
 
   let risk: RiskLevel = "low";
   if (score >= 70) risk = "high";
   else if (score >= 45) risk = "medium";
+
+  if (profile.role === "teacher") {
+    const reasons = teacherRiskReasons(nearest, profile, weakLinked);
+    const nextAction =
+      risk === "high"
+        ? "Abre el Copiloto docente, revisa entregas pendientes y deja feedback accionable en la materia con más presión."
+        : risk === "medium"
+          ? "Agenda repaso o evaluación formativa; confirma fechas y criterios en el flujo de exámenes."
+          : "Mantén criterios claros: un recordatorio breve de rúbrica o expectativas suele bastar esta semana.";
+    return { risk, score: Math.min(100, Math.round(score)), reasons, nextAction };
+  }
+
+  const reasons: string[] = [];
+  if (nearest !== undefined) {
+    if (nearest <= 3) {
+      reasons.push("La ventana de examen está muy cerca.");
+    } else if (nearest <= 10) {
+      reasons.push("El examen próximo aumenta la presión.");
+    } else if (nearest <= 21) {
+      reasons.push("El examen ya aparece en el horizonte.");
+    }
+  } else {
+    reasons.push("No hay fecha de examen registrada — asumimos mantenimiento constante.");
+  }
+
+  if (profile.weakTopics.length > 0) {
+    reasons.push("Marcaste temas débiles — la recuperación espaciada te ayudará.");
+  }
+  if (weakLinked) {
+    reasons.push("Los temas débiles conectan con esta materia — prioriza repeticiones de reparación.");
+  }
+
+  if (profile.missedClassesApprox >= 4) {
+    reasons.push("Las clases perdidas se acumulan — un kit de estudios del cuaderno cierra la brecha.");
+  }
 
   const nextAction =
     risk === "high"
@@ -99,6 +157,38 @@ function riskForSubject(
         : "Mantén con un repaso ligero y un quiz para sostener la confianza.";
 
   return { risk, score: Math.min(100, Math.round(score)), reasons, nextAction };
+}
+
+export type TeacherFocusBlock = {
+  title: string;
+  subject: string;
+  focus: string;
+  priority: "P1" | "P2" | "P3";
+  rationale: string;
+};
+
+export function buildTeacherFocusBlock(profile: UserProfile): TeacherFocusBlock | null {
+  if (profile.role !== "teacher") return null;
+  const sorted = [...buildSubjectRisks(profile)].sort((a, b) => b.score - a.score);
+  const top = sorted[0];
+  const subject = top?.subject ?? profile.subjects[0] ?? "General";
+  const riskLevel = top?.risk ?? "low";
+  const title =
+    riskLevel === "high"
+      ? "Revisión prioritaria de evaluación y feedback"
+      : riskLevel === "medium"
+        ? "Alineación de criterios y próxima sesión"
+        : "Mantenimiento de claridad y expectativas";
+  const focus = "Rúbrica, entregas y mensaje claro al estudiante";
+  const rationale =
+    riskLevel === "high"
+      ? `Concentra un bloque en "${subject}": hay más presión de fechas o brechas — prioriza retroalimentación accionable.`
+      : riskLevel === "medium"
+        ? `Organiza un repaso o micro-evaluación en "${subject}" para sostener el ritmo del cohorte.`
+        : `Mantén el hilo didáctico en "${subject}" con un recordatorio breve de criterios o cronograma.`;
+  const priority: "P1" | "P2" | "P3" =
+    riskLevel === "high" ? "P1" : riskLevel === "medium" ? "P2" : "P3";
+  return { title, subject, focus, priority, rationale };
 }
 
 export function buildSubjectRisks(profile: UserProfile): SubjectRisk[] {

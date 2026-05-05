@@ -9,15 +9,27 @@ export function isSupabaseConfigured(): boolean {
   );
 }
 
+function isRequireAuthExplicitlyDisabled(): boolean {
+  const raw = process.env.NEXT_PUBLIC_REQUIRE_AUTH?.trim().toLowerCase();
+  return raw === "false" || raw === "0" || raw === "no";
+}
+
+/** Vercel sets this to "production" only for the production deployment (not Preview). */
+function isVercelProduction(): boolean {
+  return process.env.VERCEL_ENV === "production";
+}
+
 /**
- * When Supabase is configured, middleware redirects anonymous users to /login
- * unless NEXT_PUBLIC_REQUIRE_AUTH is set to "false" (previews, demos, gradual rollout).
+ * When Supabase is configured, middleware redirects anonymous users to /login.
+ * Preview/local demos may set NEXT_PUBLIC_REQUIRE_AUTH=false to browse without login.
+ * On **Vercel Production**, that flag is never honored (and the build fails if set to false).
  * Session refresh in middleware still runs whenever keys exist.
  */
 export function isAuthRouteProtectionEnabled(): boolean {
-  // Auth protection is always enabled in any environment when Supabase is configured.
-  // This removes the public env var that could disable auth.
-  return isSupabaseConfigured();
+  if (!isSupabaseConfigured()) return false;
+  if (isVercelProduction()) return true;
+  if (isRequireAuthExplicitlyDisabled()) return false;
+  return true;
 }
 
 /**

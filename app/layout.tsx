@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 
 import { KampusProvider } from "@/components/kampus/kampus-provider";
@@ -25,6 +25,13 @@ export const metadata: Metadata = {
     template: "%s · Kampus",
   },
   description: "El sistema operativo académico para estudiantes, docentes e instituciones.",
+};
+
+/** Lets iOS / PWA expose `env(safe-area-inset-*)` for notched devices when used in CSS. */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

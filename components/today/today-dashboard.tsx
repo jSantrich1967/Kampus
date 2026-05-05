@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { todayCopy } from "@/lib/i18n/today";
-import { buildPassModePlan, buildSubjectRisks } from "@/lib/pass-mode";
+import { buildPassModePlan, buildSubjectRisks, buildTeacherFocusBlock } from "@/lib/pass-mode";
 import { TodayAuthBypassNote } from "@/components/today/today-auth-bypass-note";
 
 function daysUntil(isoDate: string): number | null {
@@ -48,6 +48,8 @@ export function TodayDashboard() {
 
   const plan = useMemo(() => buildPassModePlan(profile), [profile]);
   const risks = useMemo(() => buildSubjectRisks(profile), [profile]);
+  const teacherFocus = useMemo(() => buildTeacherFocusBlock(profile), [profile]);
+  const planningTight = profile.weeklyAvailabilityHours * 60 < profile.subjects.length * 90;
 
   const deadlines = useMemo(() => {
     return profile.upcomingExams
@@ -58,6 +60,7 @@ export function TodayDashboard() {
   }, [profile.upcomingExams]);
 
   const firstBlock = plan.sequence[0];
+  const isTeacher = profile.role === "teacher";
 
   if (!hydrated || !profile.onboardingFinished) {
     return <div className="text-sm text-slate-400">Cargando…</div>;
@@ -68,7 +71,7 @@ export function TodayDashboard() {
       <PageHeader
         eyebrow="Hoy"
         title={t.greeting({ name: profile.displayName, institution: profile.university })}
-        description={t.tagline}
+        description={isTeacher ? t.teacherTagline : t.tagline}
         actions={
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <ShareLinkButton
@@ -78,16 +81,36 @@ export function TodayDashboard() {
               label="Copiar enlace de Hoy"
               copiedLabel="Copiado"
             />
-            {profile.role === "student" ? (
-              <Link href="/pass-mode">
-                <Button className="w-full sm:w-auto">{t.passCta}</Button>
-              </Link>
-            ) : null}
-            <Link href="/study/library/rescue">
-              <Button variant="secondary" className="w-full sm:w-auto">
-                {t.rescueCta}
-              </Button>
-            </Link>
+            {isTeacher ? (
+              <>
+                <Link href="/teaching">
+                  <Button className="w-full sm:w-auto">{t.teacherCopilotCta}</Button>
+                </Link>
+                <Link href="/exams">
+                  <Button variant="secondary" className="w-full sm:w-auto">
+                    {t.teacherExamsCta}
+                  </Button>
+                </Link>
+                <Link href="/exams/calendar">
+                  <Button variant="secondary" className="w-full sm:w-auto">
+                    {t.teacherCalendarCta}
+                  </Button>
+                </Link>
+              </>
+            ) : (
+              <>
+                {profile.role === "student" ? (
+                  <Link href="/pass-mode">
+                    <Button className="w-full sm:w-auto">{t.passCta}</Button>
+                  </Link>
+                ) : null}
+                <Link href="/study/library/rescue">
+                  <Button variant="secondary" className="w-full sm:w-auto">
+                    {t.rescueCta}
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         }
       />
@@ -103,28 +126,57 @@ export function TodayDashboard() {
       <div className="grid gap-5 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>{t.sequenceTitle}</CardTitle>
-            <CardDescription>{firstBlock?.rationale}</CardDescription>
+            <CardTitle>{isTeacher ? t.teacherSequenceTitle : t.sequenceTitle}</CardTitle>
+            <CardDescription>
+              {isTeacher ? teacherFocus?.rationale : firstBlock?.rationale}
+            </CardDescription>
           </CardHeader>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <div className="text-lg font-semibold text-white">{firstBlock?.title}</div>
+              <div className="text-lg font-semibold text-white">
+                {isTeacher ? teacherFocus?.title : firstBlock?.title}
+              </div>
               <div className="mt-1 text-sm text-slate-300">
-                {firstBlock?.subject} · {firstBlock?.minutes} min · Enfoque: {firstBlock?.focus}
+                {isTeacher && teacherFocus ? (
+                  <>
+                    {teacherFocus.subject} · Enfoque: {teacherFocus.focus}
+                  </>
+                ) : (
+                  <>
+                    {firstBlock?.subject} · {firstBlock?.minutes} min · Enfoque: {firstBlock?.focus}
+                  </>
+                )}
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Badge tone="accent">{firstBlock?.priority}</Badge>
-              <Link href="/study/flashcards">
-                <Button size="sm" variant="secondary">
-                  {t.quickQuiz}
-                </Button>
-              </Link>
-              <Link href="/risk">
-                <Button size="sm" variant="ghost">
-                  {t.radar}
-                </Button>
-              </Link>
+              <Badge tone="accent">{isTeacher ? teacherFocus?.priority : firstBlock?.priority}</Badge>
+              {isTeacher ? (
+                <>
+                  <Link href="/teaching">
+                    <Button size="sm" variant="secondary">
+                      {t.teacherCopilotCta}
+                    </Button>
+                  </Link>
+                  <Link href="/collaborate/exposiciones">
+                    <Button size="sm" variant="ghost">
+                      {t.teacherPresentationsCta}
+                    </Button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link href="/study/flashcards">
+                    <Button size="sm" variant="secondary">
+                      {t.quickQuiz}
+                    </Button>
+                  </Link>
+                  <Link href="/risk">
+                    <Button size="sm" variant="ghost">
+                      {t.radar}
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </Card>
@@ -132,7 +184,13 @@ export function TodayDashboard() {
         <Card>
           <CardHeader>
             <CardTitle>{t.preparedness}</CardTitle>
-            <CardDescription>{plan.overloadNote ?? "Ritmo sostenible."}</CardDescription>
+            <CardDescription>
+              {isTeacher
+                ? planningTight
+                  ? t.teacherOverloadNote
+                  : t.teacherPreparednessHint
+                : plan.overloadNote ?? "Ritmo sostenible."}
+            </CardDescription>
           </CardHeader>
           <div className="space-y-3">
             <div className="flex items-end justify-between">
@@ -175,12 +233,12 @@ export function TodayDashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>{t.continueTitle}</CardTitle>
-            <CardDescription>{t.continueBody}</CardDescription>
+            <CardTitle>{isTeacher ? t.teacherContinueTitle : t.continueTitle}</CardTitle>
+            <CardDescription>{isTeacher ? t.teacherContinueBody : t.continueBody}</CardDescription>
           </CardHeader>
-          <Link href="/study/library">
+          <Link href={isTeacher ? "/collaborate/exposiciones" : "/study/library"}>
             <Button variant="secondary" className="w-full">
-              Ir a mis cuadernos
+              {isTeacher ? t.teacherContinueCta : "Ir a mis cuadernos"}
             </Button>
           </Link>
         </Card>
@@ -188,8 +246,10 @@ export function TodayDashboard() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t.riskTitle}</CardTitle>
-          <CardDescription>Prioriza lo que más pesa en tu semana.</CardDescription>
+          <CardTitle>{isTeacher ? t.teacherRiskTitle : t.riskTitle}</CardTitle>
+          <CardDescription>
+            {isTeacher ? t.teacherRiskDescription : "Prioriza lo que más pesa en tu semana."}
+          </CardDescription>
         </CardHeader>
         <div className="grid gap-3 md:grid-cols-2">
           {risks.map((r) => (
@@ -203,40 +263,6 @@ export function TodayDashboard() {
           ))}
         </div>
       </Card>
-
-      {profile.role === "teacher" ? (
-        <div className="grid gap-5 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t.teacherTitle}</CardTitle>
-              <CardDescription>{t.teacherBody}</CardDescription>
-            </CardHeader>
-            <div className="flex flex-wrap gap-2">
-              <Link href="/teaching">
-                <Button size="sm">Copiloto docente</Button>
-              </Link>
-              <Link href="/exams">
-                <Button size="sm" variant="secondary">
-                  Flujo de exámenes
-                </Button>
-              </Link>
-            </div>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Feedback publicable</CardTitle>
-              <CardDescription>
-                Menos fricción, más claridad para el alumno.
-              </CardDescription>
-            </CardHeader>
-            <Link href="/teaching">
-              <Button variant="ghost" size="sm" className="px-0 text-indigo-200 hover:text-white">
-                Abrir borradores →
-              </Button>
-            </Link>
-          </Card>
-        </div>
-      ) : null}
 
       {profile.role === "institution" ? (
         <Card>

@@ -48,7 +48,7 @@ npm run build      # build de producción (`.next` por defecto)
    | `OPENAI_API_KEY` | Production, Preview | si usas tutor / transcripción / visión (rutas de servidor) |
    | `OPENAI_MODEL`, etc. | opcional | valores por defecto en `.env.example` |
 
-   Para **producción** con login obligatorio, **no** pongas `NEXT_PUBLIC_REQUIRE_AUTH=false` (solo demos / previews).
+   En **Vercel Production**, **no** definas `NEXT_PUBLIC_REQUIRE_AUTH=false`: el build falla a propósito y, en runtime, el middleware **siempre** exige login si Supabase está configurado. En **Preview** puedes usar `false` solo para demos sin login.
 
 5. **Supabase → Authentication → URL configuration**
 

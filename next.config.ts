@@ -2,6 +2,18 @@ import path from "path";
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
+/** True when NEXT_PUBLIC_REQUIRE_AUTH is explicitly turned off (preview/demo only; never on Vercel Production). */
+function requireAuthIsExplicitlyDisabled(): boolean {
+  const raw = process.env.NEXT_PUBLIC_REQUIRE_AUTH?.trim().toLowerCase();
+  return raw === "false" || raw === "0" || raw === "no";
+}
+
+if (process.env.VERCEL_ENV === "production" && requireAuthIsExplicitlyDisabled()) {
+  throw new Error(
+    "Security: NEXT_PUBLIC_REQUIRE_AUTH=false is not allowed on Vercel Production. Remove it in Vercel → Project → Settings → Environment Variables (Production), then redeploy.",
+  );
+}
+
 /** Opt-in flags (see `.env.example`). Defaults match Linux/macOS/Vercel/CI. */
 function envFlag(name: string): boolean {
   const v = process.env[name]?.trim().toLowerCase();

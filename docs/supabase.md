@@ -61,11 +61,9 @@ Qué hace el script (resumen):
 
 ## 7. Auth en la app (middleware)
 
-Si existen URL y anon key, el **middleware** puede exigir sesión en rutas privadas. Para demos sin login (solo con keys puestas), puedes usar en `.env.local`:
+Si existen URL y anon key, el **middleware** exige sesión en rutas privadas salvo que desactives el requisito con `NEXT_PUBLIC_REQUIRE_AUTH=false` (solo **local** o **Vercel Preview**).
 
-`NEXT_PUBLIC_REQUIRE_AUTH=false`
-
-En producción real conviene **no** usar eso y dejar la protección activa. Más detalle en `lib/supabase/env.ts` y `.env.example`.
+En **Vercel Production** esa variable en `false` **no está permitida**: el build falla y, aunque existiera, el runtime **ignora** el bypass. Detalle en `next.config.ts`, `lib/supabase/env.ts` y `.env.example`.
 
 Con protección activa, solo son públicas **`/login`**, **`/register`** y **`/auth/*`** (el resto, incluido `/` y `/onboarding`, exige sesión).
 

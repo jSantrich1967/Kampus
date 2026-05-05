@@ -119,18 +119,18 @@ export function OnboardingFlow() {
   }
 
   return (
-    <div className="relative min-h-dvh overflow-x-hidden px-4 pb-10 pt-4 text-slate-100 sm:px-6 sm:pt-6">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(700px_400px_at_20%_0%,rgba(99,102,241,0.22),transparent)]" />
+    <div className="relative min-h-dvh overflow-x-hidden text-slate-100">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(700px_420px_at_20%_0%,rgba(99,102,241,0.2),rgba(139,92,246,0.12),transparent)]" />
 
-      {/* Single header on all breakpoints — avoids a full-height black column that broke narrow viewports. */}
-      <header className="relative z-10 mx-auto mb-6 flex max-w-3xl justify-center sm:mb-8 md:justify-start">
+      {/* Full-bleed black bar (edge to edge); logo centered. Rounded top matches card-style shells on mobile. */}
+      <header className="relative z-10 flex w-full justify-center bg-black px-4 pt-[max(1.25rem,env(safe-area-inset-top,0px))] pb-5 sm:pt-[max(1.5rem,env(safe-area-inset-top,0px))] sm:pb-6 rounded-t-2xl sm:rounded-t-3xl">
         <KampusLogo
           variant="header"
-          className="h-14 max-w-[min(100%,280px)] object-contain object-left sm:h-16 md:h-[4.5rem] md:max-w-[320px]"
+          className="h-14 max-w-[min(100%,280px)] object-contain object-center sm:h-16 md:h-[4.5rem] md:max-w-[320px]"
         />
       </header>
 
-      <div className="relative mx-auto flex max-w-3xl flex-col gap-6">
+      <div className="relative mx-auto flex max-w-3xl flex-col gap-6 px-4 pt-6 pb-[max(2.5rem,env(safe-area-inset-bottom,0px))] sm:px-6">
         <div className="text-sm text-slate-400">{t.progress(step + 1, TOTAL_STEPS)}</div>
 
         <Progress value={progressValue} />
@@ -158,7 +158,7 @@ export function OnboardingFlow() {
                     className={cn(
                       "rounded-2xl border px-4 py-4 text-left text-sm transition",
                       role === value
-                        ? "border-indigo-400/60 bg-indigo-500/10 text-white"
+                        ? "border-violet-400/70 bg-violet-500/10 text-white ring-1 ring-violet-400/35"
                         : "border-white/10 bg-white/5 text-slate-200 hover:bg-white/10",
                     )}
                   >

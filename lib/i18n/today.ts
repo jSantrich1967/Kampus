@@ -15,8 +15,19 @@ export const todayCopy: Record<
     streak: string;
     continueTitle: string;
     continueBody: string;
-    teacherTitle: string;
-    teacherBody: string;
+    teacherTagline: string;
+    teacherSequenceTitle: string;
+    teacherPreparednessHint: string;
+    teacherOverloadNote: string;
+    teacherContinueTitle: string;
+    teacherContinueBody: string;
+    teacherContinueCta: string;
+    teacherRiskTitle: string;
+    teacherRiskDescription: string;
+    teacherCopilotCta: string;
+    teacherExamsCta: string;
+    teacherCalendarCta: string;
+    teacherPresentationsCta: string;
     institutionTitle: string;
     institutionBody: string;
     quickQuiz: string;
@@ -43,8 +54,20 @@ export const todayCopy: Record<
     streak: "Racha",
     continueTitle: "Continúa donde quedaste",
     continueBody: "Abre tus cuadernos para retomar material y lanzar kit de estudios o práctica desde ahí.",
-    teacherTitle: "Atajos de docente",
-    teacherBody: "Publica feedback más rápido y detecta patrones de error.",
+    teacherTagline: "Prioriza enseñanza, evaluación y claridad para tu alumnado.",
+    teacherSequenceTitle: "Tu enfoque docente hoy",
+    teacherPreparednessHint: "Balance heurístico entre fechas de evaluación y carga declarada (ajusta en Ajustes).",
+    teacherOverloadNote:
+      "Tu disponibilidad semanal declarada es ajustada frente al número de materias: prioriza bloques cortos y revisa fechas en el Copiloto.",
+    teacherContinueTitle: "Presentaciones y aula",
+    teacherContinueBody: "Retoma exposiciones o el aula virtual desde un solo acceso.",
+    teacherContinueCta: "Ir a exposiciones",
+    teacherRiskTitle: "Seguimiento por materia",
+    teacherRiskDescription: "Prioriza feedback, rúbricas y fechas donde hay más presión docente.",
+    teacherCopilotCta: "Abrir Copiloto docente",
+    teacherExamsCta: "Flujo de exámenes",
+    teacherCalendarCta: "Calendario",
+    teacherPresentationsCta: "Exposiciones",
     institutionTitle: "Salud académica del cohorte",
     institutionBody: "Riesgo agregado y señales de engagement en un solo vistazo.",
     quickQuiz: "Quiz rápido",
