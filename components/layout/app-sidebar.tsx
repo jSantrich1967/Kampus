@@ -8,6 +8,7 @@ import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { navCopy } from "@/lib/i18n/nav";
+import { shellThemeFromRole } from "@/lib/layout/shell-theme";
 import { filterNavForRole, type NavItem } from "@/lib/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -34,6 +35,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           ? "Autodidacta"
           : "Institución";
   const groups = filterNavForRole(profile.role);
+  const shellTheme = shellThemeFromRole(profile.role);
   const pendingResearchCount = usePendingStudentWorksCount();
   const openExamsCount = useOpenExamsCount();
 
@@ -54,7 +56,13 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       <div className="px-5 pb-6 pt-8">
         <Link href="/today" className="flex flex-col gap-2" onClick={onNavigate}>
           <KampusLogo variant="sidebar" />
-          <div className="text-[11px] text-slate-400">Sistema operativo académico</div>
+          <div className="text-[11px] text-slate-400">
+            {profile.role === "teacher"
+              ? "Espacio docente · feedback y aula"
+              : profile.role === "institution"
+                ? "Panel institución · cohorte"
+                : "Sistema operativo académico"}
+          </div>
         </Link>
         <div className="mt-4 flex items-center gap-2">
           <Badge tone={profile.plan === "premium" ? "success" : "neutral"}>
@@ -81,9 +89,16 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                     onClick={onNavigate}
                     className={cn(
                       "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition",
-                      active
+                      active && shellTheme === "student"
                         ? "bg-white/10 text-white shadow-inner shadow-indigo-500/20 ring-1 ring-indigo-400/25"
-                        : "text-slate-300 hover:bg-white/5 hover:text-white",
+                        : null,
+                      active && shellTheme === "faculty"
+                        ? "bg-teal-500/12 text-white shadow-inner shadow-teal-500/15 ring-1 ring-teal-400/35"
+                        : null,
+                      active && shellTheme === "institution"
+                        ? "bg-amber-500/12 text-white shadow-inner shadow-amber-500/15 ring-1 ring-amber-400/35"
+                        : null,
+                      !active && "text-slate-300 hover:bg-white/5 hover:text-white",
                     )}
                   >
                     <Icon className="h-4 w-4 shrink-0 opacity-80" />
