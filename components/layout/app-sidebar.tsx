@@ -103,6 +103,14 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                   >
                     <Icon className="h-4 w-4 shrink-0 opacity-80" />
                     <span className="flex-1">{t.items[item.key]}</span>
+                    {item.href === "/teaching" || item.href === "/institution" ? (
+                      <span
+                        className="shrink-0 rounded-md border border-white/15 bg-white/5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-200"
+                        title={t.badges.comingSoon}
+                      >
+                        {t.badges.comingSoon}
+                      </span>
+                    ) : null}
                     {item.key === "exams" && openExamsCount > 0 ? (
                       <span
                         className="min-w-[1.25rem] rounded-full bg-amber-500/25 px-1.5 py-0.5 text-center text-[10px] font-semibold tabular-nums text-amber-100 ring-1 ring-amber-400/35"

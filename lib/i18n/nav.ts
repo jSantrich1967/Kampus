@@ -35,6 +35,7 @@ export const navCopy = {
     badges: {
       premium: "Premium",
       beta: "Beta",
+      comingSoon: "Pronto",
     },
   },
 } as const;

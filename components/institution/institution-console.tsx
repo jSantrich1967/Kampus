@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/layout/page-header";
+import { SectionProntoBanner } from "@/components/layout/section-pronto-banner";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -209,6 +210,8 @@ export function InstitutionConsole() {
           </Badge>
         }
       />
+
+      <SectionProntoBanner kind="institution" />
 
       {!isSupabaseConfigured() ? (
         <p className="text-sm text-amber-200/90">{es ? "Falta configurar Supabase." : "Supabase is not configured."}</p>
