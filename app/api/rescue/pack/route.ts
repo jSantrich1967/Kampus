@@ -36,6 +36,7 @@ function looksLikeNoUsefulExtract(text: string): boolean {
   if (!t) return true;
   const lower = t.toLowerCase();
   if (lower.includes("sin texto") || lower.includes("no text") || lower.includes("missing openai")) return true;
+  if (/\b(resp|msg)_[a-z0-9_\-]{8,}\b/i.test(t)) return true;
   if (t.replace(/\s+/g, "").length < MIN_EXTRACT_CHARS) return true;
   return false;
 }

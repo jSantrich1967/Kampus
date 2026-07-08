@@ -44,11 +44,17 @@ export function stripOpenAiResponseLeakage(raw: string): string {
   ]);
 
   for (const line of lines) {
-    const t = line.trim();
+    let t = line.trim();
     if (!t) {
       out.push(line);
       continue;
     }
+
+    // Strip inline OpenAI ids that leak into OCR output (e.g. "# file.png resp_abc123").
+    t = t.replace(/\b(resp|msg)_[A-Za-z0-9_\-]+\b/gi, "").replace(/\s{2,}/g, " ").trim();
+    if (!t) continue;
+    const headerOnly = /^#\s*.+\.(png|jpe?g|webp|gif|pdf)$/i.test(t);
+    if (headerOnly) continue;
 
     const low = t.toLowerCase();
 
@@ -59,7 +65,7 @@ export function stripOpenAiResponseLeakage(raw: string): string {
     if (noiseWords.has(low)) continue;
     if (/^"(response|message|id|object|created|model|choices|status|type)"\s*:/i.test(t)) continue;
 
-    out.push(line);
+    out.push(t);
   }
 
   return out
