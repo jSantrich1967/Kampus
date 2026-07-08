@@ -161,7 +161,7 @@ export async function POST(req: Request) {
 
   const quota = await consumeDailyUserQuota(
     "rescue_pack",
-    parseInt(process.env.API_DAILY_LIMIT_RESCUE_PACK ?? "2", 10),
+    parseInt(process.env.API_DAILY_LIMIT_RESCUE_PACK ?? "20", 10),
   );
   if (!quota.ok) {
     return NextResponse.json(
