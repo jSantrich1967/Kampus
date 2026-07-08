@@ -28,7 +28,8 @@ export async function postRescuePack(
   fallback: RescuePackFallbackInput,
 ): Promise<{ pack: RescuePack; packError: string | null }> {
   try {
-    const timeoutMs = body.packMode === "lite" ? 20000 : 30000;
+    // Allow enough time for OpenAI + Vercel serverless (route maxDuration = 60s).
+    const timeoutMs = body.packMode === "lite" ? 45000 : 60000;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     const res = await fetch("/api/rescue/pack", {

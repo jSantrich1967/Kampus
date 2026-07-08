@@ -8,6 +8,8 @@ import { rescuePackRateLimits } from "@/lib/rate-limit/openai-defaults";
 import { consumeDailyUserQuota } from "@/lib/rate-limit/user-quota";
 
 export const runtime = "nodejs";
+/** Vercel Pro: up to 60s. Required for OpenAI kit generation in production. */
+export const maxDuration = 60;
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
