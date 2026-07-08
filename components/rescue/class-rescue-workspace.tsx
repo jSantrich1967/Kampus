@@ -27,6 +27,7 @@ import { subjectToPathSegment } from "@/lib/notebooks/paths";
 import { buildRescueSourceDocumentBody, buildRescueTagNotesSection } from "@/lib/notebooks/rescue-pack-plain-text";
 import { saveRescueNotebookSource } from "@/lib/notebooks/save-rescue-source-document";
 import { postRescuePack } from "@/lib/rescue/post-rescue-pack";
+import { readRescueExtractJson, rescueExtractRejectReason } from "@/lib/rescue/extract-upload-limits";
 import { buildPassModeSubjectHref } from "@/lib/today/block-action-href";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -251,10 +252,14 @@ export function ClassRescueWorkspace() {
       setExtractBusy(true);
       setExtractError(null);
       try {
+        for (const f of list) {
+          const reject = rescueExtractRejectReason(f);
+          if (reject) throw new Error(reject);
+        }
         const fd = new FormData();
         list.forEach((f) => fd.append("files", f));
         const res = await fetch("/api/rescue/extract", { method: "POST", body: fd });
-        const json = (await res.json()) as { combinedText?: string; error?: string };
+        const json = await readRescueExtractJson<{ combinedText?: string; error?: string }>(res);
         if (!res.ok) throw new Error(json.error || "Extraction failed");
         if (!cancelled) setExtractedText((json.combinedText || "").trim());
       } catch (e) {
@@ -301,10 +306,12 @@ export function ClassRescueWorkspace() {
       if (!r.ok) throw new Error("No se pudo descargar el archivo.");
       const blob = await r.blob();
       const file = new File([blob], doc.filename, { type: doc.mime_type || blob.type || "application/octet-stream" });
+      const reject = rescueExtractRejectReason(file);
+      if (reject) throw new Error(reject);
       const fd = new FormData();
       fd.append("files", file);
       const res = await fetch("/api/rescue/extract", { method: "POST", body: fd });
-      const json = (await res.json()) as { combinedText?: string; error?: string };
+      const json = await readRescueExtractJson<{ combinedText?: string; error?: string }>(res);
       if (!res.ok) throw new Error(json.error || "Extracción fallida");
       setExtractedText((json.combinedText || "").trim());
     } catch (e) {

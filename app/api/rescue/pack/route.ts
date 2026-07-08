@@ -50,25 +50,49 @@ function clip(text: string, max: number): string {
 function extractTextFromOpenAIResponses(payload: unknown): string {
   if (!payload || typeof payload !== "object") return "";
   const root = payload as Record<string, unknown>;
-  if (typeof root.output_text === "string" && root.output_text.trim()) return root.output_text.trim();
+
+  const output = root.output;
+  if (Array.isArray(output)) {
+    const chunks: string[] = [];
+    for (const item of output) {
+      if (!item || typeof item !== "object") continue;
+      const content = (item as Record<string, unknown>).content;
+      if (!Array.isArray(content)) continue;
+      for (const c of content) {
+        if (!c || typeof c !== "object") continue;
+        const obj = c as Record<string, unknown>;
+        if (obj.type !== "output_text") continue;
+        const text = obj.text;
+        if (typeof text === "string" && text.trim()) chunks.push(text.trim());
+      }
+    }
+    if (chunks.length) return chunks.join("\n\n").trim();
+  }
+
+  if (typeof root.output_text === "string" && root.output_text.trim()) {
+    return root.output_text.trim();
+  }
 
   const parts: string[] = [];
-  collectOpenAIResponseText(payload, parts);
-  return parts
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .join("\n")
-    .trim();
+  collectOpenAIOutputTextOnly(payload, parts);
+  const seen = new Set<string>();
+  const deduped: string[] = [];
+  for (const p of parts) {
+    const t = p.trim();
+    if (!t || seen.has(t)) continue;
+    if (/^(resp|msg)_[a-z0-9_\-]+$/i.test(t)) continue;
+    if (/^gpt-\S+$/i.test(t)) continue;
+    seen.add(t);
+    deduped.push(t);
+  }
+  return deduped.join("\n").trim();
 }
 
-function collectOpenAIResponseText(node: unknown, out: string[]): void {
+function collectOpenAIOutputTextOnly(node: unknown, out: string[]): void {
   if (!node) return;
-  if (typeof node === "string") {
-    if (node.trim()) out.push(node);
-    return;
-  }
+  if (typeof node === "string") return;
   if (Array.isArray(node)) {
-    node.forEach((n) => collectOpenAIResponseText(n, out));
+    for (const item of node) collectOpenAIOutputTextOnly(item, out);
     return;
   }
   if (typeof node !== "object") return;
@@ -76,10 +100,12 @@ function collectOpenAIResponseText(node: unknown, out: string[]): void {
   const obj = node as Record<string, unknown>;
   const type = obj.type;
   const text = obj.text;
-  if (typeof type === "string" && typeof text === "string" && text.trim()) {
-    if (type.endsWith("text")) out.push(text);
+  if (typeof type === "string" && typeof text === "string" && text.trim() && type === "output_text") {
+    out.push(text);
   }
-  Object.values(obj).forEach((v) => collectOpenAIResponseText(v, out));
+  for (const value of Object.values(obj)) {
+    collectOpenAIOutputTextOnly(value, out);
+  }
 }
 
 /**
@@ -145,7 +171,9 @@ function tryParseJsonObject(text: string): unknown {
     if (balanced) {
       return JSON.parse(balanced);
     }
-    throw new Error("Invalid JSON response");
+    throw new Error(
+      "La IA devolvió un formato inválido. Reintenta en unos segundos o usa el modo «lite» (más rápido).",
+    );
   }
 }
 
@@ -296,6 +324,7 @@ export async function POST(req: Request) {
       ],
       temperature: extractUseful ? 0.25 : 0.35,
       max_output_tokens: packMode === "lite" ? 1400 : 2600,
+      text: { format: { type: "json_object" } },
     };
 
     // Retries for transient OpenAI issues (e.g., HTTP 500/503).
