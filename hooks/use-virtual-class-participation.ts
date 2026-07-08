@@ -23,7 +23,10 @@ export function useVirtualClassParticipation(
   const [live, setLive] = useState<ParticipationLiveSnapshot | null>(null);
   const [realtime, setRealtime] = useState(false);
   const displayNameRef = useRef(profile.displayName || "Estudiante");
-  displayNameRef.current = profile.displayName || "Estudiante";
+
+  useEffect(() => {
+    displayNameRef.current = profile.displayName || "Estudiante";
+  }, [profile.displayName]);
 
   useEffect(() => {
     if (!active || !authUserId) {

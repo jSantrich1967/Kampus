@@ -22,7 +22,10 @@ export function useStudyRoomPresence(
   const active = Boolean(isSupabaseConfigured() && authUserId && roomCode !== "default" && hydrated);
   const [peers, setPeers] = useState<StudyRoomPresenceRow[]>([]);
   const displayNameRef = useRef(profile.displayName || "Estudiante");
-  displayNameRef.current = profile.displayName || "Estudiante";
+
+  useEffect(() => {
+    displayNameRef.current = profile.displayName || "Estudiante";
+  }, [profile.displayName]);
 
   useEffect(() => {
     if (!active || !authUserId) {

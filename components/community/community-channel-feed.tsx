@@ -107,7 +107,7 @@ export function CommunityChannelFeed({
     return sortedPosts;
   }, [sortedPosts, feedFilter, savedPostIds]);
 
-  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const [weekAgo] = useState(() => Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   return (
     <div className="space-y-6">

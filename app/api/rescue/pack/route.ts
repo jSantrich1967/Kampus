@@ -323,7 +323,7 @@ export async function POST(req: Request) {
         { role: "user", content: [{ type: "input_text", text: user }] },
       ],
       temperature: extractUseful ? 0.25 : 0.35,
-      max_output_tokens: packMode === "lite" ? 1400 : 2600,
+      max_output_tokens: packMode === "lite" ? 1800 : 3200,
       text: { format: { type: "json_object" } },
     };
 
