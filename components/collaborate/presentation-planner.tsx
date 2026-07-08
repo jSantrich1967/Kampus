@@ -5,6 +5,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Check, Clock, Loader2, Mic2, Plus, RefreshCw, Sparkles, Trash2, Video, Users } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { CollaborateSubnav } from "@/components/collaborate/collaborate-subnav";
+import { PresentationsOnboardingPanel } from "@/components/collaborate/presentations-onboarding-panel";
 import { ShareLinkButton } from "@/components/growth/share-link-button";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button, buttonClasses } from "@/components/ui/button";
@@ -25,6 +27,10 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import type { PresentationTutorFeedback } from "@/lib/schemas/presentation-tutor";
 import { presentationDueBadgeLabel } from "@/lib/calendar/presentation-due-label";
+import { notifyPresentationsChanged } from "@/lib/collaborate/presentation-urgency";
+import { parsePresentationDeckId } from "@/lib/collaborate/presentation-path";
+import { buildVirtualSessionHref } from "@/lib/collaborate/virtual-session-path";
+import { collaborateCopy } from "@/lib/i18n/collaborate";
 import {
   deletePresentationDeckRemote,
   fetchPresentationDeckByIdRemote,
@@ -42,6 +48,7 @@ function uid() {
 export function PresentationPlanner() {
   const { locale, profile, authUserId } = useKampus();
   const es = locale === "es";
+  const col = collaborateCopy.es;
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname() ?? "/collaborate/exposiciones";
@@ -63,6 +70,7 @@ export function PresentationPlanner() {
   const [newDeckFormOpen, setNewDeckFormOpen] = useState(false);
   const [newDeckTitle, setNewDeckTitle] = useState("");
   const [newDeckDue, setNewDeckDue] = useState("");
+  const [aulaContext, setAulaContext] = useState<{ sessionId: string; course: string; topic: string } | null>(null);
 
   const liveVideoRef = useRef<HTMLVideoElement | null>(null);
   const liveStreamRef = useRef<MediaStream | null>(null);
@@ -148,12 +156,36 @@ export function PresentationPlanner() {
         const paramDeck = url?.searchParams.get("deck")?.trim() ?? null;
         const stored = loadActivePresentationDeckId();
         const ordered = sortPresentationDeckSummaries(summaries);
+
+        let aulaDeckId: string | null = null;
+        const fromAula = url?.searchParams.get("from") === "aula";
+        const sessionId = url?.searchParams.get("session")?.trim() ?? "";
+        if (fromAula && sessionId) {
+          const { data: sess } = await supabase
+            .from("virtual_class_sessions")
+            .select("presentation_url,course,topic")
+            .eq("id", sessionId)
+            .maybeSingle();
+          if (sess && !cancelled) {
+            setAulaContext({
+              sessionId,
+              course: String(sess.course ?? ""),
+              topic: String(sess.topic ?? ""),
+            });
+            aulaDeckId = parsePresentationDeckId(String(sess.presentation_url ?? ""));
+          }
+        } else if (!cancelled) {
+          setAulaContext(null);
+        }
+
         const pick =
-          paramDeck && ordered.some((s) => s.id === paramDeck)
-            ? paramDeck
-            : stored && ordered.some((s) => s.id === stored)
-              ? stored
-              : ordered[0]!.id;
+          aulaDeckId && ordered.some((s) => s.id === aulaDeckId)
+            ? aulaDeckId
+            : paramDeck && ordered.some((s) => s.id === paramDeck)
+              ? paramDeck
+              : stored && ordered.some((s) => s.id === stored)
+                ? stored
+                : ordered[0]!.id;
 
         const record = await fetchPresentationDeckByIdRemote(supabase, authUserId!, pick);
         if (cancelled) return;
@@ -194,7 +226,27 @@ export function PresentationPlanner() {
     return () => {
       cancelled = true;
     };
-  }, [authUserId, useCloud, pathname, router]);
+  }, [authUserId, useCloud, pathname, router, searchParams]);
+
+  async function handleDemoLoaded(deckId?: string) {
+    if (useCloud && authUserId && deckId) {
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const fresh = await fetchPresentationDeckSummariesRemote(supabase, authUserId);
+        setDeckSummaries(sortPresentationDeckSummaries(fresh));
+        notifyPresentationsChanged();
+        if (deckId !== activeDeckId) {
+          await selectDeckById(deckId);
+        } else {
+          const record = await fetchPresentationDeckByIdRemote(supabase, authUserId, deckId);
+          setState(record.state);
+          resetPlannerUi();
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }
 
   async function selectDeckById(id: string) {
     if (!id || id === activeDeckId || !useCloud || !authUserId) return;
@@ -458,6 +510,7 @@ export function PresentationPlanner() {
     if (!hydrated) return;
     if (useCloud) return;
     savePresentation(state);
+    notifyPresentationsChanged();
   }, [hydrated, useCloud, state]);
 
   useEffect(() => {
@@ -477,6 +530,7 @@ export function PresentationPlanner() {
               : s,
           ),
         );
+        notifyPresentationsChanged();
       });
     }, 700);
     return () => window.clearTimeout(handle);
@@ -598,16 +652,36 @@ export function PresentationPlanner() {
 
   return (
     <div className="space-y-8">
+      <CollaborateSubnav />
+
+      <PresentationsOnboardingPanel
+        useCloud={useCloud}
+        deckCount={sortedDeckSummaries.length}
+        onLoadLocalExample={loadExampleTemplate}
+        onDemoLoaded={(deckId) => void handleDemoLoaded(deckId)}
+      />
+
+      {aulaContext ? (
+        <Card className="border-teal-400/25 bg-teal-500/10">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{col.aulaLinkedTitle(aulaContext.course)}</CardTitle>
+            <CardDescription>
+              {aulaContext.topic.trim() ? `${aulaContext.topic} · ` : ""}
+              {col.aulaLinkedHint}
+            </CardDescription>
+          </CardHeader>
+          <div className="px-6 pb-4">
+            <Link href={buildVirtualSessionHref(aulaContext.sessionId)} className={buttonClasses({ variant: "ghost", size: "sm" })}>
+              {col.aulaBackCta}
+            </Link>
+          </div>
+        </Card>
+      ) : null}
+
       <div>
-        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-200/80">Colaboración</div>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white md:text-4xl">
-          {es ? "Mis exposiciones" : "My presentations"}
-        </h1>
-        <p className="mt-2 max-w-3xl text-base text-slate-300">
-          {es
-            ? "Aquí creas y organizas tus exposiciones: puedes tener varias en tu cuenta (cada una con título, fecha en el calendario, equipo y guiones). Usa Nueva exposición para otra más, o la plantilla de ejemplo para ver el flujo. Comparte enlace y código; en Aula virtual ensayan en vivo."
-            : "Create and organize multiple presentations in your account. Use New presentation for another deck, or Example template to learn the flow. Share link and code; use Virtual classroom to rehearse live."}
-        </p>
+        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-200/80">{col.eyebrow}</div>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white md:text-4xl">{col.presentationsPageTitle}</h1>
+        <p className="mt-2 max-w-3xl text-base text-slate-300">{col.presentationsPageDescription}</p>
         {useCloud && sortedDeckSummaries.length > 0 ? (
           <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3">
             <label className="flex flex-wrap items-center gap-2 text-sm text-slate-200">

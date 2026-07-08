@@ -12,6 +12,8 @@ export const diaryEntrySchema = z.object({
   /** Día “lógico” de la entrada (zona local), YYYY-MM-DD */
   entryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   createdAt: z.string().min(1),
+  /** ISO timestamp when the row was last edited (cloud sync). */
+  updatedAt: z.string().optional(),
   mood: diaryMoodSchema,
   /** 1 = muy baja … 5 = muy alta */
   energy: z.number().int().min(1).max(5),

@@ -17,10 +17,27 @@ Guía para crear el proyecto, conectar la app y crear la tabla de perfiles que u
 3. Pégalas en **`.env.local`** (local) y en **Vercel → Environment Variables** (producción/preview).  
    **Nunca** pongas la clave **service_role** en el front ni en variables `NEXT_PUBLIC_*`; solo en backend seguro si algún día la necesitas.
 
-## 3. Autenticación por email
+## 3. Autenticación (email y Google)
+
+### Email
 
 1. **Authentication** → **Providers** → **Email**: actívalo si quieres registro/login con correo y contraseña (es lo que usa el panel de la app).
 2. Opcional: **Authentication** → **Email Templates** para personalizar el correo de confirmación.
+
+### Google (Gmail)
+
+La app muestra **«Continuar con Google»** en `/login` y `/register` (`signInWithOAuth` → `/auth/callback`).
+
+1. En [Google Cloud Console](https://console.cloud.google.com/):
+   - Crea un proyecto (o usa uno existente).
+   - **APIs & Services** → **OAuth consent screen**: configura pantalla de consentimiento (tipo *External* para pruebas).
+   - **Credentials** → **Create credentials** → **OAuth client ID** → tipo **Web application**.
+   - **Authorized JavaScript origins**: `http://localhost:3002` y tu URL de producción (ej. `https://tu-app.vercel.app`).
+   - **Authorized redirect URIs**: la URL que muestra Supabase al activar Google (suele ser `https://<tu-proyecto>.supabase.co/auth/v1/callback`).
+2. En Supabase: **Authentication** → **Providers** → **Google** → activar y pegar **Client ID** y **Client Secret** de Google.
+3. Confirma que en **URL Configuration** (sección 4) están `http://localhost:3002/auth/callback` y la de producción.
+
+Tras guardar, prueba en local: **Continuar con Google** debe redirigir a Google y volver a la app con sesión iniciada.
 
 ## 4. URLs del sitio y redirecciones (muy importante)
 

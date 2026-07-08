@@ -16,6 +16,7 @@
 
 html {
   color-scheme: dark;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -113,4 +114,116 @@ body {
 @keyframes zoom-in-95 {
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes kampus-mark-enter {
+  from { opacity: 0; transform: scale(0.92) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .kampus-mark-enter {
+    animation: kampus-mark-enter 0.7s ease-out forwards;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kampus-mark-enter {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Kampus animated logo — auth screens */
+@keyframes kampus-logo-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes kampus-logo-fill-in {
+  to { opacity: 1; }
+}
+
+@keyframes kampus-auth-fade-up {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Kampus Lumina — marketing landing */
+.kampus-glass-nav {
+  background: rgba(19, 19, 24, 0.8);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.kampus-hero-gradient {
+  background:
+    radial-gradient(circle at 80% 20%, rgba(124, 58, 237, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 20% 80%, rgba(167, 139, 250, 0.05) 0%, transparent 50%);
+}
+
+/* Kampus Lumina — app surfaces (cuadernos, etc.) */
+.kampus-lumina-glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.kampus-lumina-sidebar {
+  background: rgba(19, 19, 24, 0.8);
+  backdrop-filter: blur(16px);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.kampus-lumina-nav-active {
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.28) 0%, rgba(99, 102, 241, 0.08) 100%);
+  color: #e9d5ff;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .kampus-lumina-glass-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(124, 58, 237, 0.3);
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kampus-lumina-glass-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(124, 58, 237, 0.3);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .kampus-logo-draw {
+    stroke-dasharray: 400;
+    stroke-dashoffset: 400;
+    animation: kampus-logo-draw 3s ease-out forwards;
+  }
+
+  .kampus-logo-fill {
+    opacity: 0;
+    animation: kampus-logo-fill-in 1s ease-out 2.5s forwards;
+  }
+
+  .kampus-auth-fade-up {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: kampus-auth-fade-up 0.8s ease-out 3s forwards;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kampus-logo-draw {
+    stroke-dashoffset: 0;
+  }
+
+  .kampus-logo-fill {
+    opacity: 1;
+  }
+
+  .kampus-auth-fade-up {
+    opacity: 1;
+    transform: none;
+  }
 }

@@ -1,19 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, Presentation } from "lucide-react";
+import { ArrowLeft, Calendar, Presentation } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { VirtualClassBreakoutPanel } from "@/components/collaborate/virtual-class-breakout-panel";
+import { VirtualClassLmsPanel } from "@/components/collaborate/virtual-class-lms-panel";
+import { VirtualClassParticipationPanel } from "@/components/collaborate/virtual-class-participation-panel";
+import { VirtualClassRecordingPanel } from "@/components/collaborate/virtual-class-recording-panel";
+import { VirtualClassTranscriptPanel } from "@/components/collaborate/virtual-class-transcript-panel";
+import { VirtualClassVideoPanel } from "@/components/collaborate/virtual-class-video-panel";
+import { useVirtualClassAttendance } from "@/hooks/use-virtual-class-attendance";
+import { VirtualClassroomRosterPanel } from "@/components/collaborate/virtual-classroom-roster-panel";
+import { buildCalendarHrefForScheduleLink } from "@/lib/collaborate/virtual-class-schedule-link";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { buildSessionPresentationHref } from "@/lib/collaborate/virtual-session-path";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { enrollVirtualClassSession } from "@/lib/supabase/virtual-class-db";
+import { collaborateCopy } from "@/lib/i18n/collaborate";
 
 type Props = { sessionId: string };
 
 type SessionRow = {
   id: string;
+  created_by: string;
   course: string;
   professor_name: string;
   topic: string;
@@ -22,11 +35,19 @@ type SessionRow = {
   room_label: string;
   join_url: string | null;
   embed_video_url: string | null;
+  presentation_url: string | null;
+  recording_url: string | null;
+  transcript_text: string | null;
+  transcript_updated_at: string | null;
+  lms_course_id: string | null;
+  schedule_row_id: string | null;
+  class_date: string | null;
   virtual_class_roster?: { count: number }[] | null;
 };
 
 type UiSession = {
   id: string;
+  createdBy: string;
   course: string;
   professor: string;
   topic: string;
@@ -36,6 +57,13 @@ type UiSession = {
   roomLabel: string;
   joinUrl: string | null;
   embedVideoUrl: string | null;
+  presentationUrl: string | null;
+  recordingUrl: string | null;
+  transcriptText: string | null;
+  transcriptUpdatedAt: string | null;
+  lmsCourseId: string | null;
+  scheduleRowId: string | null;
+  classDate: string | null;
 };
 
 function formatTime(total: number) {
@@ -47,6 +75,7 @@ function formatTime(total: number) {
 export function VirtualClassroomSession({ sessionId }: Props) {
   const { locale, authUserId } = useKampus();
   const es = locale === "es";
+  const t = collaborateCopy.es;
   const [session, setSession] = useState<UiSession | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -69,7 +98,7 @@ export function VirtualClassroomSession({ sessionId }: Props) {
         const { data, error } = await supabase
           .from("virtual_class_sessions")
           .select(
-            "id,course,professor_name,topic,capacity,starts_at,room_label,join_url,embed_video_url,virtual_class_roster(count)",
+            "id,created_by,course,professor_name,topic,capacity,starts_at,room_label,join_url,embed_video_url,presentation_url,recording_url,transcript_text,transcript_updated_at,lms_course_id,schedule_row_id,class_date,virtual_class_roster(count)",
           )
           .eq("id", sessionId)
           .maybeSingle();
@@ -80,17 +109,32 @@ export function VirtualClassroomSession({ sessionId }: Props) {
           return;
         }
         const row = data as SessionRow;
+        let enrolled = row.virtual_class_roster?.[0]?.count ?? 0;
+        try {
+          const enrollResult = await enrollVirtualClassSession(supabase, sessionId);
+          if (enrollResult.ok && !enrollResult.alreadyEnrolled) enrolled += 1;
+        } catch {
+          /* enrollment optional — roster may be closed or full */
+        }
         setSession({
           id: row.id,
+          createdBy: row.created_by,
           course: row.course,
           professor: row.professor_name,
           topic: row.topic,
           capacity: row.capacity,
-          enrolled: row.virtual_class_roster?.[0]?.count ?? 0,
+          enrolled,
           startsAt: row.starts_at,
           roomLabel: row.room_label,
           joinUrl: row.join_url ?? null,
           embedVideoUrl: row.embed_video_url ?? null,
+          presentationUrl: row.presentation_url ?? null,
+          recordingUrl: row.recording_url ?? null,
+          transcriptText: row.transcript_text ?? null,
+          transcriptUpdatedAt: row.transcript_updated_at ?? null,
+          lmsCourseId: row.lms_course_id ?? null,
+          scheduleRowId: row.schedule_row_id ?? null,
+          classDate: row.class_date ?? null,
         });
       } catch (e) {
         const msg = e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : null;
@@ -110,6 +154,8 @@ export function VirtualClassroomSession({ sessionId }: Props) {
     const id = window.setInterval(() => setFocusSeconds((t) => t + 1), 1000);
     return () => window.clearInterval(id);
   }, [running]);
+
+  useVirtualClassAttendance(sessionId, Boolean(authUserId && session));
 
   if (!isSupabaseConfigured()) {
     return <p className="text-sm text-amber-200/90">{es ? "Falta configurar Supabase." : "Supabase is not configured."}</p>;
@@ -139,7 +185,25 @@ export function VirtualClassroomSession({ sessionId }: Props) {
   }
 
   const seatsLeft = Math.max(0, session.capacity - session.enrolled);
-  const presHref = `/collaborate/exposiciones?from=aula&session=${encodeURIComponent(session.id)}`;
+  const presHref = buildSessionPresentationHref(session.id, session.presentationUrl);
+  const isCreator = authUserId === session.createdBy;
+  const sessionStarted = new Date(session.startsAt).getTime() <= Date.now();
+
+  async function refreshEnrolledCount() {
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error } = await supabase
+        .from("virtual_class_sessions")
+        .select("virtual_class_roster(count)")
+        .eq("id", sessionId)
+        .maybeSingle();
+      if (error) throw error;
+      const count = (data as SessionRow | null)?.virtual_class_roster?.[0]?.count ?? 0;
+      setSession((prev) => (prev ? { ...prev, enrolled: count } : prev));
+    } catch {
+      /* ignore */
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -165,47 +229,60 @@ export function VirtualClassroomSession({ sessionId }: Props) {
           {es ? "Cupo:" : "Seats:"}{" "}
           {seatsLeft} {es ? "libres de" : "free of"} {session.capacity} ({session.enrolled} {es ? "dentro" : "inside"})
         </p>
+        {session.scheduleRowId && session.classDate ? (
+          <Link
+            href={buildCalendarHrefForScheduleLink(session.scheduleRowId, session.classDate)}
+            className="mt-2 inline-flex items-center gap-1.5 text-xs text-teal-300 hover:underline"
+          >
+            <Calendar className="h-3.5 w-3.5" aria-hidden />
+            {t.scheduleLinkedBadge(session.classDate)}
+          </Link>
+        ) : null}
       </div>
 
+      <VirtualClassParticipationPanel sessionId={session.id} isCreator={isCreator} sessionLoaded />
+
+      <VirtualClassLmsPanel
+        sessionId={session.id}
+        isCreator={isCreator}
+        creatorUserId={session.createdBy}
+        lmsCourseId={session.lmsCourseId}
+        onUpdated={(id) => setSession((prev) => (prev ? { ...prev, lmsCourseId: id } : prev))}
+      />
+
+      <VirtualClassRecordingPanel
+        sessionId={session.id}
+        isCreator={isCreator}
+        recordingUrl={session.recordingUrl}
+        sessionStarted={sessionStarted}
+        onUpdated={(url) => setSession((prev) => (prev ? { ...prev, recordingUrl: url } : prev))}
+      />
+
+      <VirtualClassTranscriptPanel
+        sessionId={session.id}
+        isCreator={isCreator}
+        transcriptText={session.transcriptText}
+        transcriptUpdatedAt={session.transcriptUpdatedAt}
+        onUpdated={(text) =>
+          setSession((prev) =>
+            prev ? { ...prev, transcriptText: text, transcriptUpdatedAt: new Date().toISOString() } : prev,
+          )
+        }
+      />
+
+      <VirtualClassBreakoutPanel sessionId={session.id} isCreator={isCreator} courseTitle={session.course} />
+
+      {isCreator ? (
+        <VirtualClassroomRosterPanel
+          sessionId={session.id}
+          capacity={session.capacity}
+          enrolled={session.enrolled}
+          onRosterChange={() => void refreshEnrolledCount()}
+        />
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>{es ? "Clase (vídeo)" : "Class (video)"}</CardTitle>
-            <CardDescription>
-              {es
-                ? "Si tu institución usa Meet/Zoom, aquí iría el embed o el botón de unión."
-                : "If your school uses Meet/Zoom, the embed or join button would go here."}
-            </CardDescription>
-          </CardHeader>
-          <div className="space-y-3 px-6 pb-6">
-            {session.embedVideoUrl ? (
-              <div className="aspect-video overflow-hidden rounded-xl border border-white/10 bg-black">
-                <iframe
-                  title={es ? "Vídeo de la clase" : "Class video"}
-                  src={session.embedVideoUrl}
-                  className="h-full w-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
-              </div>
-            ) : (
-              <p className="text-sm text-slate-400">
-                {es ? "Demo sin vídeo embebido en esta sesión." : "No embedded video in this demo session."}
-              </p>
-            )}
-            {session.joinUrl ? (
-              <a
-                href={session.joinUrl}
-                target="_blank"
-                rel="noreferrer"
-                className={buttonClasses({ variant: "secondary", className: "gap-2" })}
-              >
-                <ExternalLink className="h-4 w-4" />
-                {es ? "Abrir videollamada" : "Open video call"}
-              </a>
-            ) : null}
-          </div>
-        </Card>
+        <VirtualClassVideoPanel embedVideoUrl={session.embedVideoUrl} joinUrl={session.joinUrl} />
 
         <Card>
           <CardHeader>

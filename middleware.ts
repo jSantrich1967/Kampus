@@ -1,5 +1,4 @@
 import { createServerClient } from "@supabase/ssr";
-import type { User } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { isAuthRouteProtectionEnabled, isSupabaseConfigured } from "@/lib/supabase/env";
@@ -8,30 +7,6 @@ import { getSafeInternalRedirect, isAuthPublicPath } from "@/lib/supabase/safe-r
 /** Avoid Supabase round-trips for anonymous visitors to public routes (reduces Edge timeouts). */
 function hasLikelySupabaseAuthCookie(request: NextRequest): boolean {
   return request.cookies.getAll().some(({ name }) => name.startsWith("sb-"));
-}
-
-/**
- * `getUser()` hits Auth; on cold/slow networks Vercel can return MIDDLEWARE_INVOCATION_TIMEOUT.
- * After a short wait, fall back to cookie session (still no access to Postgres; route handlers enforce RLS).
- */
-const AUTH_GET_USER_MS = 2800;
-
-async function getAuthUserWithBudget(
-  supabase: ReturnType<typeof createServerClient>,
-): Promise<{ user: User | null }> {
-  const getUserPromise = supabase.auth.getUser().then((r: Awaited<ReturnType<typeof supabase.auth.getUser>>) => ({
-    kind: "user" as const,
-    r,
-  }));
-  const timeoutPromise = new Promise<{ kind: "timeout" }>((resolve) => {
-    setTimeout(() => resolve({ kind: "timeout" }), AUTH_GET_USER_MS);
-  });
-  const outcome = await Promise.race([getUserPromise, timeoutPromise]);
-  if (outcome.kind === "user") {
-    return { user: outcome.r.data.user ?? null };
-  }
-  const { data } = await supabase.auth.getSession();
-  return { user: data.session?.user ?? null };
 }
 
 function redirectWithSessionCookies(from: NextResponse, url: URL) {
@@ -51,6 +26,11 @@ export async function middleware(request: NextRequest) {
 
   // Anonymous public pages: skip Supabase entirely (major latency win on Edge).
   if (isAuthPublicPath(pathname) && !hasLikelySupabaseAuthCookie(request)) {
+    return NextResponse.next();
+  }
+
+  // Local/preview demos with auth bypass: skip Supabase on every navigation.
+  if (!isAuthRouteProtectionEnabled()) {
     return NextResponse.next();
   }
 
@@ -74,11 +54,10 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  const { user } = await getAuthUserWithBudget(supabase);
-
-  if (!isAuthRouteProtectionEnabled()) {
-    return response;
-  }
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
 
   if (!user && !isAuthPublicPath(pathname)) {
     const loginUrl = new URL("/login", request.url);

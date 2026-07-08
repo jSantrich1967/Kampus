@@ -2,15 +2,26 @@
 
 import Link from "next/link";
 import { Video } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 
+import { VirtualClassroomOnboardingPanel } from "@/components/collaborate/virtual-classroom-onboarding-panel";
+import { VirtualClassroomCreateForm, type VirtualClassSchedulePrefill } from "@/components/collaborate/virtual-classroom-create-form";
+import { VirtualClassWebcalPanel } from "@/components/collaborate/virtual-class-webcal-panel";
+import { VirtualClassIcsExportButton } from "@/components/collaborate/virtual-class-ics-export-button";
+import { CollaborateSubnav } from "@/components/collaborate/collaborate-subnav";
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { collaborateCopy } from "@/lib/i18n/collaborate";
 import { navCopy } from "@/lib/i18n/nav";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { enrollVirtualClassSession, fetchMyVirtualClassSessionIds } from "@/lib/supabase/virtual-class-db";
+import { fetchClassScheduleRemote } from "@/lib/supabase/agenda-db";
+import { endsAtFromScheduleSlot, startsAtFromScheduleSlot } from "@/lib/collaborate/virtual-class-schedule-link";
 import { useSupabaseSWR } from "@/lib/hooks/use-supabase-swr";
 
 type SessionRow = {
@@ -33,6 +44,7 @@ type UiSession = {
   topic: string;
   capacity: number;
   enrolled: number;
+  isEnrolled: boolean;
   startsAt: string;
   roomLabel: string;
   joinUrl: string | null;
@@ -41,11 +53,17 @@ type UiSession = {
 
 export function VirtualClassroomHub() {
   const { locale, authUserId } = useKampus();
+  const searchParams = useSearchParams();
+  const scheduleIdParam = searchParams.get("scheduleId");
+  const classDateParam = searchParams.get("classDate");
   const es = locale === "es";
   const t = navCopy.es;
-  const { data, error: loadError, isLoading } = useSupabaseSWR<UiSession[]>(
+  const c = collaborateCopy.es;
+  const [schedulePrefill, setSchedulePrefill] = useState<VirtualClassSchedulePrefill | null>(null);
+  const { data, error: loadError, isLoading, mutate } = useSupabaseSWR<UiSession[]>(
     authUserId ? `vc_sessions:${authUserId}` : null,
     async (supabase) => {
+      const enrolledIds = await fetchMyVirtualClassSessionIds(supabase, authUserId!);
       const { data, error } = await supabase
         .from("virtual_class_sessions")
         .select(
@@ -61,6 +79,7 @@ export function VirtualClassroomHub() {
         topic: row.topic,
         capacity: row.capacity,
         enrolled: row.virtual_class_roster?.[0]?.count ?? 0,
+        isEnrolled: enrolledIds.has(row.id),
         startsAt: row.starts_at,
         roomLabel: row.room_label,
         joinUrl: row.join_url ?? null,
@@ -70,18 +89,70 @@ export function VirtualClassroomHub() {
     },
   );
 
+  const [enrollBusy, setEnrollBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!authUserId || !scheduleIdParam || !classDateParam) {
+      setSchedulePrefill(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const rows = await fetchClassScheduleRemote(supabase, authUserId);
+        const row = rows.find((r) => r.id === scheduleIdParam);
+        if (!row || cancelled) return;
+        const startsIso = startsAtFromScheduleSlot(classDateParam, row.startTime);
+        const endsIso = endsAtFromScheduleSlot(classDateParam, row.endTime);
+        const pad = (n: number) => String(n).padStart(2, "0");
+        const toLocal = (iso: string) => {
+          const d = new Date(iso);
+          return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        };
+        setSchedulePrefill({
+          scheduleRowId: row.id,
+          classDate: classDateParam,
+          subject: row.subject,
+          professorName: row.professorName,
+          location: row.location,
+          startsLocal: toLocal(startsIso),
+          endsLocal: toLocal(endsIso),
+        });
+      } catch {
+        if (!cancelled) setSchedulePrefill(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, scheduleIdParam, classDateParam]);
+
   const sessions = useMemo(() => data ?? [], [data]);
+
+  async function handleEnroll(sessionId: string) {
+    if (!authUserId) return;
+    setEnrollBusy(sessionId);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const result = await enrollVirtualClassSession(supabase, sessionId);
+      if (!result.ok && result.error !== "full") {
+        return;
+      }
+      await mutate();
+    } finally {
+      setEnrollBusy(null);
+    }
+  }
 
   return (
     <div className="space-y-8">
+      <CollaborateSubnav />
+
       <PageHeader
-        eyebrow={t.groups.work}
-        title={es ? "Aula virtual" : "Virtual classroom"}
-        description={
-          es
-            ? "Sesiones demo: horario, tema y cupo. La videollamada real depende de tu institución."
-            : "Demo sessions: schedule, topic, seats. Live video depends on your institution."
-        }
+        eyebrow={c.eyebrow}
+        title={c.classroomPageTitle}
+        description={c.classroomPageDescription}
       />
 
       {!isSupabaseConfigured() ? (
@@ -100,16 +171,25 @@ export function VirtualClassroomHub() {
         <p className="text-sm text-slate-400">{es ? "Cargando sesiones…" : "Loading sessions…"}</p>
       ) : null}
 
+      {authUserId && isSupabaseConfigured() ? (
+        <VirtualClassroomOnboardingPanel sessionCount={sessions.length} onDemoCreated={() => void mutate()} />
+      ) : null}
+
+      {authUserId && isSupabaseConfigured() ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <VirtualClassIcsExportButton />
+          <VirtualClassWebcalPanel />
+        </div>
+      ) : null}
+
+      <VirtualClassroomCreateForm onCreated={() => void mutate()} schedulePrefill={schedulePrefill} />
+
       <div className="grid gap-4 md:grid-cols-2">
         {!isLoading && sessions.length === 0 && authUserId ? (
           <Card className="border-white/10 bg-slate-950/40">
             <CardHeader>
               <CardTitle>{es ? "Sin sesiones" : "No sessions"}</CardTitle>
-              <CardDescription>
-                {es
-                  ? "Aún no tienes sesiones asignadas. Cuando un docente te agregue al roster, aparecerán aquí."
-                  : "You don't have assigned sessions yet. Once an instructor adds you to the roster, they'll show up here."}
-              </CardDescription>
+              <CardDescription>{c.virtualClassEmptyHint}</CardDescription>
             </CardHeader>
           </Card>
         ) : null}
@@ -144,16 +224,27 @@ export function VirtualClassroomHub() {
                 <div className="flex flex-wrap gap-2 pt-1">
                   {full ? (
                     <Button type="button" size="sm" disabled>
-                      {es ? "Sin cupo" : "No seats"}
+                      {c.virtualClassNoSeats}
                     </Button>
-                  ) : (
+                  ) : s.isEnrolled ? (
                     <Link
                       href={`/collaborate/aula-virtual/${encodeURIComponent(s.id)}`}
                       className={buttonClasses({ size: "sm", className: "gap-2" })}
                     >
                       <Video className="h-4 w-4" />
-                      {es ? "Entrar al aula" : "Enter classroom"}
+                      {c.virtualClassEnter}
                     </Link>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={enrollBusy === s.id}
+                      onClick={() => void handleEnroll(s.id)}
+                      className="gap-2"
+                    >
+                      <Video className="h-4 w-4" />
+                      {enrollBusy === s.id ? c.virtualClassEnrolling : c.virtualClassEnroll}
+                    </Button>
                   )}
                 </div>
               </CardHeader>

@@ -11,7 +11,7 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
 
   return (
     <html lang="es">
-      <body>
+      <body className="min-h-dvh bg-kampus-bg text-slate-100 antialiased">
         <NextError statusCode={0} />
       </body>
     </html>

@@ -22,6 +22,7 @@ export function parseShareAttribution(searchParams: URLSearchParams): {
     "ai_library",
     "exam_workflow",
     "teacher_workflow",
+    "wellbeing_counselor",
   ];
   const campaign = allowed.includes(raw as ShareCampaign) ? (raw as ShareCampaign) : null;
   return { isKampusShare: isKampusShare && !!campaign, campaign, ref };

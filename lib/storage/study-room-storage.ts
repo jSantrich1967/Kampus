@@ -1,4 +1,5 @@
-const STORAGE_KEY = "kampus.studyroom.v1";
+const LEGACY_STORAGE_KEY = "kampus.studyroom.v1";
+const STORAGE_PREFIX = "kampus.studyroom.v1.";
 
 export type StudyRoomState = {
   title: string;
@@ -16,10 +17,22 @@ export const defaultStudyRoomState: StudyRoomState = {
   focusSeconds: 0,
 };
 
-export function loadStudyRoom(): StudyRoomState {
+export const STUDY_ROOM_CHANGED_EVENT = "kampus:study-room-changed";
+
+export function notifyStudyRoomChanged(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(STUDY_ROOM_CHANGED_EVENT));
+}
+
+function storageKeyForRoom(roomCode: string): string {
+  const code = roomCode.trim() || "default";
+  return code === "default" ? LEGACY_STORAGE_KEY : `${STORAGE_PREFIX}${code}`;
+}
+
+export function loadStudyRoom(roomCode = "default"): StudyRoomState {
   if (typeof window === "undefined") return defaultStudyRoomState;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(storageKeyForRoom(roomCode));
     if (!raw) return defaultStudyRoomState;
     const parsed = JSON.parse(raw) as StudyRoomState;
     if (!parsed || typeof parsed !== "object") return defaultStudyRoomState;
@@ -29,7 +42,8 @@ export function loadStudyRoom(): StudyRoomState {
   }
 }
 
-export function saveStudyRoom(state: StudyRoomState) {
+export function saveStudyRoom(state: StudyRoomState, roomCode = "default") {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  window.localStorage.setItem(storageKeyForRoom(roomCode), JSON.stringify(state));
+  notifyStudyRoomChanged();
 }

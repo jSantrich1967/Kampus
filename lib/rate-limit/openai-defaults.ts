@@ -35,3 +35,17 @@ export function presentationTranscribeRateLimits(): { max: number; windowMs: num
     windowMs: parseInt(process.env.API_RL_TRANSCRIBE_WINDOW_MS ?? String(60 * 60 * 1000), 10),
   };
 }
+
+export function studyRoomAssistantRateLimits(): { max: number; windowMs: number } {
+  return {
+    max: parseInt(process.env.API_RL_MAX_STUDY_ROOM_ASSISTANT ?? "35", 10),
+    windowMs: parseInt(process.env.API_RL_WINDOW_MS ?? String(15 * 60 * 1000), 10),
+  };
+}
+
+export function virtualClassTranscribeRateLimits(): { max: number; windowMs: number } {
+  return {
+    max: parseInt(process.env.API_RL_MAX_VIRTUAL_CLASS_TRANSCRIBE ?? "15", 10),
+    windowMs: parseInt(process.env.API_RL_VIRTUAL_CLASS_TRANSCRIBE_WINDOW_MS ?? String(60 * 60 * 1000), 10),
+  };
+}

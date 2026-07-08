@@ -12,7 +12,7 @@ import {
 import type { StudentWork } from "@/lib/schemas/student-work";
 import { formatAgendaCloudError } from "@/lib/notebooks/storage-errors";
 import type { PresentationState } from "@/lib/storage/presentation-storage";
-import { ensurePresentationTeamCode, presentationStateFromRemoteJson } from "@/lib/storage/presentation-storage";
+import { defaultPresentationState, ensurePresentationTeamCode, generateTeamSessionCode, presentationStateFromRemoteJson } from "@/lib/storage/presentation-storage";
 
 type UserExamRow = {
   id: string;
@@ -308,6 +308,54 @@ export async function insertStudentWorkRemote(
   return mapWorkRow(data as WorkRow);
 }
 
+const DEMO_WORK_PREFIX = "Kampus ·";
+
+function researchDemoDueDate(daysFromNow: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + daysFromNow);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** Sample research deadlines when the list is empty (exploration / first visit). */
+export async function bootstrapResearchDemoWorks(
+  client: SupabaseClient,
+  userId: string,
+): Promise<{ ok: boolean; inserted: number; alreadyExists: boolean }> {
+  const works = await fetchStudentWorksRemote(client, userId);
+  const hasDemo = works.some((w) => w.title.startsWith(DEMO_WORK_PREFIX));
+  if (hasDemo) {
+    return { ok: true, inserted: 0, alreadyExists: true };
+  }
+
+  const demos: Omit<StudentWork, "id" | "createdAt">[] = [
+    {
+      title: `${DEMO_WORK_PREFIX} Informe bibliográfico`,
+      subject: "Metodología",
+      dueDate: researchDemoDueDate(5),
+      notes: "Mínimo 5 fuentes académicas. Revisa el enunciado en el campus virtual.",
+    },
+    {
+      title: `${DEMO_WORK_PREFIX} Borrador monografía`,
+      subject: "Investigación I",
+      dueDate: researchDemoDueDate(12),
+      notes: "Capítulos 1–2 + hipótesis. Comparte borrador con el equipo en sala de estudio.",
+    },
+    {
+      title: `${DEMO_WORK_PREFIX} Entrega urgente (demo)`,
+      subject: "General",
+      dueDate: researchDemoDueDate(2),
+      notes: "Ejemplo de plazo cercano — aparece destacado en Mi calendario.",
+    },
+  ];
+
+  for (const row of demos) {
+    await insertStudentWorkRemote(client, userId, row);
+  }
+
+  return { ok: true, inserted: demos.length, alreadyExists: false };
+}
+
 export async function updateStudentWorkCompletedRemote(
   client: SupabaseClient,
   userId: string,
@@ -488,6 +536,36 @@ export async function insertPresentationDeckRemote(
   return mapPresentationDeckRow(data as PresentationDeckRow);
 }
 
+const DEMO_DECK_TITLE = "Kampus · Exposición demo";
+
+function demoDueDateIso(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 7);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** Creates or returns a rich example deck for first-time exploration. */
+export async function bootstrapPresentationDemoDeck(
+  client: SupabaseClient,
+  userId: string,
+): Promise<{ ok: boolean; deckId?: string; alreadyExists?: boolean }> {
+  const summaries = await fetchPresentationDeckSummariesRemote(client, userId);
+  const existing = summaries.find((s) => s.deckTitle.trim() === DEMO_DECK_TITLE);
+  if (existing) {
+    return { ok: true, deckId: existing.id, alreadyExists: true };
+  }
+
+  const state = ensurePresentationTeamCode({
+    ...defaultPresentationState,
+    deckTitle: DEMO_DECK_TITLE,
+    teamSessionCode: generateTeamSessionCode(),
+    presentationDueDate: demoDueDateIso(),
+  });
+  const row = await insertPresentationDeckRemote(client, userId, state);
+  return { ok: true, deckId: row.id, alreadyExists: false };
+}
+
 export async function updatePresentationDeckRemote(
   client: SupabaseClient,
   userId: string,
@@ -507,6 +585,45 @@ export async function updatePresentationDeckRemote(
     .eq("id", deckId)
     .eq("user_id", userId);
   if (error) throw new Error(formatAgendaCloudError(error.message));
+}
+
+export async function updateExamDueDateRemote(
+  client: SupabaseClient,
+  userId: string,
+  examId: string,
+  dueDate: string,
+): Promise<void> {
+  const { error } = await client
+    .from("user_exams")
+    .update({ due_date: dueDate })
+    .eq("id", examId)
+    .eq("user_id", userId);
+  if (error) throw new Error(formatAgendaCloudError(error.message));
+}
+
+export async function updateStudentWorkDueDateRemote(
+  client: SupabaseClient,
+  userId: string,
+  workId: string,
+  dueDate: string,
+): Promise<void> {
+  const { error } = await client
+    .from("student_works")
+    .update({ due_date: dueDate })
+    .eq("id", workId)
+    .eq("user_id", userId);
+  if (error) throw new Error(formatAgendaCloudError(error.message));
+}
+
+export async function updatePresentationDueDateRemote(
+  client: SupabaseClient,
+  userId: string,
+  deckId: string,
+  dueDate: string,
+): Promise<void> {
+  const deck = await fetchPresentationDeckByIdRemote(client, userId, deckId);
+  const nextState = { ...deck.state, presentationDueDate: dueDate };
+  await updatePresentationDeckRemote(client, userId, deckId, nextState);
 }
 
 export async function deletePresentationDeckRemote(

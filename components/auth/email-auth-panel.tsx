@@ -4,17 +4,17 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { KampusLogo } from "@/components/brand/kampus-logo";
+import { GoogleIcon } from "@/components/auth/google-icon";
+import { KampusAnimatedLogo } from "@/components/brand/kampus-animated-logo";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { authCopy } from "@/lib/i18n/auth";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSafeInternalRedirect } from "@/lib/supabase/safe-redirect";
 
 const inputClassName =
-  "w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 outline-none ring-indigo-400/40 focus:ring";
+  "w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition-all focus:ring-2 focus:ring-purple-500/80";
 
 type EmailAuthPanelProps = {
   mode: "login" | "register";
@@ -57,6 +57,8 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
     if (msg.includes("not confirmed")) return t.errorEmailNotConfirmed;
     if (msg.includes("user already registered")) return t.errorUserAlreadyRegistered;
     if (msg.includes("invalid login credentials")) return t.errorInvalidLoginCredentials;
+    if (msg.includes("provider") && msg.includes("not enabled")) return t.errorOAuthProvider;
+    if (msg.includes("oauth")) return t.errorOAuthProvider;
     return raw || t.errorGeneric;
   }
 
@@ -125,6 +127,42 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
     }
   }
 
+  async function signInWithGoogle() {
+    setError(null);
+    setMessage(null);
+
+    if (!isSupabaseConfigured()) {
+      setError(t.supabaseMissing);
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const callbackNext = encodeURIComponent(nextPath);
+      const redirectTo = origin ? `${origin}/auth/callback?next=${callbackNext}` : undefined;
+      const { error: oauthErr } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
+        },
+      });
+      if (oauthErr) {
+        setError(formatSupabaseAuthErrorMessage(oauthErr.message));
+        setBusy(false);
+      }
+    } catch (err) {
+      const net = authNetworkErrorMessage(err);
+      setError(net ?? t.errorGeneric);
+      setBusy(false);
+    }
+  }
+
   async function resendConfirmationEmail() {
     setError(null);
     if (!email.trim()) {
@@ -162,92 +200,131 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
   const registerHref = nextQuery ? `/register?next=${encodeURIComponent(nextQuery)}` : "/register";
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center px-4 py-16">
-      <div className="mb-8 text-center">
-        <Link href="/" className="inline-flex flex-col items-center gap-2">
-          <KampusLogo variant="sidebar" />
-          <span className="text-xs text-slate-500">{t.backHome}</span>
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-[#131318] p-6">
+      <div className="mb-8 flex flex-col items-center">
+        <Link href="/" className="flex flex-col items-center transition-colors">
+          <KampusAnimatedLogo className="mb-4" />
+          <span className="text-sm text-gray-400 hover:text-white">{t.backHome}</span>
         </Link>
       </div>
 
-      <Card className="w-full max-w-md border-white/10 bg-slate-950/40 shadow-xl shadow-indigo-950/20">
-        <CardHeader>
-          <CardTitle>{mode === "login" ? t.loginTitle : t.registerTitle}</CardTitle>
-          <CardDescription>{mode === "login" ? t.loginDescription : t.registerDescription}</CardDescription>
-        </CardHeader>
+      <div className="kampus-auth-fade-up w-full max-w-md rounded-3xl border border-white/5 bg-[#1b1b20] p-8 shadow-2xl">
+        <h1 className="mb-2 text-2xl font-bold text-white">
+          {mode === "login" ? t.loginTitle : t.registerTitle}
+        </h1>
+        <p className="mb-8 text-sm text-gray-400">
+          {mode === "login" ? t.loginDescription : t.registerDescription}
+        </p>
 
         {!configured ? (
           <p className="text-sm text-amber-200/90">{t.supabaseMissing}</p>
         ) : (
-          <form onSubmit={onSubmit} className="flex flex-col gap-4">
-            <label className="space-y-2 text-sm">
-              <span className="text-slate-300">{t.email}</span>
-              <input
-                type="email"
-                name="email"
-                autoComplete="email"
-                required
-                className={inputClassName}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </label>
-            <label className="space-y-2 text-sm">
-              <span className="text-slate-300">{t.password}</span>
-              <input
-                type="password"
-                name="password"
-                autoComplete={mode === "login" ? "current-password" : "new-password"}
-                required
-                minLength={6}
-                className={inputClassName}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </label>
+          <div className="flex flex-col gap-6">
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full border-white/10 bg-white/5 py-3 hover:bg-white/10"
+              disabled={busy}
+              onClick={() => void signInWithGoogle()}
+            >
+              <GoogleIcon />
+              {t.continueWithGoogle}
+            </Button>
 
             {error ? <p className="text-sm text-rose-300">{error}</p> : null}
             {message ? <p className="text-sm text-teal-200/90">{message}</p> : null}
 
-            {pendingEmailVerification && mode === "register" ? (
-              <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-slate-950/40 px-3 py-3">
-                <p className="text-xs leading-relaxed text-slate-400">{t.emailDeliveryHint}</p>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="w-full"
-                  disabled={busy}
-                  onClick={() => void resendConfirmationEmail()}
-                >
-                  {busy ? "…" : t.resendConfirmation}
-                </Button>
-              </div>
-            ) : null}
+            <div className="relative flex items-center">
+              <div className="h-px flex-1 border-t border-white/5" aria-hidden />
+              <span className="px-4 text-xs uppercase tracking-widest text-gray-500">{t.orContinueWithEmail}</span>
+              <div className="h-px flex-1 border-t border-white/5" aria-hidden />
+            </div>
 
-            <Button type="submit" className="w-full" disabled={busy}>
-              {busy ? "…" : mode === "login" ? t.submitLogin : t.submitRegister}
-            </Button>
+            <form onSubmit={onSubmit} className="space-y-6">
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-gray-300">{t.email}</span>
+                <input
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  required
+                  placeholder="ejemplo@email.com"
+                  className={inputClassName}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </label>
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-gray-300">{t.password}</span>
+                <input
+                  type="password"
+                  name="password"
+                  autoComplete={mode === "login" ? "current-password" : "new-password"}
+                  required
+                  minLength={6}
+                  placeholder="••••••••"
+                  className={inputClassName}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </label>
 
-            <p className="text-center text-sm text-slate-400">
-              {mode === "login" ? (
-                <>
-                  {t.noAccount}{" "}
-                  <Link href={registerHref} className="font-medium text-indigo-300 hover:text-indigo-200">
-                    {t.registerLink}
-                  </Link>
-                </>
-              ) : (
-                <>
-                  {t.hasAccount}{" "}
-                  <Link href={loginHref} className="font-medium text-indigo-300 hover:text-indigo-200">
-                    {t.loginLink}
-                  </Link>
-                </>
-              )}
-            </p>
-          </form>
+              {pendingEmailVerification && mode === "register" ? (
+                <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-3">
+                  <p className="text-xs leading-relaxed text-gray-400">{t.emailDeliveryHint}</p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="w-full"
+                    disabled={busy}
+                    onClick={() => void resendConfirmationEmail()}
+                  >
+                    {busy ? "…" : t.resendConfirmation}
+                  </Button>
+                </div>
+              ) : null}
+
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-[#a78bfa] to-[#7c3aed] py-3 font-semibold text-white shadow-lg shadow-purple-500/20 hover:opacity-90"
+                disabled={busy}
+              >
+                {busy ? "…" : mode === "login" ? t.submitLogin : t.submitRegister}
+              </Button>
+
+              <p className="text-center text-sm text-gray-400">
+                {mode === "login" ? (
+                  <>
+                    {t.noAccount}{" "}
+                    <Link href={registerHref} className="font-medium text-purple-400 hover:underline">
+                      {t.registerLink}
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    {t.hasAccount}{" "}
+                    <Link href={loginHref} className="font-medium text-purple-400 hover:underline">
+                      {t.loginLink}
+                    </Link>
+                  </>
+                )}
+              </p>
+            </form>
+          </div>
         )}
-      </Card>
+      </div>
+
+      <footer className="mt-auto flex gap-6 py-8 text-xs text-gray-500">
+        <Link href="#" className="hover:text-white">
+          Términos
+        </Link>
+        <Link href="#" className="hover:text-white">
+          Privacidad
+        </Link>
+        <Link href="#" className="hover:text-white">
+          Ayuda
+        </Link>
+      </footer>
     </div>
   );
 }

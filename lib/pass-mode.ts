@@ -1,4 +1,5 @@
 import type { UserProfile } from "@/lib/schemas/profile";
+import { buildCommunitySubjectHref } from "@/lib/community/channels";
 
 export type RiskLevel = "low" | "medium" | "high";
 
@@ -22,6 +23,8 @@ export type StudyBlock = {
 
 export type PassModePlan = {
   generatedAt: string;
+  intensity: PassPlanIntensity;
+  planLabel: string;
   dailyBudgetMinutes: number;
   overloadNote: string | null;
   preparednessScore: number; // 0-100
@@ -29,6 +32,14 @@ export type PassModePlan = {
   subjectRisks: SubjectRisk[];
   nextBestActions: string[];
 };
+
+export type PassPlanIntensity = "full" | "minimal";
+
+export type BuildPassModePlanOptions = {
+  intensity?: PassPlanIntensity;
+};
+
+const MINIMAL_BUDGET_MINUTES = 15;
 
 function daysUntil(isoDate: string): number | null {
   const target = new Date(isoDate);
@@ -208,8 +219,71 @@ export function buildSubjectRisks(profile: UserProfile): SubjectRisk[] {
  * Deterministic "Pass Mode" planner — designed to feel intelligent while staying explainable.
  * Replace with model + calendar integration when backend exists.
  */
-export function buildPassModePlan(profile: UserProfile): PassModePlan {
+export function buildPassModePlan(
+  profile: UserProfile,
+  options?: BuildPassModePlanOptions,
+): PassModePlan {
+  const intensity = options?.intensity ?? "full";
   const subjectRisks = buildSubjectRisks(profile).sort((a, b) => b.score - a.score);
+
+  const top = subjectRisks[0]?.subject ?? profile.subjects[0] ?? "General";
+  const second = subjectRisks[1]?.subject ?? profile.subjects[1] ?? top;
+
+  const avgRisk =
+    subjectRisks.reduce((acc, s) => acc + s.score, 0) / Math.max(1, subjectRisks.length);
+  const preparednessScore = Math.max(12, Math.min(92, Math.round(88 - avgRisk * 0.35)));
+
+  if (intensity === "minimal") {
+    const allocated = [4, 6, 5] as const;
+    const sequence: StudyBlock[] = [
+      {
+        id: "flashcards",
+        title: "Sprint de tarjetas",
+        subject: top,
+        minutes: allocated[0],
+        focus: profile.weakTopics.slice(0, 2).join(", ") || "Conceptos clave del cuaderno",
+        priority: "P1",
+        rationale: "Plan mínimo de 15 min: repaso activo antes del quiz.",
+      },
+      {
+        id: "deep",
+        title: "Recuperación focalizada",
+        subject: top,
+        minutes: allocated[1],
+        focus: profile.weakTopics[0] ?? "Tu punto débil principal",
+        priority: "P1",
+        rationale: "Un solo bloque profundo — calidad sobre cantidad.",
+      },
+      {
+        id: "quiz",
+        title: "Quiz de presión express",
+        subject: top,
+        minutes: allocated[2],
+        focus: "Preguntas cronometradas desde apuntes",
+        priority: "P1",
+        rationale: "Cierra con práctica real bajo presión.",
+      },
+    ];
+
+    return {
+      generatedAt: new Date().toISOString(),
+      intensity,
+      planLabel: `Plan mínimo · ${MINIMAL_BUDGET_MINUTES} min`,
+      dailyBudgetMinutes: MINIMAL_BUDGET_MINUTES,
+      overloadNote:
+        profile.weeklyAvailabilityHours * 60 < profile.subjects.length * 90
+          ? "Carga alta detectada — usamos el plan mínimo viable de hoy."
+          : null,
+      preparednessScore,
+      sequence,
+      subjectRisks,
+      nextBestActions: [
+        `Tarjetas de 4 min sobre ${top} y tus temas débiles.`,
+        `Quiz express de ${allocated[2]} min con material del cuaderno.`,
+        "Premium: simulador oral estilo profesor para practicar explicación.",
+      ],
+    };
+  }
 
   const dailyBudgetMinutes = Math.round((profile.weeklyAvailabilityHours * 60) / 7);
   const cap = Math.max(45, Math.min(180, dailyBudgetMinutes));
@@ -219,10 +293,7 @@ export function buildPassModePlan(profile: UserProfile): PassModePlan {
       ? "Tu carga de materias supera tus minutos disponibles: acortamos sesiones y priorizamos exámenes."
       : null;
 
-  const top = subjectRisks[0]?.subject ?? profile.subjects[0] ?? "General";
-  const second = subjectRisks[1]?.subject ?? profile.subjects[1] ?? top;
-
-  const weights = [0.16, 0.34, 0.24, 0.14, 0.12] as const;
+  const weights = [0.14, 0.28, 0.12, 0.22, 0.12, 0.12] as const;
   const allocated = weights.map((w) => Math.max(8, Math.round(cap * w)));
   const drift = cap - allocated.reduce((a, b) => a + b, 0);
   allocated[allocated.length - 1] = Math.max(8, allocated[allocated.length - 1] + drift);
@@ -247,10 +318,19 @@ export function buildPassModePlan(profile: UserProfile): PassModePlan {
       rationale: "El recuerdo activo vence la relectura: este bloque apunta a tu punto débil.",
     },
     {
+      id: "flashcards",
+      title: "Sprint de tarjetas",
+      subject: top,
+      minutes: allocated[2],
+      focus: profile.weakTopics.slice(0, 2).join(", ") || "Repaso activo del cuaderno",
+      priority: "P2",
+      rationale: "Tarjetas cortas ancladas a tus temas débiles del plan.",
+    },
+    {
       id: "secondary",
       title: "Repaso de materia secundaria",
       subject: second,
-      minutes: allocated[2],
+      minutes: allocated[3],
       focus: "Preguntas tipo examen + autoexplicación",
       priority: "P2",
       rationale: "Alterna el contexto para evitar fatiga y mantener un progreso amplio.",
@@ -259,7 +339,7 @@ export function buildPassModePlan(profile: UserProfile): PassModePlan {
       id: "quiz",
       title: "Quiz de control de presión",
       subject: top,
-      minutes: allocated[3],
+      minutes: allocated[4],
       focus: "Preguntas mixtas cronometradas",
       priority: "P2",
       rationale: "Un ensayo breve bajo presión mejora la transferencia a exámenes reales.",
@@ -268,27 +348,25 @@ export function buildPassModePlan(profile: UserProfile): PassModePlan {
       id: "close",
       title: "Cierra el ciclo",
       subject: second,
-      minutes: allocated[4],
+      minutes: allocated[5],
       focus: "3 errores para corregir mañana + 1 pregunta para clase",
       priority: "P3",
       rationale: "Termina con un siguiente paso concreto para que mañana arranques más rápido.",
     },
   ];
 
-  const avgRisk =
-    subjectRisks.reduce((acc, s) => acc + s.score, 0) / Math.max(1, subjectRisks.length);
-  const preparednessScore = Math.max(12, Math.min(92, Math.round(88 - avgRisk * 0.35)));
-
   const nextBestActions = [
-    `Abre el kit de estudios del cuaderno para "${top}" y genera preguntas probables de examen.`,
-    `Haz un sprint de tarjetas de 12 minutos sobre: ${profile.weakTopics.slice(0, 2).join(", ") || "tus apuntes más recientes"}.`,
+    `Inicia el quiz de control de presión para "${top}" (basado en apuntes y clases del cuaderno).`,
+    `Sprint de tarjetas (${allocated[2]} min) sobre: ${profile.weakTopics.slice(0, 2).join(", ") || "tus apuntes más recientes"}.`,
     profile.interestedInCommunity
-      ? "Únete a un hilo de la comunidad de la materia pidiendo una explicación de un compañero/a."
-      : "Comparte un resumen de 3 viñetas con un compañero/a: enseñar fija la memoria.",
+      ? `Pregunta en la comunidad de "${top}" (${buildCommunitySubjectHref(top)}) — pide una explicación a un compañero.`
+      : "Premium: practica explicación oral con el simulador de profesor.",
   ];
 
   return {
     generatedAt: new Date().toISOString(),
+    intensity,
+    planLabel: `Plan completo · ${cap} min`,
     dailyBudgetMinutes: cap,
     overloadNote,
     preparednessScore,

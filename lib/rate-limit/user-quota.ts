@@ -1,3 +1,4 @@
+import { isAuthRouteProtectionEnabled } from "@/lib/supabase/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type QuotaResult =
@@ -13,6 +14,16 @@ export async function consumeDailyUserQuota(
   quotaKey: string,
   dailyLimit: number,
 ): Promise<QuotaResult> {
+  /** Local/preview demo: OpenAI routes work with OPENAI_API_KEY only (no Supabase session). */
+  if (!isAuthRouteProtectionEnabled()) {
+    return {
+      ok: true,
+      used: 0,
+      limit: dailyLimit,
+      resetAtIso: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    };
+  }
+
   const supabase = await createSupabaseServerClient();
 
   const {

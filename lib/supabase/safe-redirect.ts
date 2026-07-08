@@ -76,6 +76,8 @@ export function isAuthPublicPath(pathname: string): boolean {
   // Landing page: allow organic visitors to understand the product before logging in.
   if (pathname === "/") return true;
   if (pathname === "/login" || pathname === "/register") return true;
+  if (pathname === "/demo") return true;
+  if (pathname.startsWith("/preview/")) return true;
   if (pathname.startsWith("/auth/")) return true;
   return false;
 }

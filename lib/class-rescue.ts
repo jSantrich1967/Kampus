@@ -7,6 +7,11 @@ export type RescueQuizItem = {
   question: string;
   options: string[];
   answerIndex: number;
+  /** Clase del calendario o apunte de origen (quiz de presión). */
+  sourceClassLabel?: string;
+  sourceClassDate?: string | null;
+  sourceFilename?: string;
+  sourceDocumentId?: string;
 };
 
 export type RescueFlashcard = { front: string; back: string };

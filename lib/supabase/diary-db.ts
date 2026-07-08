@@ -18,6 +18,7 @@ function mapDiaryRow(row: DiaryRow): DiaryEntry {
     id: row.id,
     entryDate: row.entry_date.slice(0, 10),
     createdAt: row.created_at,
+    updatedAt: row.updated_at,
     ...payload,
   };
 }

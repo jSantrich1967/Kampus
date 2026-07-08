@@ -56,7 +56,7 @@ export function ExamsHub() {
             <CardTitle>Lado estudiante</CardTitle>
             <CardDescription>Ver exámenes, enviar intentos y recibir feedback.</CardDescription>
           </CardHeader>
-          <Link href="/exams/student">
+          <Link href="/exams">
             <Button size="sm" variant="secondary">
               Abrir exámenes (estudiante)
             </Button>

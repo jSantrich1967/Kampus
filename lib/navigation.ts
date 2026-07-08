@@ -3,6 +3,7 @@ import {
   Building2,
   Calendar,
   CalendarDays,
+  Heart,
   Layers3,
   LayoutDashboard,
   Library,
@@ -48,7 +49,7 @@ export const navigationGroups: NavGroup[] = [
     id: "learn",
     items: [
       { href: "/study/library", key: "library", icon: Library, roles: ["student", "teacher", "learner"] },
-      { href: "/study/flashcards", key: "flashcards", icon: Layers3, roles: ["student", "teacher", "learner"] },
+      { href: "/study/flashcards", key: "flashcards", icon: Layers3, roles: ["student", "teacher", "institution", "learner"] },
     ],
   },
   {
@@ -67,16 +68,17 @@ export const navigationGroups: NavGroup[] = [
   {
     id: "work",
     items: [
-      { href: "/collaborate/aula-virtual", key: "rooms", icon: Video, roles: ["student", "teacher", "learner"] },
-      { href: "/collaborate/exposiciones", key: "myPresentations", icon: Presentation, roles: ["student", "teacher", "learner"] },
-      { href: "/collaborate/investigaciones", key: "myResearch", icon: Microscope, roles: ["student", "teacher", "learner"] },
+      { href: "/collaborate/aula-virtual", key: "rooms", icon: Video, roles: ["student", "teacher", "institution", "learner"] },
+      { href: "/collaborate/exposiciones", key: "myPresentations", icon: Presentation, roles: ["student", "teacher", "institution", "learner"] },
+      { href: "/collaborate/investigaciones", key: "myResearch", icon: Microscope, roles: ["student", "teacher", "institution", "learner"] },
     ],
   },
   {
     id: "wellbeing",
     items: [
-      { href: "/wellbeing/psychologist", key: "psychologist", icon: Stethoscope, roles: ["student", "teacher", "learner"] },
+      { href: "/wellbeing", key: "wellbeing", icon: Heart, roles: ["student", "teacher", "learner"] },
       { href: "/wellbeing/diary", key: "diary", icon: NotebookPen, roles: ["student", "teacher", "learner"] },
+      { href: "/wellbeing/psychologist", key: "psychologist", icon: Stethoscope, roles: ["student", "teacher", "learner"] },
     ],
   },
   {

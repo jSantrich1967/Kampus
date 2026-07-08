@@ -38,7 +38,11 @@ export function saveDiaryEntries(rows: DiaryEntry[]) {
 
 export function upsertDiaryEntry(entry: DiaryEntry) {
   const rest = loadDiaryEntries().filter((e) => e.id !== entry.id);
-  const next = [entry, ...rest].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const stamped: DiaryEntry = {
+    ...entry,
+    updatedAt: new Date().toISOString(),
+  };
+  const next = [stamped, ...rest].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   saveDiaryEntries(next);
 }
 
@@ -53,10 +57,12 @@ export function getDiaryEntryById(id: string): DiaryEntry | null {
 export type NewDiaryEntryInput = Omit<DiaryEntry, "id" | "createdAt">;
 
 export function createDiaryEntry(input: NewDiaryEntryInput): DiaryEntry {
+  const now = new Date().toISOString();
   const row: DiaryEntry = {
     ...input,
     id: uid(),
-    createdAt: new Date().toISOString(),
+    createdAt: now,
+    updatedAt: now,
   };
   upsertDiaryEntry(row);
   return row;
@@ -92,4 +98,12 @@ export function diaryStreakDays(entries: DiaryEntry[]): number {
     d.setDate(d.getDate() - 1);
   }
   return streak;
+}
+
+export function hasDiaryEntryForDate(entries: DiaryEntry[], iso: string): boolean {
+  return entries.some((e) => e.entryDate === iso);
+}
+
+export function hasDiaryEntryToday(entries: DiaryEntry[]): boolean {
+  return hasDiaryEntryForDate(entries, localIsoDate());
 }

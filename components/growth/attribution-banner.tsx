@@ -55,6 +55,8 @@ export function AttributionBanner() {
         return "Llegaste desde un flujo de exámenes compartido";
       case "teacher_workflow":
         return "Llegaste desde un flujo de docencia compartido";
+      case "wellbeing_counselor":
+        return "Llegaste desde un resumen de bienestar compartido con orientador";
       default:
         return "Llegaste desde un enlace de Kampus";
     }

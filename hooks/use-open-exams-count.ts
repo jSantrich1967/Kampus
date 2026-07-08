@@ -1,6 +1,5 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
@@ -19,7 +18,6 @@ function countOpenExams(list: Exam[]): number {
  * Alineado con la lista en /exams/student: incluye seed demo si aún no hay datos.
  */
 export function useOpenExamsCount(): number {
-  const pathname = usePathname();
   const { hydrated, authUserId, profile } = useKampus();
   const useCloud = Boolean(isSupabaseConfigured() && authUserId);
   const [count, setCount] = useState(0);
@@ -44,7 +42,7 @@ export function useOpenExamsCount(): number {
 
   useEffect(() => {
     void refresh();
-  }, [refresh, pathname]);
+  }, [refresh]);
 
   useEffect(() => {
     const onFocus = () => void refresh();

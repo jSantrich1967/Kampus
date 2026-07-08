@@ -19,9 +19,25 @@ with
       ('user_class_cancellations'),
       ('virtual_class_sessions'),
       ('virtual_class_roster'),
+      ('community_post_reports'),
+      ('community_post_helpful'),
       ('community_posts'),
       ('community_question_answers'),
       ('diary_entries'),
+      ('psychologist_chat_sessions'),
+      ('wellbeing_institution_contributions'),
+      ('wellbeing_push_subscriptions'),
+      ('wellbeing_counselor_alerts'),
+      ('collaborate_study_rooms'),
+      ('collaborate_deadline_push_opt_in'),
+      ('collaborate_deadline_push_last'),
+      ('collaborate_study_room_presence'),
+      ('collaborate_study_room_messages'),
+      ('collaborate_webcal_tokens'),
+      ('virtual_class_breakout_rooms'),
+      ('virtual_class_attendance'),
+      ('collaborate_lms_integrations'),
+      ('virtual_class_participation'),
       ('api_usage_quotas'),
       ('institution_kpis'),
       ('institution_course_signals')
@@ -92,7 +108,16 @@ with
     values
       ('consume_api_quota'),
       ('handle_new_user'),
-      ('set_profiles_updated_at')
+      ('set_profiles_updated_at'),
+      ('enroll_virtual_class_session'),
+      ('list_virtual_class_roster'),
+      ('add_virtual_class_roster_by_email'),
+      ('resolve_webcal_user_id'),
+      ('mark_virtual_class_attendance'),
+      ('list_institution_virtual_attendance_summary'),
+      ('upsert_virtual_class_participation'),
+      ('list_virtual_class_participation_live'),
+      ('bootstrap_virtual_class_demo')
   ),
   fn_report as (
     select

@@ -28,6 +28,7 @@ export const navCopy = {
       myResearch: "Mis investigaciones",
       psychologist: "Psicólogo",
       diary: "Mi Diario",
+      wellbeing: "Inicio bienestar",
       teaching: "Copiloto docente",
       institution: "Panel institucional",
       settings: "Ajustes",

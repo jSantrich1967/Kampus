@@ -1,9 +1,11 @@
 export const authCopy = {
   es: {
     loginTitle: "Entrar",
-    loginDescription: "Accede con tu cuenta de Kampus (Supabase Auth).",
+    loginDescription: "Entra con Google o con tu correo y contraseña.",
     registerTitle: "Crear cuenta",
-    registerDescription: "Regístrate para sincronizar tu perfil en la nube.",
+    registerDescription: "Regístrate con Google o con correo para sincronizar tu perfil en la nube.",
+    continueWithGoogle: "Continuar con Google",
+    orContinueWithEmail: "o con correo",
     email: "Correo",
     password: "Contraseña",
     submitLogin: "Entrar",
@@ -24,6 +26,8 @@ export const authCopy = {
       "Correo o contraseña incorrectos. Si acabas de registrarte y no confirmaste el correo, desactiva «Confirm email» para pruebas o espera/reenviar la confirmación.",
     errorFailedToFetch:
       "No se pudo conectar con Supabase (red bloqueada o URL mal configurada). Prueba otra red o ventana de incógnito; desactiva VPN/antivirus que inspeccione HTTPS. En Vercel: revisa NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY en Production y haz Redeploy. En Supabase: confirma que el proyecto no esté pausado.",
+    errorOAuthProvider:
+      "Inicio con Google no está disponible. Activa el proveedor Google en Supabase → Authentication → Providers y configura Client ID y Client Secret de Google Cloud.",
     checkEmail: "Si tu proyecto requiere confirmación, revisa tu correo para activar la cuenta.",
     registerSuccess: "Cuenta creada. Si pide confirmación por correo, ábrelo antes de entrar.",
     resendConfirmation: "Reenviar correo de confirmación",

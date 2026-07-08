@@ -1,6 +1,5 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
@@ -23,7 +22,6 @@ export function notifyStudentWorksChanged(): void {
  * Se actualiza al cambiar de ruta, al volver el foco a la pestaña y tras {@link notifyStudentWorksChanged}.
  */
 export function usePendingStudentWorksCount(): number {
-  const pathname = usePathname();
   const { hydrated, authUserId } = useKampus();
   const useCloud = Boolean(isSupabaseConfigured() && authUserId);
   const [count, setCount] = useState(0);
@@ -42,7 +40,7 @@ export function usePendingStudentWorksCount(): number {
 
   useEffect(() => {
     void refresh();
-  }, [refresh, pathname]);
+  }, [refresh]);
 
   useEffect(() => {
     const onFocus = () => void refresh();

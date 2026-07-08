@@ -1,12 +1,13 @@
 "use client";
 
+import { Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { PassModePanel } from "@/components/pass-mode/pass-mode-panel";
 
-export default function PassModePage() {
+function PassModePageContent() {
   const router = useRouter();
   const { profile, hydrated } = useKampus();
 
@@ -34,4 +35,12 @@ export default function PassModePage() {
   }
 
   return <PassModePanel />;
+}
+
+export default function PassModePage() {
+  return (
+    <Suspense fallback={<div className="text-sm text-slate-400">Cargando Modo aprobar…</div>}>
+      <PassModePageContent />
+    </Suspense>
+  );
 }

@@ -16,6 +16,7 @@ const messageSchema = z.object({
 
 const requestSchema = z.object({
   messages: z.array(messageSchema).min(1).max(28),
+  context: z.string().max(4000).optional(),
 });
 
 function clip(text: string, max: number): string {
@@ -44,7 +45,7 @@ FLUJO DE UN BUEN ACOMPAÑAMIENTO (aplícalo de forma natural, sin numerar en exc
 
 RIESGO Y CRISIS (prioridad absoluta):
 - Si hay ideas de suicidio, autolesión, planes, o miedo a perder el control: no des consejos que pospongan la seguridad. Indica de forma directa y empática que busque ayuda humana YA.
-- Menciona recursos en España: emergencias 112; línea 024 (prevención del suicidio y apoyo emocional, gratuito); si es menor, ANAR 900 20 20 10. Ajusta si el usuario indica otro país.
+- Menciona recursos en Venezuela: emergencias 171; línea Siempre Juntos 0800-2586867 (apoyo emocional gratuito); LAPSI FPV 0424-2907338 (vie–dom). Ajusta si el usuario indica otro país.
 - Si describe violencia grave en curso, orienta a protegerse y a contactar emergencias o autoridades.
 
 ESTILO: párrafos cortos; máximo ~180 palabras salvo que pida más detalle; evita jerga; ofrece opciones ("si te apetece, podemos…").
@@ -100,11 +101,16 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "El último mensaje debe ser del usuario." }, { status: 400 });
       }
 
+      const contextExtra = body.context?.trim();
+      const systemText = contextExtra
+        ? `${SYSTEM_ES}\n\nCONTEXTO ADICIONAL (orientación, no diagnóstico):\n${clip(contextExtra, 4000)}`
+        : SYSTEM_ES;
+
       const openaiUrl = "https://api.openai.com/v1/responses";
       const openaiPayload = {
         model,
         input: [
-          { role: "system" as const, content: [{ type: "input_text" as const, text: SYSTEM_ES }] },
+          { role: "system" as const, content: [{ type: "input_text" as const, text: systemText }] },
           ...body.messages.map((m) => ({
             role: m.role as "user" | "assistant",
             // Responses API enforces role-based content types:
@@ -156,7 +162,10 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "La respuesta del modelo llegó vacía." }, { status: 502 });
       }
 
-      return NextResponse.json({ reply: text.trim() });
+      return NextResponse.json({
+        reply: text.trim(),
+        quota: { used: quota.used, limit: quota.limit },
+      });
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

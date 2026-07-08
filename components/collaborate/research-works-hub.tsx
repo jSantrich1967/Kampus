@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { CheckCircle2, ClipboardList, Loader2, Microscope, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
+import { CollaborateSubnav } from "@/components/collaborate/collaborate-subnav";
+import { ResearchOnboardingPanel } from "@/components/collaborate/research-onboarding-panel";
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button } from "@/components/ui/button";
@@ -22,6 +25,7 @@ import {
   updateStudentWorkCompletedRemote,
 } from "@/lib/supabase/agenda-db";
 import { notifyStudentWorksChanged } from "@/hooks/use-pending-student-works-count";
+import { collaborateCopy } from "@/lib/i18n/collaborate";
 
 /** Días hasta la fecha límite (medianoche local); negativo = vencido. */
 function daysUntilDue(dueIso: string, now = new Date()): number | null {
@@ -54,8 +58,11 @@ type WorkFilterScope = "all" | "active" | "completed" | "week" | "overdue";
  * Mis investigaciones: mismos datos que en Mi calendario (trabajos / entregas), enfoque en lista y fechas.
  */
 export function ResearchWorksHub() {
+  const searchParams = useSearchParams();
+  const focusWorkId = searchParams.get("work")?.trim() ?? "";
   const { profile, hydrated, authUserId, locale } = useKampus();
   const es = locale === "es";
+  const t = collaborateCopy.es;
   const useCloud = Boolean(isSupabaseConfigured() && authUserId);
 
   const [works, setWorks] = useState<StudentWork[]>([]);
@@ -118,6 +125,18 @@ export function ResearchWorksHub() {
       return true;
     });
   }, [sortedWorks, filterScope, filterSubject]);
+
+  useEffect(() => {
+    if (!focusWorkId) return;
+    setFilterScope("all");
+    setFilterSubject("");
+  }, [focusWorkId]);
+
+  useEffect(() => {
+    if (!focusWorkId || loading || works.length === 0) return;
+    const row = document.getElementById(`work-row-${focusWorkId}`);
+    row?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [focusWorkId, loading, works]);
 
   const loadWorks = useCallback(async () => {
     if (!hydrated) return;
@@ -215,25 +234,29 @@ export function ResearchWorksHub() {
 
   return (
     <div className="space-y-8">
+      <CollaborateSubnav />
+
+      <ResearchOnboardingPanel useCloud={useCloud} workCount={works.length} onDemoLoaded={refresh} />
+
       <PageHeader
-        eyebrow="Colaboración"
-        title="Mis investigaciones"
-        description="Organiza monografías, trabajos prácticos y entregas con fecha límite. Todo queda ordenado por proximidad y enlazado con tu calendario académico."
+        eyebrow={t.eyebrow}
+        title={t.researchPageTitle}
+        description={t.researchPageDescription}
         actions={
           <div className="flex flex-wrap gap-2">
             <Link href="/exams/calendar">
               <Button variant="secondary" size="sm">
-                Mi calendario
+                {t.calendarCta}
               </Button>
             </Link>
             <Link href="/exams/student">
               <Button variant="secondary" size="sm">
-                Mis exámenes
+                {t.examsCta}
               </Button>
             </Link>
             <Link href="/collaborate/exposiciones">
               <Button variant="ghost" size="sm">
-                Mis exposiciones
+                {t.subnavPresentations}
               </Button>
             </Link>
             <Button type="button" variant="ghost" size="sm" onClick={refresh} disabled={loading}>
@@ -421,11 +444,13 @@ export function ResearchWorksHub() {
                 return (
                   <li
                     key={w.id}
+                    id={`work-row-${w.id}`}
                     className={cn(
                       "flex items-start justify-between gap-3 border border-white/10 border-l-4 bg-slate-950/30 pl-3 pr-2 py-2.5 text-sm",
                       "rounded-lg",
                       workUrgencyClass(diff, done),
                       done && "opacity-90",
+                      focusWorkId === w.id && "ring-2 ring-indigo-400/45",
                     )}
                   >
                     <div className="min-w-0 flex-1">

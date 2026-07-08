@@ -15,25 +15,23 @@ import {
   Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { PageHeader } from "@/components/layout/page-header";
+import { WellbeingSubnav } from "@/components/wellbeing/wellbeing-subnav";
+import { DiaryExportMenu } from "@/components/wellbeing/diary-export-menu";
+import { DiaryFhirExportMenu } from "@/components/wellbeing/diary-fhir-export-menu";
+import { WellbeingCounselorSharePanel } from "@/components/wellbeing/wellbeing-counselor-share-panel";
 import { useKampus } from "@/components/kampus/kampus-provider";
+import { useDiaryEntries } from "@/hooks/use-diary-entries";
+import { useDiaryPendingCount } from "@/hooks/use-diary-pending-count";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import type { DiaryEntry, DiaryMoment, DiaryMood } from "@/lib/schemas/diary-entry";
 import { localIsoDate } from "@/lib/calendar/local-iso-date";
 import { cn } from "@/lib/cn";
 import { formatAgendaCloudError } from "@/lib/notebooks/storage-errors";
-import type { DiaryEntry, DiaryMoment, DiaryMood } from "@/lib/schemas/diary-entry";
-import {
-  createDiaryEntry,
-  deleteDiaryEntry,
-  diaryStreakDays,
-  loadDiaryEntries,
-  upsertDiaryEntry,
-} from "@/lib/storage/diary-storage";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { deleteDiaryEntryRemote, fetchDiaryEntriesRemote, insertDiaryEntryRemote, updateDiaryEntryRemote } from "@/lib/supabase/diary-db";
+import { wellbeingCopy } from "@/lib/i18n/wellbeing";
 
 const MOODS: { id: DiaryMood; label: string; emoji: string }[] = [
   { id: "heavy", label: "Muy bajo", emoji: "🌧️" },
@@ -107,17 +105,30 @@ function entryToPlainText(e: DiaryEntry): string {
 }
 
 export function DiaryHub() {
-  const { hydrated: kampusHydrated, authUserId } = useKampus();
-  const useCloud = Boolean(isSupabaseConfigured() && authUserId);
+  const { hydrated: kampusHydrated, profile } = useKampus();
+  const wb = wellbeingCopy.es;
+  const searchParams = useSearchParams();
+
+  const {
+    entries,
+    loading,
+    syncing,
+    loadError,
+    syncMessage,
+    clearSyncMessage,
+    pendingFlushed,
+    refresh,
+    saveEntry,
+    removeEntry: removeEntryFromHook,
+    streakDays: streak,
+    useCloud,
+  } = useDiaryEntries();
+  const pendingCount = useDiaryPendingCount();
 
   const [hydrated, setHydrated] = useState(false);
-  const [entries, setEntries] = useState<DiaryEntry[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [tick, setTick] = useState(0);
-  const bump = useCallback(() => setTick((t) => t + 1), []);
+  const [highlightEntryId, setHighlightEntryId] = useState<string | null>(null);
 
   const [entryDate, setEntryDate] = useState("");
   const [mood, setMood] = useState<DiaryMood>("neutral");
@@ -134,35 +145,29 @@ export function DiaryHub() {
   const [draftKey, setDraftKey] = useState(0);
   const formAnchorRef = useRef<HTMLDivElement | null>(null);
 
-  const loadEntries = useCallback(async () => {
-    if (!hydrated || !kampusHydrated) return;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      if (useCloud) {
-        const supabase = createSupabaseBrowserClient();
-        const list = await fetchDiaryEntriesRemote(supabase, authUserId!);
-        setEntries(list);
-      } else {
-        setEntries(loadDiaryEntries());
-      }
-    } catch (e) {
-      setLoadError(formatAgendaCloudError(e instanceof Error ? e.message : "No se pudo cargar el diario."));
-    } finally {
-      setLoading(false);
-    }
-  }, [hydrated, kampusHydrated, useCloud, authUserId]);
-
   useEffect(() => {
     setHydrated(true);
     setEntryDate(localIsoDate());
   }, []);
 
   useEffect(() => {
-    void loadEntries();
-  }, [loadEntries, tick]);
+    const paramDate = searchParams.get("date")?.trim();
+    const paramEntry = searchParams.get("entry")?.trim();
+    if (paramDate && /^\d{4}-\d{2}-\d{2}$/.test(paramDate)) {
+      setEntryDate(paramDate);
+    }
+    if (paramEntry) {
+      setHighlightEntryId(paramEntry);
+      window.setTimeout(() => setHighlightEntryId(null), 8000);
+    }
+  }, [searchParams]);
 
-  const streak = useMemo(() => diaryStreakDays(entries), [entries]);
+  useEffect(() => {
+    if (!syncMessage) return;
+    const tm = window.setTimeout(() => clearSyncMessage(), 8000);
+    return () => window.clearTimeout(tm);
+  }, [syncMessage, clearSyncMessage]);
+
   const dailyPrompt = useMemo(() => (entryDate ? promptForDate(entryDate) : PROMPTS[0]!), [entryDate]);
 
   const sortedEntries = useMemo(() => {
@@ -242,38 +247,13 @@ export function DiaryHub() {
     };
 
     try {
-      if (useCloud) {
-        const supabase = createSupabaseBrowserClient();
-        if (editingId) {
-          const prev = entries.find((e) => e.id === editingId);
-          if (!prev) return;
-          await updateDiaryEntryRemote(supabase, authUserId!, {
-            ...prev,
-            ...payload,
-            id: editingId,
-            createdAt: prev.createdAt,
-          });
-        } else {
-          await insertDiaryEntryRemote(supabase, authUserId!, payload);
-        }
-      } else if (editingId) {
-        const prev = entries.find((e) => e.id === editingId);
-        if (!prev) return;
-        upsertDiaryEntry({
-          ...prev,
-          ...payload,
-          id: editingId,
-          createdAt: prev.createdAt,
-        });
-      } else {
-        createDiaryEntry(payload);
-      }
-      bump();
+      await saveEntry(payload, editingId);
       resetForm();
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 2400);
     } catch (e) {
-      setFormError(formatAgendaCloudError(e instanceof Error ? e.message : "No se pudo guardar."));
+      const msg = e instanceof Error ? e.message : "No se pudo guardar.";
+      setFormError(msg === "offline" ? wb.offlineSaveHint : formatAgendaCloudError(msg));
     }
   }
 
@@ -289,16 +269,10 @@ export function DiaryHub() {
     const where = useCloud ? "tu cuenta (Supabase)" : "este dispositivo";
     if (!window.confirm(`¿Borrar esta entrada del diario en ${where}?`)) return;
     try {
-      if (useCloud) {
-        const supabase = createSupabaseBrowserClient();
-        await deleteDiaryEntryRemote(supabase, authUserId!, id);
-      } else {
-        deleteDiaryEntry(id);
-      }
-      bump();
+      await removeEntryFromHook(id);
       if (editingId === id) resetForm();
     } catch (e) {
-      setLoadError(formatAgendaCloudError(e instanceof Error ? e.message : "No se pudo borrar."));
+      setFormError(formatAgendaCloudError(e instanceof Error ? e.message : "No se pudo borrar."));
     }
   }
 
@@ -309,9 +283,9 @@ export function DiaryHub() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Bienestar"
-        title="Mi Diario"
-        description="Un ritual privado para ordenar el día: ánimo, gratitud breve, reflexión con pregunta guía e intención para mañana. Pensado como un diario de cabecera, no como una red social."
+        eyebrow={wb.diaryEyebrow}
+        title={wb.diaryTitle}
+        description={wb.diaryDescription}
         actions={
           <div className="relative z-20 flex flex-col items-end gap-1">
             <div className="flex flex-wrap justify-end gap-2">
@@ -326,8 +300,8 @@ export function DiaryHub() {
               >
                 Entrada nueva
               </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={() => bump()} disabled={loading}>
-                <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
+              <Button type="button" variant="ghost" size="sm" onClick={() => void refresh()} disabled={loading || syncing}>
+                <RefreshCw className={cn("h-3.5 w-3.5", (loading || syncing) && "animate-spin")} />
                 Actualizar
               </Button>
             </div>
@@ -338,15 +312,32 @@ export function DiaryHub() {
         }
       />
 
+      <WellbeingSubnav />
+
       {draftBanner ? (
         <p className="rounded-xl border border-indigo-400/30 bg-indigo-950/40 px-4 py-3 text-sm text-indigo-100">{draftBanner}</p>
       ) : null}
 
-      {loadError ? <p className="text-sm text-rose-300">{loadError}</p> : null}
-      {loading ? (
+      {loadError ? <p className="text-sm text-rose-300">{formatAgendaCloudError(loadError)}</p> : null}
+      {syncMessage ? (
+        <p className="rounded-xl border border-emerald-400/30 bg-emerald-950/30 px-4 py-3 text-sm text-emerald-100">
+          {wb.syncMergedBanner(Number(syncMessage))}
+        </p>
+      ) : null}
+      {pendingFlushed > 0 ? (
+        <p className="rounded-xl border border-sky-400/30 bg-sky-950/30 px-4 py-3 text-sm text-sky-100">
+          {wb.pendingQueueFlushed(pendingFlushed)}
+        </p>
+      ) : null}
+      {pendingCount > 0 ? (
+        <p className="rounded-xl border border-amber-400/30 bg-amber-950/30 px-4 py-3 text-sm text-amber-100">
+          {wb.pendingQueueBanner(pendingCount)}
+        </p>
+      ) : null}
+      {loading || syncing ? (
         <div className="flex items-center gap-2 text-sm text-slate-400">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-          Sincronizando diario…
+          {syncing ? wb.syncInProgress : wb.syncLoading}
         </div>
       ) : null}
 
@@ -371,6 +362,17 @@ export function DiaryHub() {
         ) : null}
       </div>
 
+      {!loading && entries.length > 0 ? (
+        <Card className="border-white/10 bg-slate-950/40">
+          <div className="space-y-6 px-6 py-5">
+            <DiaryExportMenu entries={entries} ownerLabel={profile.displayName || profile.university} />
+            <DiaryFhirExportMenu entries={entries} />
+          </div>
+        </Card>
+      ) : null}
+
+      <WellbeingCounselorSharePanel />
+
       <Card className="border-indigo-500/20 bg-indigo-950/10">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-indigo-100">
@@ -388,9 +390,8 @@ export function DiaryHub() {
             ) : (
               <>
                 Sin sesión (o sin Supabase), las entradas quedan solo en <strong className="text-white">este navegador</strong>{" "}
-                (localStorage). Si borras datos del sitio o cambias de dispositivo, puedes perder el historial: usa «Copiar» en
-                entradas importantes. Al iniciar sesión con la migración aplicada, el diario pasa a la nube (las entradas viejas locales
-                no se fusionan solas).
+                (localStorage). Al iniciar sesión, las entradas locales se <strong className="text-white">suben y fusionan</strong>{" "}
+                con tu cuenta (una entrada por día; si hay conflicto, gana la más reciente).
               </>
             )}
           </CardDescription>
@@ -637,7 +638,13 @@ export function DiaryHub() {
               </li>
             ) : (
               sortedEntries.map((e) => (
-                <li key={e.id} className="px-5 py-4 text-sm">
+                <li
+                  key={e.id}
+                  className={cn(
+                    "px-5 py-4 text-sm",
+                    highlightEntryId === e.id && "bg-indigo-500/10 ring-1 ring-inset ring-indigo-400/30",
+                  )}
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="font-medium capitalize text-slate-100">{formatLongDateEs(e.entryDate)}</div>

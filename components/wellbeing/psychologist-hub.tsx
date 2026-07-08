@@ -1,9 +1,29 @@
 "use client";
 
 import { Loader2, MessageCircle, Mic, MicOff, RotateCcw, Send, Volume2 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { PageHeader } from "@/components/layout/page-header";
+import { WellbeingSubnav } from "@/components/wellbeing/wellbeing-subnav";
+import { WellbeingHumanSupportPanel } from "@/components/wellbeing/wellbeing-human-support-panel";
+import { useDiaryInsights } from "@/hooks/use-diary-insights";
+import { useKampus } from "@/components/kampus/kampus-provider";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import {
+  clearPsychologistChatEverywhere,
+  persistPsychologistChatToCloud,
+} from "@/lib/wellbeing/psychologist-chat-sync";
+import { usePsychologistChatSync } from "@/hooks/use-psychologist-chat-sync";
+import { wellbeingCopy } from "@/lib/i18n/wellbeing";
+import { loadDiaryEntries } from "@/lib/storage/diary-storage";
+import {
+  clearPsychologistChatStorage,
+  savePsychologistChat,
+} from "@/lib/storage/psychologist-chat-storage";
+import { buildExamStressPrompt } from "@/lib/wellbeing/psychologist-path";
+import { buildPsychologistContextBlock } from "@/lib/wellbeing/psychologist-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
@@ -81,6 +101,37 @@ function pickRecorderMime(): string | undefined {
 }
 
 export function PsychologistHub() {
+  const wb = wellbeingCopy.es;
+  const { authUserId } = useKampus();
+  const useCloud = Boolean(isSupabaseConfigured() && authUserId);
+  const searchParams = useSearchParams();
+  const { insights } = useDiaryInsights();
+  const { refresh: syncChat, cloudSynced } = usePsychologistChatSync();
+
+  const examSubject = searchParams.get("subject")?.trim() ?? "";
+  const examDaysRaw = searchParams.get("days");
+  const examDays = examDaysRaw !== null && examDaysRaw !== "" ? Number.parseInt(examDaysRaw, 10) : undefined;
+  const promptParam = searchParams.get("prompt")?.trim() ?? "";
+
+  const suggestedPrompt = useMemo(() => {
+    if (promptParam) return promptParam;
+    if (examSubject && examDays !== undefined && !Number.isNaN(examDays)) {
+      return buildExamStressPrompt(examSubject, examDays);
+    }
+    return null;
+  }, [promptParam, examSubject, examDays]);
+
+  const contextBlock = useMemo(
+    () =>
+      buildPsychologistContextBlock({
+        examSubject: examSubject || undefined,
+        examDays: examDays !== undefined && !Number.isNaN(examDays) ? examDays : undefined,
+        insights,
+        entries: loadDiaryEntries(),
+      }),
+    [examSubject, examDays, insights],
+  );
+
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
   const [messages, setMessages] = useState<ChatTurn[]>([]);
   const [input, setInput] = useState("");
@@ -89,6 +140,9 @@ export function PsychologistHub() {
   const [browserListen, setBrowserListen] = useState(false);
   const [mediaRecording, setMediaRecording] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [chatRestored, setChatRestored] = useState(false);
+  const [quotaUsed, setQuotaUsed] = useState<number | null>(null);
+  const [quotaLimit, setQuotaLimit] = useState<number | null>(null);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const recRef = useRef<MediaRecorder | null>(null);
@@ -97,7 +151,25 @@ export function PsychologistHub() {
   useEffect(() => {
     setHydrated(true);
     setDisclaimerAccepted(loadDisclaimerAccepted());
-  }, []);
+    void syncChat().then((restored) => {
+      if (restored.length > 0) {
+        setMessages(restored);
+        setChatRestored(true);
+        window.setTimeout(() => setChatRestored(false), 6000);
+      }
+    });
+  }, [syncChat]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (messages.length > 0) savePsychologistChat(messages);
+  }, [messages, hydrated]);
+
+  useEffect(() => {
+    if (!suggestedPrompt || input.trim()) return;
+    setInput(suggestedPrompt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- prefill once from URL
+  }, [suggestedPrompt]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -124,15 +196,36 @@ export function PsychologistHub() {
         const res = await fetch("/api/wellbeing/psychologist/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: nextHistory }),
+          body: JSON.stringify({
+            messages: nextHistory,
+            context: contextBlock.trim() || undefined,
+          }),
         });
-        const data = (await res.json().catch(() => ({}))) as { reply?: string; error?: string };
+        const data = (await res.json().catch(() => ({}))) as {
+          reply?: string;
+          error?: string;
+          quota?: { used: number; limit: number };
+        };
         if (!res.ok) {
+          if (res.status === 429) {
+            throw new Error(data.error || wb.psychologistQuotaExceeded);
+          }
           throw new Error(data.error || `Error ${res.status}`);
         }
         const reply = (data.reply ?? "").trim();
         if (!reply) throw new Error("Respuesta vacía.");
+        if (data.quota) {
+          setQuotaUsed(data.quota.used);
+          setQuotaLimit(data.quota.limit);
+        }
         setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+        if (useCloud && authUserId) {
+          const supabase = createSupabaseBrowserClient();
+          void persistPsychologistChatToCloud(supabase, authUserId, [
+            ...nextHistory,
+            { role: "assistant", content: reply },
+          ]);
+        }
       } catch (e) {
         const msg = e instanceof Error ? e.message : "No se pudo enviar el mensaje.";
         setError(msg);
@@ -142,7 +235,7 @@ export function PsychologistHub() {
         setBusy(false);
       }
     },
-    [messages, disclaimerAccepted, busy],
+    [messages, disclaimerAccepted, busy, contextBlock, wb.psychologistQuotaExceeded, useCloud, authUserId],
   );
 
   const startBrowserDictation = useCallback(() => {
@@ -229,8 +322,14 @@ export function PsychologistHub() {
     setMessages([]);
     setInput("");
     setError(null);
+    if (useCloud && authUserId) {
+      const supabase = createSupabaseBrowserClient();
+      void clearPsychologistChatEverywhere(supabase, authUserId);
+    } else {
+      clearPsychologistChatStorage();
+    }
     if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
-  }, []);
+  }, [useCloud, authUserId]);
 
   if (!hydrated) {
     return <div className="text-sm text-slate-400">Cargando…</div>;
@@ -239,9 +338,9 @@ export function PsychologistHub() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Bienestar"
-        title="Apoyo emocional (no es terapia clínica)"
-        description="Un espacio para hablar de estrés, ánimo, estudios o lo que te preocupa, con una IA entrenada en un estilo de acompañamiento prudente y psicoeducativo. No sustituye a un psicólogo o psiquiatra."
+        eyebrow={wb.psychologistEyebrow}
+        title={wb.psychologistTitle}
+        description={wb.psychologistDescription}
         actions={
           <Button type="button" variant="secondary" size="sm" onClick={resetChat} disabled={busy || messages.length === 0}>
             <RotateCcw className="h-3.5 w-3.5" />
@@ -250,14 +349,39 @@ export function PsychologistHub() {
         }
       />
 
+      <WellbeingSubnav />
+
+      {chatRestored ? (
+        <p className="rounded-xl border border-indigo-400/25 bg-indigo-950/30 px-4 py-3 text-sm text-indigo-100">
+          {wb.psychologistChatRestored}
+        </p>
+      ) : null}
+
+      {useCloud && cloudSynced ? (
+        <p className="rounded-xl border border-emerald-400/20 bg-emerald-950/20 px-4 py-3 text-sm text-emerald-100">
+          {wb.psychologistChatCloudSynced}
+        </p>
+      ) : null}
+
+      {examSubject && examDays !== undefined && !Number.isNaN(examDays) ? (
+        <Card className="border-violet-400/25 bg-violet-500/10">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{wb.psychologistExamBanner(examSubject, examDays)}</CardTitle>
+            {suggestedPrompt ? (
+              <CardDescription>{wb.psychologistSuggestedPrompt}</CardDescription>
+            ) : null}
+          </CardHeader>
+        </Card>
+      ) : null}
+
       <Card className="border-rose-500/25 bg-rose-950/15">
         <CardHeader>
           <CardTitle className="text-rose-100">Si estás en peligro o con ideas de hacerte daño</CardTitle>
           <CardDescription className="text-rose-100/85">
-            Esta app no puede intervenir en una crisis. Busca ayuda humana ya: en España llama al{" "}
-            <strong className="text-white">112</strong> (emergencias) o al <strong className="text-white">024</strong> (prevención
-            del suicidio y apoyo emocional, gratuito). Si eres menor: <strong className="text-white">ANAR 900 20 20 10</strong>.
-            Cuéntaselo a un adulto de confianza.
+            Esta app no puede intervenir en una crisis. Busca ayuda humana ya: en Venezuela llama al{" "}
+            <strong className="text-white">171</strong> (emergencias) o al{" "}
+            <strong className="text-white">0800-2586867</strong> (línea Siempre Juntos — apoyo emocional gratuito). También
+            LAPSI FPV: <strong className="text-white">0424-2907338</strong> (vie–dom). Cuéntaselo a un adulto de confianza.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -365,8 +489,23 @@ export function PsychologistHub() {
         </div>
 
         {error ? <p className="px-5 pb-2 text-sm text-rose-300">{error}</p> : null}
+        {quotaUsed !== null && quotaLimit !== null ? (
+          <p className="px-5 pb-2 text-xs text-slate-500">{wb.psychologistQuotaHint(quotaUsed, quotaLimit)}</p>
+        ) : null}
 
         <div className="flex flex-col gap-2 border-t border-white/5 px-5 py-4">
+          {suggestedPrompt && messages.length === 0 ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="self-start"
+              disabled={!disclaimerAccepted || busy}
+              onClick={() => void sendMessage(suggestedPrompt)}
+            >
+              {wb.psychologistSuggestedPrompt}
+            </Button>
+          ) : null}
           <textarea
             className="min-h-[88px] w-full resize-y rounded-xl border border-white/10 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 outline-none ring-indigo-400/30 focus:ring disabled:opacity-50"
             placeholder={disclaimerAccepted ? "Escribe aquí…" : "Acepta los avisos para escribir."}
@@ -425,6 +564,8 @@ export function PsychologistHub() {
           </p>
         </div>
       </Card>
+
+      <WellbeingHumanSupportPanel compact />
     </div>
   );
 }

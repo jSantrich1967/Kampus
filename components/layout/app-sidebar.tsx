@@ -14,13 +14,21 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cn } from "@/lib/cn";
 import { useOpenExamsCount } from "@/hooks/use-open-exams-count";
+import { useCommunityUnreadReplyCount } from "@/hooks/use-community-unread-reply-count";
+import { useDiaryCheckInStatus } from "@/hooks/use-diary-check-in-status";
+import { useUpcomingPresentationsCount } from "@/hooks/use-upcoming-presentations-count";
+import { useUpcomingVirtualSessions } from "@/hooks/use-upcoming-virtual-sessions";
 import { usePendingStudentWorksCount } from "@/hooks/use-pending-student-works-count";
+import { collaborateCopy } from "@/lib/i18n/collaborate";
+import { communityCopy } from "@/lib/i18n/community";
+import { wellbeingCopy } from "@/lib/i18n/wellbeing";
 
 type AppSidebarProps = {
   onNavigate?: () => void;
+  luminaMode?: boolean;
 };
 
-export function AppSidebar({ onNavigate }: AppSidebarProps) {
+export function AppSidebar({ onNavigate, luminaMode = false }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { profile, authUserId } = useKampus();
@@ -38,6 +46,13 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const shellTheme = shellThemeFromRole(profile.role);
   const pendingResearchCount = usePendingStudentWorksCount();
   const openExamsCount = useOpenExamsCount();
+  const upcomingPresentationsCount = useUpcomingPresentationsCount();
+  const upcomingVirtualSessionsCount = useUpcomingVirtualSessions(24).count;
+  const collaborateT = collaborateCopy.es;
+  const communityUnreadReplies = useCommunityUnreadReplyCount();
+  const communityT = communityCopy.es;
+  const { hasCheckedInToday: diaryCheckedInToday, loading: diaryStatusLoading } = useDiaryCheckInStatus();
+  const wellbeingT = wellbeingCopy.es;
 
   function pathMatchesNavItem(item: NavItem, pathname: string): boolean {
     if (item.key === "library" && pathname.startsWith("/study/notebook")) return true;
@@ -48,20 +63,34 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     if (item.key === "agendaCalendar") {
       return pathname === "/exams/calendar" || pathname.startsWith("/exams/calendar/");
     }
+    if (item.key === "wellbeing") {
+      return pathname === "/wellbeing";
+    }
+    if (item.key === "diary") {
+      return pathname === "/wellbeing/diary" || pathname.startsWith("/wellbeing/diary/");
+    }
+    if (item.key === "psychologist") {
+      return pathname === "/wellbeing/psychologist" || pathname.startsWith("/wellbeing/psychologist/");
+    }
+    if (item.key === "myPresentations" || item.key === "myResearch" || item.key === "rooms") {
+      return pathname.startsWith("/collaborate");
+    }
     return pathname === item.href || pathname.startsWith(`${item.href}/`);
   }
 
   return (
     <div className="flex h-full flex-col">
-      <div className="px-5 pb-6 pt-8">
-        <Link href="/today" className="flex flex-col gap-2" onClick={onNavigate}>
+      <div className="px-3 pb-6 pt-5">
+        <Link href="/today" className="flex flex-col items-start gap-2">
           <KampusLogo variant="sidebar" />
-          <div className="text-[11px] text-slate-400">
+          <div className={cn("text-[11px]", luminaMode ? "font-bold uppercase tracking-widest text-purple-400" : "text-slate-400")}>
             {profile.role === "teacher"
               ? "Espacio docente · feedback y aula"
               : profile.role === "institution"
                 ? "Panel institución · cohorte"
-                : "Sistema operativo académico"}
+                : luminaMode
+                  ? "Lumina Studio"
+                  : "Sistema operativo académico"}
           </div>
         </Link>
         <div className="mt-4 flex items-center gap-2">
@@ -86,10 +115,10 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={onNavigate}
                     className={cn(
-                      "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition",
-                      active && shellTheme === "student"
+                      "flex min-h-11 touch-manipulation items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition",
+                      active && luminaMode && "kampus-lumina-nav-active font-medium text-purple-300",
+                      active && !luminaMode && shellTheme === "student"
                         ? "bg-white/10 text-white shadow-inner shadow-indigo-500/20 ring-1 ring-indigo-400/25"
                         : null,
                       active && shellTheme === "faculty"
@@ -135,6 +164,37 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                         {pendingResearchCount > 99 ? "99+" : pendingResearchCount}
                       </span>
                     ) : null}
+                    {item.key === "myPresentations" && upcomingPresentationsCount > 0 ? (
+                      <span
+                        className="min-w-[1.25rem] rounded-full bg-violet-500/25 px-1.5 py-0.5 text-center text-[10px] font-semibold tabular-nums text-violet-100 ring-1 ring-violet-400/35"
+                        aria-label={collaborateT.sidebarPresentationsBadge(upcomingPresentationsCount)}
+                      >
+                        {upcomingPresentationsCount > 99 ? "99+" : upcomingPresentationsCount}
+                      </span>
+                    ) : null}
+                    {item.key === "rooms" && upcomingVirtualSessionsCount > 0 ? (
+                      <span
+                        className="min-w-[1.25rem] rounded-full bg-teal-500/25 px-1.5 py-0.5 text-center text-[10px] font-semibold tabular-nums text-teal-100 ring-1 ring-teal-400/35"
+                        aria-label={collaborateT.sidebarVirtualSessionBadge(upcomingVirtualSessionsCount)}
+                      >
+                        {upcomingVirtualSessionsCount > 99 ? "99+" : upcomingVirtualSessionsCount}
+                      </span>
+                    ) : null}
+                    {item.key === "community" && communityUnreadReplies > 0 ? (
+                      <span
+                        className="min-w-[1.25rem] rounded-full bg-emerald-500/25 px-1.5 py-0.5 text-center text-[10px] font-semibold tabular-nums text-emerald-100 ring-1 ring-emerald-400/35"
+                        aria-label={communityT.sidebarUnreadReplies(communityUnreadReplies)}
+                      >
+                        {communityUnreadReplies > 99 ? "99+" : communityUnreadReplies}
+                      </span>
+                    ) : null}
+                    {item.key === "diary" && !diaryStatusLoading && !diaryCheckedInToday ? (
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-full bg-violet-400 ring-2 ring-violet-400/30"
+                        aria-label={wellbeingT.sidebarPendingCheckIn}
+                        title={wellbeingT.sidebarPendingCheckIn}
+                      />
+                    ) : null}
                     {item.premium && profile.plan === "free" ? (
                       <span className="text-[10px] font-semibold uppercase text-amber-200/90">{t.badges.premium}</span>
                     ) : null}
@@ -147,6 +207,19 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       </nav>
 
       <div className="border-t border-white/5 p-4">
+        {luminaMode && profile.plan === "free" ? (
+          <div className="mb-4 rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-600/20 to-indigo-600/20 p-4">
+            <p className="mb-3 text-xs leading-relaxed text-purple-300">
+              Sincroniza tus apuntes en todos tus dispositivos.
+            </p>
+            <Link
+              href="/settings"
+              className="block min-h-11 w-full touch-manipulation rounded-lg bg-purple-600 py-2.5 text-center text-sm font-bold leading-none text-white transition-all hover:bg-purple-500"
+            >
+              Upgrade to Pro
+            </Link>
+          </div>
+        ) : null}
         {isSupabaseConfigured() && authUserId ? (
           <Button
             type="button"

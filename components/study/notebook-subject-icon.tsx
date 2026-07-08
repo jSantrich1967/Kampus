@@ -8,6 +8,7 @@ import {
   Calculator,
   ChartLine,
   Code,
+  Database,
   FlaskConical,
   Globe,
   Landmark,
@@ -48,12 +49,18 @@ export function getNotebookSubjectIcon(subjectName: string): SubjectIconResult {
   }
 
   // --- Computing
+  if (/(base-de-dato|database|sql|postgres|mysql|dato-relacion)/.test(s)) {
+    return { Icon: Database, label: "Bases de datos" };
+  }
   if (/(program|codigo|software|comput|sistem|algorit|ia|machine|ml|ai|web|frontend|backend|node|react)/.test(s)) {
     return { Icon: Code, label: "Programación" };
   }
 
   // --- Science
-  if (/(quimic|fisic|biolog|ciencia|laboratorio)/.test(s)) {
+  if (/(biolog|molecular|genet|celul)/.test(s)) {
+    return { Icon: Atom, label: "Biología" };
+  }
+  if (/(quimic|fisic|ciencia|laboratorio)/.test(s)) {
     return { Icon: Atom, label: "Ciencias" };
   }
   if (/(farmac|medic|salud|anatom|fisiolog|microbio)/.test(s)) {

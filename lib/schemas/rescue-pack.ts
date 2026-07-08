@@ -4,6 +4,10 @@ export const rescueQuizItemSchema = z.object({
   question: z.string().min(1),
   options: z.array(z.string().min(1)).min(2),
   answerIndex: z.number().int().min(0),
+  sourceClassLabel: z.string().min(1).optional(),
+  sourceClassDate: z.string().nullable().optional(),
+  sourceFilename: z.string().min(1).optional(),
+  sourceDocumentId: z.string().min(1).optional(),
 });
 
 export const rescueFlashcardSchema = z.object({

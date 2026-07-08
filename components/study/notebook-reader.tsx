@@ -3,10 +3,13 @@
 import { ArrowLeft, BookOpenText, ChevronLeft, ChevronRight, Loader2, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { PageHeader } from "@/components/layout/page-header";
 import { NotebookStudyKitPanel } from "@/components/study/notebook-study-kit-panel";
+import { NotebookSubjectHub } from "@/components/study/notebook-subject-hub";
+import { NotebookUploadDropZone } from "@/components/study/notebook-upload-drop-zone";
 import { getNotebookSubjectCover } from "@/components/study/notebook-subject-cover";
 import { getNotebookSubjectIcon } from "@/components/study/notebook-subject-icon";
 import { Button } from "@/components/ui/button";
@@ -18,6 +21,12 @@ import { subjectToPathSegment } from "@/lib/notebooks/paths";
 import { formatNotebookCloudError } from "@/lib/notebooks/storage-errors";
 import { uploadNotebookDocuments } from "@/lib/notebooks/upload-documents";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
+import { libraryCopy } from "@/lib/i18n/library";
+import {
+  buildNotebookClassSummaries,
+  buildNotebookSubjectStats,
+} from "@/lib/study/notebook-class-summary";
+import { useFileDropZone } from "@/lib/hooks/use-file-drop-zone";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cn } from "@/lib/cn";
@@ -51,6 +60,17 @@ function pageRangeLabel(index0List: number[]): string {
 
 export function NotebookReader({ subjectSlug }: Props) {
   const { authUserId } = useKampus();
+  const searchParams = useSearchParams();
+  const docIdFromUrl = searchParams.get("doc")?.trim() || null;
+  const openKitFromUrl = searchParams.get("kit") === "1" || searchParams.get("kit") === "true";
+  const openUploadFromUrl = searchParams.get("upload") === "1" || searchParams.get("upload") === "true";
+  const scheduleIdFromUrl = searchParams.get("scheduleId")?.trim() || null;
+  const classDateFromUrl = searchParams.get("classDate")?.trim() || null;
+  const topicFromUrl = searchParams.get("topic")?.trim() || "";
+  const lessonFromUrl = searchParams.get("lesson")?.trim() || "";
+  const focusFromUrl = searchParams.get("focus")?.trim() || null;
+  const calendarUploadMode = Boolean(scheduleIdFromUrl && classDateFromUrl);
+  const lib = libraryCopy.es;
   const [pages, setPages] = useState<NotebookDocumentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +88,12 @@ export function NotebookReader({ subjectSlug }: Props) {
 
   const subjectLabel =
     pages[0]?.subject ?? (subjectSlug && subjectSlug.length > 0 ? subjectSlug.replace(/_/g, " ") : "Cuaderno");
+
+  const subjectStats = useMemo(() => buildNotebookSubjectStats(pages), [pages]);
+  const classSummaries = useMemo(
+    () => buildNotebookClassSummaries(pages, subjectLabel),
+    [pages, subjectLabel],
+  );
 
   const uploadSubject = useMemo(() => {
     const fromPages = (pages[0]?.subject ?? "").trim();
@@ -109,7 +135,8 @@ export function NotebookReader({ subjectSlug }: Props) {
       const slug = (subjectSlug ?? "").trim();
       const filtered = slug ? all.filter((d) => subjectToPathSegment(d.subject) === slug) : [];
       setPages(filtered);
-      setPageIndex(0);
+      const targetIdx = docIdFromUrl ? filtered.findIndex((d) => d.id === docIdFromUrl) : -1;
+      setPageIndex(targetIdx >= 0 ? targetIdx : 0);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "No se pudo cargar el cuaderno.";
       setError(formatNotebookCloudError(msg));
@@ -117,7 +144,19 @@ export function NotebookReader({ subjectSlug }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [authUserId, subjectSlug]);
+  }, [authUserId, subjectSlug, docIdFromUrl]);
+
+  useEffect(() => {
+    if (!pages.length || !docIdFromUrl) return;
+    const idx = pages.findIndex((d) => d.id === docIdFromUrl);
+    if (idx >= 0 && idx !== pageIndex) setPageIndex(idx);
+  }, [pages, docIdFromUrl, pageIndex]);
+
+  useEffect(() => {
+    if (!pages.length || docIdFromUrl || !classDateFromUrl) return;
+    const idx = pages.findIndex((d) => (d.class_date ?? "").slice(0, 10) === classDateFromUrl);
+    if (idx >= 0) setPageIndex(idx);
+  }, [pages, classDateFromUrl, docIdFromUrl]);
 
   useEffect(() => {
     void load();
@@ -158,11 +197,11 @@ export function NotebookReader({ subjectSlug }: Props) {
         subject,
         files: Array.from(fileList),
         fields: {
-          topic: "",
-          lesson_point: "",
+          topic: topicFromUrl || "",
+          lesson_point: lessonFromUrl || "",
           practice_exercises: "",
-          schedule_id: null,
-          class_date: null,
+          schedule_id: scheduleIdFromUrl,
+          class_date: classDateFromUrl,
         },
       });
 
@@ -174,6 +213,14 @@ export function NotebookReader({ subjectSlug }: Props) {
       setUploading(false);
     }
   }
+
+  const canUpload = Boolean(authUserId && isSupabaseConfigured());
+  const { isDraggingOver: isReaderDragOver, dropZoneProps: readerDropProps } = useFileDropZone({
+    disabled: !canUpload || uploading || total === 0,
+    onDrop: (files) => void uploadMoreFiles(files),
+  });
+
+  const emptyUploadLabel = calendarUploadMode ? "Subir apuntes de la clase" : "Subir primeros archivos";
 
   async function signedDownload(doc: NotebookDocumentRow) {
     if (!authUserId) return;
@@ -343,7 +390,7 @@ export function NotebookReader({ subjectSlug }: Props) {
   const isPdf =
     Boolean(current?.mime_type?.includes("pdf")) || Boolean(current?.filename?.toLowerCase().endsWith(".pdf"));
 
-  if (!isSupabaseConfigured()) {
+  if (!isSupabaseConfigured() && authUserId) {
     return (
       <div className="space-y-6">
         <PageHeader eyebrow="Cuaderno" title="Lector" description="Configura Supabase para abrir tus cuadernos." />
@@ -352,19 +399,61 @@ export function NotebookReader({ subjectSlug }: Props) {
     );
   }
 
-  if (!authUserId) {
+  const isDemoBrowse = !authUserId;
+
+  if (isDemoBrowse) {
     return (
       <div className="space-y-6">
-        <PageHeader eyebrow="Cuaderno" title="Lector" description="Inicia sesión para abrir tus materiales." />
-        <Link href="/login">
-          <Button>Ir a iniciar sesión</Button>
-        </Link>
+        <PageHeader
+          eyebrow="Cuaderno"
+          title={subjectLabel}
+          description={lib.demoReaderBody}
+          actions={
+            <Link href="/study/library">
+              <Button variant="secondary" size="sm" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Volver a mis cuadernos
+              </Button>
+            </Link>
+          }
+        />
+
+        <NotebookSubjectHub
+          subject={subjectLabel}
+          subjectSlug={subjectSlug}
+          stats={subjectStats}
+          classes={classSummaries}
+          focusTopic={focusFromUrl}
+        />
+
+        <EmptyState
+          icon={<EmptyStateIllustrationNotebook />}
+          title={lib.demoReaderTitle}
+          description={lib.demoReaderBody}
+          actions={
+            <Link href="/login">
+              <Button>Iniciar sesión para subir apuntes</Button>
+            </Link>
+          }
+        />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6" {...(total > 0 && canUpload ? readerDropProps : {})}>
+      {isReaderDragOver && total > 0 ? (
+        <div
+          className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-purple-950/60 backdrop-blur-sm"
+          aria-hidden
+        >
+          <div className="flex flex-col items-center gap-3 rounded-3xl border border-purple-400/40 bg-purple-500/20 px-10 py-8 text-center shadow-2xl">
+            <Upload className="h-10 w-10 text-purple-200" />
+            <p className="text-lg font-semibold text-white">{lib.readerDropOverlay}</p>
+            <p className="text-sm text-purple-100/80">{lib.quickUploadFormats}</p>
+          </div>
+        </div>
+      ) : null}
       <PageHeader
         eyebrow="Cuaderno"
         title={loading ? "Abriendo…" : subjectLabel}
@@ -381,6 +470,26 @@ export function NotebookReader({ subjectSlug }: Props) {
 
       {error ? <p className="text-sm text-rose-300">{error}</p> : null}
 
+      {calendarUploadMode && openUploadFromUrl ? (
+        <div className="mb-4 rounded-2xl border border-sky-500/25 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+          <p className="font-medium text-white">Subida vinculada al calendario</p>
+          <p className="mt-1 text-sky-100/90">
+            Clase del {classDateFromUrl}
+            {topicFromUrl ? ` · ${topicFromUrl}` : ""}. Los archivos quedarán ligados a esta sesión.
+          </p>
+        </div>
+      ) : null}
+
+      {!loading ? (
+        <NotebookSubjectHub
+          subject={subjectLabel}
+          subjectSlug={subjectSlug}
+          stats={subjectStats}
+          classes={classSummaries}
+          focusTopic={focusFromUrl}
+        />
+      ) : null}
+
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-slate-400">
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -396,26 +505,20 @@ export function NotebookReader({ subjectSlug }: Props) {
             description="Sube tus primeros archivos (PDF/imagen/texto). Esta subida es rápida (sin calendario). Si necesitas vincular a una fecha de clase, súbelos desde Mis cuadernos marcando “clase del calendario”."
             actions={
               <>
-                <label
-                  className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-indigo-500/20 px-4 py-2 text-sm font-semibold text-indigo-100 ring-1 ring-indigo-400/30 hover:bg-indigo-500/30"
-                  title="Subida rápida (sin horario ni fecha de clase). Para calendario, usa Mis cuadernos."
-                >
-                  <Upload className="h-4 w-4" />
-                  {uploading ? "Subiendo…" : "Subir primeros archivos"}
-                  <input
-                    type="file"
-                    className="hidden"
-                    multiple
-                    accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md,application/pdf,image/*,text/plain,text/markdown"
-                    disabled={uploading}
-                    onChange={(e) => void uploadMoreFiles(e.target.files)}
-                  />
-                </label>
-                <Link href="/study/library">
-                  <Button variant="secondary" size="sm">
-                    Mis cuadernos (con calendario)
-                  </Button>
-                </Link>
+                <NotebookUploadDropZone
+                  variant="large"
+                  label={emptyUploadLabel}
+                  uploading={uploading}
+                  disabled={!canUpload}
+                  onFiles={(files) => void uploadMoreFiles(files)}
+                />
+                {!calendarUploadMode ? (
+                  <Link href="/study/library">
+                    <Button variant="secondary" size="sm">
+                      Mis cuadernos (con calendario)
+                    </Button>
+                  </Link>
+                ) : null}
               </>
             }
           />
@@ -525,21 +628,14 @@ export function NotebookReader({ subjectSlug }: Props) {
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
-                      <label
-                        className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-indigo-500/20 px-3 py-2 text-xs font-semibold text-indigo-100 ring-1 ring-indigo-400/30 hover:bg-indigo-500/30"
-                        title="Subida rápida: sin clase del horario. Calendario → Mis cuadernos."
-                      >
-                        <Upload className="h-4 w-4" />
-                        {uploading ? "Subiendo…" : "Agregar (rápido)"}
-                        <input
-                          type="file"
-                          className="hidden"
-                          multiple
-                          accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md,application/pdf,image/*,text/plain,text/markdown"
-                          disabled={uploading}
-                          onChange={(e) => void uploadMoreFiles(e.target.files)}
-                        />
-                      </label>
+                      <NotebookUploadDropZone
+                        variant="compact"
+                        label={uploading ? lib.quickUploadProgress : "Agregar (rápido)"}
+                        uploading={uploading}
+                        disabled={!canUpload}
+                        onFiles={(files) => void uploadMoreFiles(files)}
+                        className="px-3 py-2"
+                      />
                       <Button
                         type="button"
                         size="sm"
@@ -687,6 +783,7 @@ export function NotebookReader({ subjectSlug }: Props) {
             currentPage={current}
             subjectLabel={subjectLabel}
             subjectSlug={subjectSlug}
+            autoGenerateKit={openKitFromUrl}
           />
         </>
       ) : null}

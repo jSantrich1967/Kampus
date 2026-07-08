@@ -79,6 +79,11 @@ export function saveExams(exams: Exam[]) {
   writeJson(EXAMS_KEY, exams);
 }
 
+export function updateExamDueDate(examId: string, dueDate: string) {
+  const next = loadExams().map((e) => (e.id === examId ? { ...e, dueDate } : e));
+  saveExams(next);
+}
+
 export function loadAttempts(): ExamAttempt[] {
   const json = readJson(ATTEMPTS_KEY);
   const parsed = attemptsArraySchema.safeParse(json);

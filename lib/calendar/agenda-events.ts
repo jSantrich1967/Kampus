@@ -1,7 +1,11 @@
 import type { Exam } from "@/lib/schemas/exams";
 import { isStudentWorkCompleted, type StudentWork } from "@/lib/schemas/student-work";
+import { buildStudentWorkHref } from "@/lib/calendar/student-work-path";
 
-export type AgendaKind = "exam" | "presentation" | "work" | "class";
+import { buildPresentationDeckHref } from "@/lib/collaborate/presentation-path";
+import { buildPassModeSubjectHref } from "@/lib/today/block-action-href";
+
+export type AgendaKind = "exam" | "presentation" | "work" | "class" | "virtualClass";
 
 export type AgendaEvent = {
   id: string;
@@ -11,6 +15,8 @@ export type AgendaEvent = {
   title: string;
   subject: string;
   href: string;
+  /** Deep link to Pass Mode for exam events. */
+  passModeHref?: string;
   /** Optional status text (e.g. cancellation reason). */
   note?: string;
 };
@@ -43,6 +49,7 @@ export function buildAgendaEvents(params: {
       title: e.title,
       subject: e.subject,
       href: `/exams/student/${e.id}`,
+      passModeHref: buildPassModeSubjectHref(e.subject),
     });
   }
 
@@ -55,10 +62,7 @@ export function buildAgendaEvents(params: {
       date: pd,
       title: p.title.trim() || "Exposición",
       subject: "Exposición",
-      href:
-        p.id === LOCAL_ONLY_PRESENTATION_ID
-          ? "/collaborate/exposiciones"
-          : `/collaborate/exposiciones?deck=${encodeURIComponent(p.id)}`,
+      href: buildPresentationDeckHref(p.id),
     });
   }
 
@@ -70,7 +74,7 @@ export function buildAgendaEvents(params: {
       date: w.dueDate,
       title: w.title,
       subject: w.subject,
-      href: "/collaborate/investigaciones",
+      href: buildStudentWorkHref(w.id),
     });
   }
 

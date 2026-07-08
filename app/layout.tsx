@@ -25,6 +25,12 @@ export const metadata: Metadata = {
     template: "%s · Kampus",
   },
   description: "El sistema operativo académico para estudiantes, docentes e instituciones.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Kampus",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 /** Lets iOS / PWA expose `env(safe-area-inset-*)` for notched devices when used in CSS. */

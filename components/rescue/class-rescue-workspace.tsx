@@ -27,6 +27,7 @@ import { subjectToPathSegment } from "@/lib/notebooks/paths";
 import { buildRescueSourceDocumentBody, buildRescueTagNotesSection } from "@/lib/notebooks/rescue-pack-plain-text";
 import { saveRescueNotebookSource } from "@/lib/notebooks/save-rescue-source-document";
 import { postRescuePack } from "@/lib/rescue/post-rescue-pack";
+import { buildPassModeSubjectHref } from "@/lib/today/block-action-href";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
@@ -936,7 +937,7 @@ export function ClassRescueWorkspace() {
               >
                 {saveFlashcardsBusy ? "Guardando tarjetas…" : "Guardar tarjetas en el cuaderno"}
               </Button>
-              <Link href="/pass-mode">
+              <Link href={buildPassModeSubjectHref(subjectHint.trim() || profile.subjects[0] || "General", "rescue")}>
                 <Button variant="secondary" size="sm">
                   Llevar esto a Modo aprobar
                 </Button>

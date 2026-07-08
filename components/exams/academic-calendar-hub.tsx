@@ -4,6 +4,12 @@ import Link from "next/link";
 import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, RotateCcw, Trash2 } from "lucide-react";
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { CalendarTodayFocusPanel } from "@/components/exams/calendar-today-focus-panel";
+import { VirtualClassIcsExportButton } from "@/components/collaborate/virtual-class-ics-export-button";
+import { CalendarAgendaEventChip } from "@/components/exams/calendar-agenda-event-chip";
+import { CalendarCompactAgenda } from "@/components/exams/calendar-compact-agenda";
+import { CalendarWeekGrid } from "@/components/exams/calendar-week-grid";
+import { ExamPracticePanel } from "@/components/exams/exam-practice-panel";
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { RescuePackDisplay } from "@/components/rescue/rescue-pack-display";
@@ -18,6 +24,18 @@ import {
   type PresentationAgendaSlice,
 } from "@/lib/calendar/agenda-events";
 import { localIsoDate } from "@/lib/calendar/local-iso-date";
+import { daysUntilDate, daysLeftLabel, urgencyTone } from "@/lib/calendar/calendar-urgency";
+import { buildClassAgendaEventsForRange } from "@/lib/calendar/class-agenda-events";
+import { buildVirtualClassAgendaEvents } from "@/lib/calendar/virtual-class-agenda-events";
+import type { VirtualClassAgendaSlice } from "@/lib/calendar/virtual-class-agenda-events";
+import {
+  addDays,
+  buildWeekDayCells,
+  formatWeekRangeLabel,
+  getMondayOfWeek,
+} from "@/lib/calendar/calendar-week";
+import { AGENDA_DRAG_MIME, parseAgendaEventRef } from "@/lib/calendar/agenda-drag";
+import { syncCancellationsWithCloud } from "@/lib/calendar/sync-cancellations";
 import { cn } from "@/lib/cn";
 import { formatAgendaCloudError } from "@/lib/notebooks/storage-errors";
 import type { Exam } from "@/lib/schemas/exams";
@@ -28,10 +46,15 @@ import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 import { combineNotebookExtractedTextForPack } from "@/lib/notebooks/document-tags";
 import { postRescuePack } from "@/lib/rescue/post-rescue-pack";
 import type { RescuePack } from "@/lib/class-rescue";
-import { seedDemoExamsIfEmpty, loadExams } from "@/lib/storage/exams-storage";
-import { loadPresentation } from "@/lib/storage/presentation-storage";
-import { addStudentWork, loadStudentWorks, removeStudentWork, setStudentWorkCompleted } from "@/lib/storage/student-work-storage";
-import { addClassScheduleRow, loadClassSchedule, removeClassScheduleRow } from "@/lib/storage/class-schedule-storage";
+import { seedDemoExamsIfEmpty, loadExams, updateExamDueDate } from "@/lib/storage/exams-storage";
+import { loadPresentation, savePresentation } from "@/lib/storage/presentation-storage";
+import { addStudentWork, loadStudentWorks, removeStudentWork, setStudentWorkCompleted, updateStudentWorkDueDate } from "@/lib/storage/student-work-storage";
+import { addClassScheduleRow, loadClassSchedule, removeClassScheduleRow, saveClassSchedule } from "@/lib/storage/class-schedule-storage";
+import {
+  loadClassCancellations,
+  removeClassCancellation,
+  upsertClassCancellation,
+} from "@/lib/storage/class-cancellation-storage";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
@@ -39,30 +62,46 @@ import {
   ensureDemoExamsRemote,
   fetchPresentationDeckSummariesRemote,
   fetchClassScheduleRemote,
-  fetchClassCancellationsRemote,
   fetchStudentWorksRemote,
   fetchUserExams,
   insertClassScheduleRemote,
   insertStudentWorkRemote,
   updateStudentWorkCompletedRemote,
+  updateExamDueDateRemote,
+  updateStudentWorkDueDateRemote,
+  updatePresentationDueDateRemote,
   deleteClassScheduleRemote,
   upsertClassCancellationRemote,
   deleteClassCancellationRemote,
 } from "@/lib/supabase/agenda-db";
 import { notifyStudentWorksChanged } from "@/hooks/use-pending-student-works-count";
+import { notifyPresentationsChanged } from "@/lib/collaborate/presentation-urgency";
+import { fetchVirtualClassSessionsInRangeForExport } from "@/lib/supabase/virtual-class-db";
+import type { VirtualClassSessionExport } from "@/lib/supabase/virtual-class-db";
+import { notifyClassScheduleChanged } from "@/hooks/use-class-schedule";
+import { examsCopy } from "@/lib/i18n/exams";
+import { calendarCopy } from "@/lib/i18n/calendar";
+import { buildVirtualClassFromScheduleHref } from "@/lib/collaborate/virtual-class-schedule-link";
+import { collaborateCopy } from "@/lib/i18n/collaborate";
+import { buildCommunityExamHref } from "@/lib/community/channels";
+import { buildPassModeSubjectHref } from "@/lib/today/block-action-href";
 
 const WEEKDAYS_ES = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
-function kindLabel(kind: AgendaEvent["kind"]): string {
+type CalendarViewMode = "month" | "week" | "compact";
+
+function kindLabel(kind: AgendaEvent["kind"], cal: (typeof calendarCopy)["es"]): string {
   if (kind === "exam") return "Examen";
   if (kind === "presentation") return "Exposición";
   if (kind === "class") return "Clase";
+  if (kind === "virtualClass") return cal.virtualClassLabel;
   return "Trabajo / investigación";
 }
 
 function kindTone(kind: AgendaEvent["kind"]): "success" | "accent" | "neutral" {
   if (kind === "exam") return "success";
   if (kind === "presentation") return "accent";
+  if (kind === "virtualClass") return "success";
   return "neutral";
 }
 
@@ -81,6 +120,8 @@ export function AcademicCalendarHub() {
     const n = new Date();
     return new Date(n.getFullYear(), n.getMonth(), 1);
   });
+  const [viewMode, setViewMode] = useState<CalendarViewMode>("month");
+  const [weekStart, setWeekStart] = useState(() => getMondayOfWeek(new Date()));
   const [tick, setTick] = useState(0);
   const [loading, setLoading] = useState(false);
   const firstCalendarLoad = useRef(true);
@@ -94,6 +135,12 @@ export function AcademicCalendarHub() {
     Record<string, { count: number; filenames: string[]; topic?: string | null; lesson_point?: string | null }>
   >({});
   const [presentationSlices, setPresentationSlices] = useState<PresentationAgendaSlice[]>([]);
+  const [virtualSessions, setVirtualSessions] = useState<VirtualClassAgendaSlice[]>([]);
+  const [virtualSessionExports, setVirtualSessionExports] = useState<VirtualClassSessionExport[]>([]);
+
+  const cal = calendarCopy.es;
+  const collab = collaborateCopy.es;
+  const labelForKind = useCallback((kind: AgendaEvent["kind"]) => kindLabel(kind, cal), [cal]);
 
   const [workTitle, setWorkTitle] = useState("");
   const [workSubject, setWorkSubject] = useState("");
@@ -136,6 +183,9 @@ export function AcademicCalendarHub() {
     | null
   >(null);
   const [selectedClassKeys, setSelectedClassKeys] = useState<string[]>([]);
+  const [draggingEventId, setDraggingEventId] = useState<string | null>(null);
+  const [dropTargetIso, setDropTargetIso] = useState<string | null>(null);
+  const [rescheduleBusy, setRescheduleBusy] = useState(false);
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
 
@@ -453,17 +503,22 @@ export function AcademicCalendarHub() {
       if (useCloud) {
         const supabase = createSupabaseBrowserClient();
         await ensureDemoExamsRemote(supabase, authUserId!, profile.subjects[0]);
-        const [examList, workList, classList, cancelList, deckSummaries] = await Promise.all([
+        const [examList, workList, classList, deckSummaries] = await Promise.all([
           fetchUserExams(supabase, authUserId!),
           fetchStudentWorksRemote(supabase, authUserId!),
           fetchClassScheduleRemote(supabase, authUserId!),
-          fetchClassCancellationsRemote(supabase, authUserId!),
           fetchPresentationDeckSummariesRemote(supabase, authUserId!),
         ]);
+        const mergedCancellations = await syncCancellationsWithCloud(
+          supabase,
+          authUserId!,
+          loadClassCancellations(),
+        );
         setExams(examList);
         setWorks(workList);
         setClasses(classList);
-        setCancellations(cancelList);
+        saveClassSchedule(classList);
+        setCancellations(mergedCancellations);
         setPresentationSlices(
           deckSummaries.map((s) => ({
             id: s.id,
@@ -476,7 +531,7 @@ export function AcademicCalendarHub() {
         setExams(loadExams());
         setWorks(loadStudentWorks());
         setClasses(loadClassSchedule());
-        setCancellations([]);
+        setCancellations(loadClassCancellations());
         const loc = loadPresentation();
         const due = loc.presentationDueDate?.trim();
         setPresentationSlices(
@@ -491,6 +546,7 @@ export function AcademicCalendarHub() {
             : [],
         );
       }
+      notifyClassScheduleChanged();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "No se pudo cargar el calendario.";
       setLoadError(formatAgendaCloudError(msg));
@@ -525,45 +581,79 @@ export function AcademicCalendarHub() {
     });
   }, [works]);
 
-  const classEvents = useMemo(() => {
-    if (classes.length === 0) return [] as AgendaEvent[];
-    const year = cursor.getFullYear();
-    const monthIndex0 = cursor.getMonth();
-    const lastDay = new Date(year, monthIndex0 + 1, 0).getDate();
-    const out: AgendaEvent[] = [];
-    for (let d = 1; d <= lastDay; d += 1) {
-      const date = new Date(year, monthIndex0, d);
-      const weekdayMon0 = (date.getDay() + 6) % 7;
-      const iso = `${year}-${String(monthIndex0 + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-      for (const c of classes) {
-        if (c.weekday !== weekdayMon0) continue;
-        const cancelled = cancellations.find((x) => x.scheduleId === c.id && x.classDate === iso) ?? null;
-        const uploadHref = `/study/library?subject=${encodeURIComponent(c.subject)}&topic=${encodeURIComponent(
-          "Clase",
-        )}&scheduleId=${encodeURIComponent(c.id)}&classDate=${encodeURIComponent(iso)}&expand=1`;
-        out.push({
-          id: `class:${c.id}:${iso}`,
-          kind: "class",
-          date: iso,
-          title: cancelled ? `${c.startTime} · ${c.subject} (suspendida)` : `${c.startTime} · ${c.subject}`,
-          subject: c.subject,
-          href: uploadHref,
-          note: cancelled?.reason?.trim() ? `Justificación: ${cancelled.reason.trim()}` : undefined,
-        });
-      }
+  const visibleRange = useMemo(() => {
+    if (viewMode === "week") {
+      return { start: weekStart, end: addDays(weekStart, 6) };
     }
-    return out;
-  }, [classes, cancellations, cursor]);
+    const year = cursor.getFullYear();
+    const m0 = cursor.getMonth();
+    return { start: new Date(year, m0, 1), end: new Date(year, m0 + 1, 0) };
+  }, [viewMode, cursor, weekStart]);
+
+  const classEvents = useMemo(
+    () => buildClassAgendaEventsForRange(classes, cancellations, visibleRange.start, visibleRange.end),
+    [classes, cancellations, visibleRange],
+  );
+
+  const virtualClassEvents = useMemo(
+    () => buildVirtualClassAgendaEvents(virtualSessions),
+    [virtualSessions],
+  );
+
+  useEffect(() => {
+    if (!useCloud || !authUserId) {
+      setVirtualSessions([]);
+      setVirtualSessionExports([]);
+      return;
+    }
+    let cancelled = false;
+    const from = new Date(visibleRange.start);
+    from.setHours(0, 0, 0, 0);
+    const to = new Date(visibleRange.end);
+    to.setHours(23, 59, 59, 999);
+    void (async () => {
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const rows = await fetchVirtualClassSessionsInRangeForExport(supabase, from, to);
+        if (!cancelled) {
+          setVirtualSessionExports(rows);
+          setVirtualSessions(
+            rows.map((s) => ({
+              id: s.id,
+              course: s.course,
+              topic: s.topic,
+              startsAt: s.startsAt,
+            })),
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setVirtualSessions([]);
+          setVirtualSessionExports([]);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [useCloud, authUserId, visibleRange, tick]);
 
   const allEvents = useMemo(() => {
-    return [...events, ...classEvents].sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title));
-  }, [events, classEvents]);
+    return [...events, ...classEvents, ...virtualClassEvents].sort(
+      (a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title),
+    );
+  }, [events, classEvents, virtualClassEvents]);
 
   const y = cursor.getFullYear();
   const m0 = cursor.getMonth();
   const matrix = useMemo(() => monthMatrix(y, m0), [y, m0]);
 
   const monthTitle = cursor.toLocaleString("es-ES", { month: "long", year: "numeric" });
+  const weekTitle = formatWeekRangeLabel(weekStart);
+  const weekDays = useMemo(
+    () => buildWeekDayCells(weekStart, localIsoDate(), WEEKDAYS_ES),
+    [weekStart],
+  );
 
   useEffect(() => {
     if (!hydrated) return;
@@ -571,12 +661,8 @@ export function AcademicCalendarHub() {
       setClassDocsByKey({});
       return;
     }
-    const year = cursor.getFullYear();
-    const monthIndex0 = cursor.getMonth();
-    const firstIso = `${year}-${String(monthIndex0 + 1).padStart(2, "0")}-01`;
-    const lastIso = `${year}-${String(monthIndex0 + 1).padStart(2, "0")}-${String(
-      new Date(year, monthIndex0 + 1, 0).getDate(),
-    ).padStart(2, "0")}`;
+    const firstIso = `${visibleRange.start.getFullYear()}-${String(visibleRange.start.getMonth() + 1).padStart(2, "0")}-${String(visibleRange.start.getDate()).padStart(2, "0")}`;
+    const lastIso = `${visibleRange.end.getFullYear()}-${String(visibleRange.end.getMonth() + 1).padStart(2, "0")}-${String(visibleRange.end.getDate()).padStart(2, "0")}`;
 
     let cancelled = false;
     void (async () => {
@@ -618,7 +704,7 @@ export function AcademicCalendarHub() {
     return () => {
       cancelled = true;
     };
-  }, [hydrated, useCloud, authUserId, cursor]);
+  }, [hydrated, useCloud, authUserId, visibleRange]);
 
   const upcoming = useMemo(() => {
     const today = localIsoDate();
@@ -637,6 +723,69 @@ export function AcademicCalendarHub() {
   function nextMonth() {
     setCursor(new Date(y, m0 + 1, 1));
   }
+
+  function prevWeek() {
+    setWeekStart((w) => addDays(w, -7));
+  }
+
+  function nextWeek() {
+    setWeekStart((w) => addDays(w, 7));
+  }
+
+  function goToTodayView() {
+    const today = new Date();
+    setWeekStart(getMondayOfWeek(today));
+    setCursor(new Date(today.getFullYear(), today.getMonth(), 1));
+  }
+
+  const rescheduleEvent = useCallback(
+    async (eventId: string, newDateIso: string) => {
+      const ref = parseAgendaEventRef(eventId);
+      if (!ref || !/^\d{4}-\d{2}-\d{2}$/.test(newDateIso)) return;
+      setRescheduleBusy(true);
+      setLoadError(null);
+      try {
+        if (ref.kind === "exam") {
+          if (useCloud) {
+            const supabase = createSupabaseBrowserClient();
+            await updateExamDueDateRemote(supabase, authUserId!, ref.entityId, newDateIso);
+          }
+          updateExamDueDate(ref.entityId, newDateIso);
+        } else if (ref.kind === "work") {
+          if (useCloud) {
+            const supabase = createSupabaseBrowserClient();
+            await updateStudentWorkDueDateRemote(supabase, authUserId!, ref.entityId, newDateIso);
+          }
+          updateStudentWorkDueDate(ref.entityId, newDateIso);
+          notifyStudentWorksChanged();
+        } else if (ref.kind === "presentation") {
+          if (ref.entityId === LOCAL_ONLY_PRESENTATION_ID) {
+            const loc = loadPresentation();
+            savePresentation({ ...loc, presentationDueDate: newDateIso });
+          } else if (useCloud) {
+            const supabase = createSupabaseBrowserClient();
+            await updatePresentationDueDateRemote(supabase, authUserId!, ref.entityId, newDateIso);
+          }
+          notifyPresentationsChanged();
+        }
+        refresh();
+      } catch (err) {
+        setLoadError(formatAgendaCloudError(err instanceof Error ? err.message : calendarCopy.es.rescheduleError));
+      } finally {
+        setRescheduleBusy(false);
+        setDraggingEventId(null);
+        setDropTargetIso(null);
+      }
+    },
+    [useCloud, authUserId, refresh],
+  );
+
+  const handleDayDrop = useCallback(
+    (iso: string, eventId: string) => {
+      void rescheduleEvent(eventId, iso);
+    },
+    [rescheduleEvent],
+  );
 
   async function submitClassSchedule(e: FormEvent) {
     e.preventDefault();
@@ -771,6 +920,11 @@ export function AcademicCalendarHub() {
           reason: cancelReason.trim(),
         });
       }
+      upsertClassCancellation({
+        scheduleId: cancelScheduleId,
+        classDate: cancelDate,
+        reason: cancelReason.trim(),
+      });
       setCancelReason("");
       refresh();
     } catch (err) {
@@ -784,6 +938,7 @@ export function AcademicCalendarHub() {
         const supabase = createSupabaseBrowserClient();
         await deleteClassCancellationRemote(supabase, authUserId!, id);
       }
+      removeClassCancellation(id);
       refresh();
     } catch (err) {
       setLoadError(formatAgendaCloudError(err instanceof Error ? err.message : "Error al eliminar suspensión."));
@@ -808,7 +963,7 @@ export function AcademicCalendarHub() {
         description={pageDescription}
         actions={
           <div className="flex flex-wrap gap-2">
-            <Link href="/exams/student">
+            <Link href="/exams">
               <Button variant="secondary" size="sm">
                 Mis exámenes
               </Button>
@@ -839,14 +994,64 @@ export function AcademicCalendarHub() {
         </div>
       ) : null}
 
+      <CalendarTodayFocusPanel />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Button type="button" size="sm" variant="secondary" className="gap-1" onClick={prevMonth} aria-label="Mes anterior">
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <h2 className="min-w-[10rem] capitalize text-lg font-semibold text-white">{monthTitle}</h2>
-          <Button type="button" size="sm" variant="secondary" className="gap-1" onClick={nextMonth} aria-label="Mes siguiente">
-            <ChevronRight className="h-4 w-4" />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-lg border border-white/10 p-0.5">
+            <Button
+              type="button"
+              size="sm"
+              variant={viewMode === "month" ? "secondary" : "ghost"}
+              onClick={() => setViewMode("month")}
+            >
+              {calendarCopy.es.viewMonth}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={viewMode === "week" ? "secondary" : "ghost"}
+              onClick={() => {
+                setViewMode("week");
+                setWeekStart(getMondayOfWeek(new Date()));
+              }}
+            >
+              {calendarCopy.es.viewWeek}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={viewMode === "compact" ? "secondary" : "ghost"}
+              onClick={() => setViewMode("compact")}
+            >
+              {calendarCopy.es.viewCompact}
+            </Button>
+          </div>
+          {viewMode === "month" ? (
+            <>
+              <Button type="button" size="sm" variant="secondary" className="gap-1" onClick={prevMonth} aria-label="Mes anterior">
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <h2 className="min-w-[10rem] capitalize text-lg font-semibold text-white">{monthTitle}</h2>
+              <Button type="button" size="sm" variant="secondary" className="gap-1" onClick={nextMonth} aria-label="Mes siguiente">
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </>
+          ) : viewMode === "week" ? (
+            <>
+              <Button type="button" size="sm" variant="secondary" className="gap-1" onClick={prevWeek} aria-label="Semana anterior">
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <h2 className="min-w-[12rem] text-lg font-semibold text-white">{weekTitle}</h2>
+              <Button type="button" size="sm" variant="secondary" className="gap-1" onClick={nextWeek} aria-label="Semana siguiente">
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </>
+          ) : (
+            <h2 className="min-w-[12rem] text-lg font-semibold text-white">{calendarCopy.es.viewCompact}</h2>
+          )}
+          <Button type="button" size="sm" variant="ghost" onClick={goToTodayView}>
+            {calendarCopy.es.goToday}
           </Button>
         </div>
         <div className="flex flex-col items-end gap-1 text-xs text-slate-500">
@@ -863,13 +1068,51 @@ export function AcademicCalendarHub() {
             <span className="inline-flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-slate-400/80" /> Trabajo
             </span>
+            <span className="inline-flex items-center gap-1.5 text-slate-400">
+              <span className="h-2 w-2 rounded-full bg-teal-400/80" /> {cal.virtualClassLabel}
+            </span>
           </div>
+          {useCloud && virtualSessionExports.length > 0 ? (
+            <VirtualClassIcsExportButton sessions={virtualSessionExports} />
+          ) : null}
           <p className="max-w-sm text-right text-[11px] leading-snug text-slate-600">
-            Exposición y trabajo: fecha en el planificador o entregas en la columna derecha. Exámenes demo usan fechas en tu zona horaria (mes actual cuando cabe).
+            {calendarCopy.es.dragHint}
           </p>
+          <p className="max-w-sm text-right text-[11px] leading-snug text-slate-600">
+            {calendarCopy.es.classClickHint}
+          </p>
+          {rescheduleBusy ? (
+            <p className="text-[11px] text-indigo-300">{calendarCopy.es.dropHint}</p>
+          ) : null}
         </div>
       </div>
 
+      {viewMode === "compact" ? (
+        <CalendarCompactAgenda
+          events={allEvents}
+          kindLabel={labelForKind}
+          draggingEventId={draggingEventId}
+          onDragStart={setDraggingEventId}
+          onDragEnd={() => setDraggingEventId(null)}
+        />
+      ) : viewMode === "week" ? (
+        <CalendarWeekGrid
+          days={weekDays}
+          eventsOnDay={(iso) => allEvents.filter((e) => e.date === iso)}
+          classDocsByKey={classDocsByKey}
+          selectedClassKeys={selectedClassKeys}
+          onToggleClassKey={toggleSelectedClassKey}
+          materialHint={materialHint}
+          kindLabel={labelForKind}
+          dropTargetIso={dropTargetIso}
+          draggingEventId={draggingEventId}
+          onDragStart={setDraggingEventId}
+          onDragEnd={() => setDraggingEventId(null)}
+          onDayDragOver={setDropTargetIso}
+          onDayDragLeave={() => setDropTargetIso(null)}
+          onDayDrop={handleDayDrop}
+        />
+      ) : (
       <div className="overflow-x-auto rounded-2xl border border-white/10 bg-slate-950/40">
         <div className="grid grid-cols-7 gap-px border-b border-white/10 bg-white/10 text-center text-[11px] font-semibold uppercase tracking-wide text-slate-400">
           {WEEKDAYS_ES.map((d) => (
@@ -890,9 +1133,21 @@ export function AcademicCalendarHub() {
               <div
                 key={iso}
                 className={cn(
-                  "min-h-[5.5rem] bg-slate-950/80 p-1.5 text-left",
+                  "min-h-[5.5rem] bg-slate-950/80 p-1.5 text-left transition",
                   isToday && "ring-1 ring-inset ring-indigo-400/40",
+                  dropTargetIso === iso && "bg-indigo-500/10 ring-2 ring-inset ring-indigo-400/50",
                 )}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDropTargetIso(iso);
+                }}
+                onDragLeave={() => setDropTargetIso(null)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const eventId = e.dataTransfer.getData(AGENDA_DRAG_MIME);
+                  if (eventId) void handleDayDrop(iso, eventId);
+                  setDropTargetIso(null);
+                }}
               >
                 <div className={cn("text-xs font-semibold", isToday ? "text-indigo-200" : "text-slate-400")}>{day}</div>
                 <div className="mt-1 space-y-0.5">
@@ -902,34 +1157,23 @@ export function AcademicCalendarHub() {
                     const selected = Boolean(key) && selectedClassKeys.includes(key);
                     const mat = key ? classDocsByKey[key] : null;
                     const hint = materialHint(mat);
-                    const countText = mat?.count ? `+${mat.count}` : "";
                     return (
-                    <Link
-                      key={ev.id}
-                      href={ev.href}
-                      className={cn(
-                        "block rounded px-1 py-0.5 text-[10px] leading-tight ring-1 transition hover:bg-white/5",
-                        ev.kind === "exam" && "bg-emerald-500/15 text-emerald-100 ring-emerald-400/20",
-                        ev.kind === "presentation" && "bg-indigo-500/15 text-indigo-100 ring-indigo-400/25",
-                        ev.kind === "class" && !selected && "bg-white/5 text-slate-200 ring-white/10",
-                        ev.kind === "class" && selected && "bg-amber-500/20 text-amber-100 ring-amber-400/30",
-                        ev.kind === "work" && "bg-white/5 text-slate-200 ring-white/10",
-                      )}
-                      title={`${kindLabel(ev.kind)}: ${ev.title}${ev.note ? ` · ${ev.note}` : ""}`}
-                      onClick={(e) => {
-                        // UX: click selects class days; Ctrl/Cmd click keeps navigation.
-                        if (!isClass) return;
-                        if (e.metaKey || e.ctrlKey) return;
-                        e.preventDefault();
-                        toggleSelectedClassKey(key);
-                      }}
-                    >
-                      <div className="flex items-baseline justify-between gap-1">
-                        <span className="min-w-0 flex-1 truncate">{ev.title}</span>
-                        {countText ? <span className="shrink-0 text-[10px] text-slate-400">{countText}</span> : null}
-                      </div>
-                      {hint ? <div className="mt-0.5 truncate text-[10px] text-slate-400">{hint}</div> : null}
-                    </Link>
+                      <CalendarAgendaEventChip
+                        key={ev.id}
+                        ev={ev}
+                        hint={hint}
+                        kindLabel={labelForKind(ev.kind)}
+                        selected={selected}
+                        dragging={draggingEventId === ev.id}
+                        onDragStart={setDraggingEventId}
+                        onDragEnd={() => setDraggingEventId(null)}
+                        className="text-[10px]"
+                        onClassClick={(e) => {
+                          if (e.metaKey || e.ctrlKey) return;
+                          e.preventDefault();
+                          toggleSelectedClassKey(key);
+                        }}
+                      />
                     );
                   })}
                   {dayEvents.length > 3 ? (
@@ -941,6 +1185,7 @@ export function AcademicCalendarHub() {
           })}
         </div>
       </div>
+      )}
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3">
         <div className="text-sm text-slate-300">
@@ -977,32 +1222,82 @@ export function AcademicCalendarHub() {
             {upcoming.length === 0 ? (
               <li className="text-sm text-slate-500">No hay fechas futuras. Añade entregas de trabajos o fecha en exposiciones.</li>
             ) : (
-              upcoming.map((ev) => (
+              upcoming.map((ev) => {
+                const daysLeft = daysUntilDate(ev.date);
+                const isClass = ev.kind === "class" && ev.id.startsWith("class:");
+                const scheduleId = isClass ? (ev.id.split(":")[1] ?? "") : "";
+                const classKey = scheduleId ? `${scheduleId}:${ev.date}` : "";
+                const classMat = classKey ? classDocsByKey[classKey] : null;
+                const classNoteCount = classMat?.count ?? 0;
+
+                return (
                 <li key={ev.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2 text-sm">
                   <div className="min-w-0">
-                    <div className="truncate font-medium text-white">{ev.title}</div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="truncate font-medium text-white">{ev.title}</span>
+                      {daysLeft !== null && daysLeft >= 0 ? (
+                        <Badge tone={urgencyTone(daysLeft)}>{daysLeftLabel(daysLeft)}</Badge>
+                      ) : null}
+                    </div>
                     <div className="text-xs text-slate-500">
                       {ev.date} · {ev.subject}
-                      {ev.kind === "class" && ev.id.startsWith("class:") ? (
+                      {isClass ? (
                         (() => {
-                          const scheduleId = ev.id.split(":")[1] ?? "";
-                          const key = scheduleId ? `${scheduleId}:${ev.date}` : "";
-                          const hint = key ? materialHint(classDocsByKey[key] ?? null) : "";
+                          const hint = classKey ? materialHint(classDocsByKey[classKey] ?? null) : "";
                           return hint ? <span className="text-slate-400"> · {hint}</span> : null;
                         })()
                       ) : null}
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <Badge tone={kindTone(ev.kind)}>{kindLabel(ev.kind)}</Badge>
-                    {ev.kind === "class" && ev.id.startsWith("class:") ? (
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    <Badge tone={kindTone(ev.kind)}>{labelForKind(ev.kind)}</Badge>
+                    {isClass ? (
+                      <Badge tone={classNoteCount > 0 ? "success" : "warning"}>
+                        {classNoteCount > 0 ? calendarCopy.es.classNotesReady : calendarCopy.es.classNotesMissing}
+                      </Badge>
+                    ) : null}
+                    {ev.kind === "exam" && ev.passModeHref ? (
+                      <Link href={ev.passModeHref}>
+                        <Button type="button" size="sm" variant="secondary">
+                          {examsCopy.es.calendarPassModeCta}
+                        </Button>
+                      </Link>
+                    ) : null}
+                    {ev.kind === "exam" && profile.interestedInCommunity !== false ? (
+                      <Link href={buildCommunityExamHref(ev.subject, ev.date)}>
+                        <Button type="button" size="sm" variant="ghost">
+                          {calendarCopy.es.communityExamCta}
+                        </Button>
+                      </Link>
+                    ) : null}
+                    {ev.kind === "exam" ? <ExamPracticePanel subject={ev.subject} compact /> : null}
+                    {ev.kind === "presentation" ? (
+                      <>
+                        <Link href={ev.href}>
+                          <Button type="button" size="sm" variant="secondary">
+                            {calendarCopy.es.calendarPresentationCta}
+                          </Button>
+                        </Link>
+                        <Link href="/collaborate/sala-estudio">
+                          <Button type="button" size="sm" variant="ghost">
+                            {calendarCopy.es.calendarStudyRoomCta}
+                          </Button>
+                        </Link>
+                      </>
+                    ) : null}
+                    {isClass && scheduleId ? (
+                      <Link href={buildVirtualClassFromScheduleHref(scheduleId, ev.date)}>
+                        <Button type="button" size="sm" variant="ghost">
+                          {cal.calendarVirtualClassCta}
+                        </Button>
+                      </Link>
+                    ) : null}
+                    {isClass ? (
                       <Button
                         type="button"
                         size="sm"
                         variant="secondary"
                         onClick={() => {
-                          const parts = ev.id.split(":");
-                          const scheduleId = parts[1] ?? "";
                           if (!scheduleId) return;
                           void generateKitForClass(scheduleId, ev.date, ev.subject);
                         }}
@@ -1015,7 +1310,8 @@ export function AcademicCalendarHub() {
                     </Link>
                   </div>
                 </li>
-              ))
+                );
+              })
             )}
           </ul>
         </Card>
@@ -1145,16 +1441,11 @@ export function AcademicCalendarHub() {
                   placeholder="Ej. Profesor enfermo, paro, cambio de aula…"
                 />
               </label>
-              <Button type="submit" size="sm" variant="secondary" disabled={!useCloud}>
-                Guardar suspensión
+              <Button type="submit" size="sm" variant="secondary">
+                {calendarCopy.es.saveCancellation}
               </Button>
-              {!useCloud ? (
-                <p className="text-[11px] text-slate-500">
-                  Para guardar “clase suspendida” en la nube, inicia sesión (usa Supabase). En modo local lo implementamos después.
-                </p>
-              ) : null}
             </form>
-            {useCloud && cancellations.length > 0 ? (
+            {cancellations.length > 0 ? (
               <ul className="mt-4 space-y-2">
                 {cancellations.slice(0, 8).map((c) => (
                   <li key={c.id} className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-slate-950/30 px-3 py-2 text-xs">
@@ -1364,7 +1655,7 @@ export function AcademicCalendarHub() {
             {kitSources ? (
               <details className="rounded-xl border border-white/10 bg-slate-950/40 p-3 text-xs text-slate-300">
                 <summary className="cursor-pointer select-none text-slate-200">
-                  Ver archivos usados y texto extraído (diagnóstico)
+                  {calendarCopy.es.diagnosticsSummary}
                 </summary>
                 <div className="mt-2 space-y-2">
                   <p className="text-slate-400">
@@ -1427,11 +1718,18 @@ export function AcademicCalendarHub() {
           </CardHeader>
           <ul className="list-disc space-y-1 px-6 pb-6 pl-10 text-sm text-amber-50/90">
             {unscheduledExams.map((e) => (
-              <li key={e.id}>
-                <Link href={`/exams/student/${e.id}`} className="underline-offset-2 hover:underline">
-                  {e.title}
+              <li key={e.id} className="flex flex-wrap items-center justify-between gap-2">
+                <span>
+                  <Link href={`/exams/student/${e.id}`} className="underline-offset-2 hover:underline">
+                    {e.title}
+                  </Link>
+                  <span className="text-amber-200/70"> · {e.subject}</span>
+                </span>
+                <Link href={buildPassModeSubjectHref(e.subject)}>
+                  <Button size="sm" variant="secondary">
+                    {examsCopy.es.calendarPassModeCta}
+                  </Button>
                 </Link>
-                <span className="text-amber-200/70"> · {e.subject}</span>
               </li>
             ))}
           </ul>

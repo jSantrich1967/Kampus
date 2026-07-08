@@ -47,8 +47,9 @@ export function KampusProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const stored = loadProfile();
     setProfileState(stored);
+    // Render immediately from local storage; Supabase sync runs in the background.
+    setHydrated(true);
     if (!isSupabaseConfigured()) {
-      setHydrated(true);
       setAuthUserId(null);
     }
   }, []);
@@ -63,7 +64,6 @@ export function KampusProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
       if (userId === null) {
         setAuthUserId(null);
-        setHydrated(true);
         return;
       }
 
@@ -88,8 +88,6 @@ export function KampusProvider({ children }: { children: ReactNode }) {
           setProfileState(local);
           saveProfile(local);
         }
-      } finally {
-        if (!cancelled) setHydrated(true);
       }
     };
 

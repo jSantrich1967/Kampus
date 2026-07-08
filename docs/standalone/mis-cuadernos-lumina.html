@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kampus — Mis Cuadernos (Lumina)</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    .glass-sidebar {
+      background: rgba(19, 19, 24, 0.8);
+      backdrop-filter: blur(16px);
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    .glass-card:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(124, 58, 237, 0.3);
+      transform: translateY(-4px);
+    }
+
+    .active-nav {
+      background: rgba(124, 58, 237, 0.1);
+      color: #a78bfa;
+      border-right: 3px solid #7c3aed;
+    }
+
+    .notebook-card.hidden-by-search {
+      display: none;
+    }
+  </style>
+</head>
+<body class="flex min-h-screen bg-[#0e0e13] text-white">
+
+  <!-- Sidebar -->
+  <aside class="glass-sidebar fixed z-50 flex h-screen w-64 flex-col max-md:hidden">
+    <div class="p-8">
+      <div class="mb-12 flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-purple-700 shadow-lg shadow-purple-500/20">
+          <span class="material-icons-round text-white">school</span>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight">Kampus</h1>
+          <p class="text-[10px] font-bold uppercase tracking-widest text-purple-400">Lumina Studio</p>
+        </div>
+      </div>
+
+      <nav class="space-y-2">
+        <a href="#" class="flex items-center gap-3 rounded-xl px-4 py-3 text-gray-400 transition-all hover:bg-white/5 hover:text-white">
+          <span class="material-icons-round text-xl">today</span>
+          <span class="font-medium">Hoy</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 rounded-xl px-4 py-3 text-gray-400 transition-all hover:bg-white/5 hover:text-white">
+          <span class="material-icons-round text-xl">style</span>
+          <span class="font-medium">Tarjetas</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 rounded-l-xl rounded-r-none px-4 py-3 active-nav transition-all">
+          <span class="material-icons-round text-xl">auto_stories</span>
+          <span class="font-medium">Mis cuadernos</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 rounded-xl px-4 py-3 text-gray-400 transition-all hover:bg-white/5 hover:text-white">
+          <span class="material-icons-round text-xl">quiz</span>
+          <span class="font-medium">Exámenes</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 rounded-xl px-4 py-3 text-gray-400 transition-all hover:bg-white/5 hover:text-white">
+          <span class="material-icons-round text-xl">calendar_month</span>
+          <span class="font-medium">Calendario</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 rounded-xl px-4 py-3 text-gray-400 transition-all hover:bg-white/5 hover:text-white">
+          <span class="material-icons-round text-xl">group</span>
+          <span class="font-medium">Comunidad</span>
+        </a>
+      </nav>
+    </div>
+
+    <div class="mt-auto space-y-6 p-6">
+      <div class="rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-600/20 to-indigo-600/20 p-4">
+        <p class="mb-3 text-xs leading-relaxed text-purple-300">Sincroniza tus apuntes en todos tus dispositivos.</p>
+        <button type="button" class="w-full rounded-lg bg-purple-600 py-2 text-sm font-bold text-white transition-all hover:bg-purple-500">
+          Upgrade to Pro
+        </button>
+      </div>
+      <div class="space-y-1">
+        <a href="#" class="flex items-center gap-3 px-4 py-2 text-gray-500 transition-all hover:text-gray-300">
+          <span class="material-icons-round text-sm">settings</span>
+          <span class="text-sm font-medium">Ajustes</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 px-4 py-2 text-gray-500 transition-all hover:text-gray-300">
+          <span class="material-icons-round text-sm">logout</span>
+          <span class="text-sm font-medium">Cerrar sesión</span>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="ml-0 flex-1 p-6 md:ml-64 md:p-10">
+    <!-- Top bar -->
+    <header class="mb-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div class="relative w-full lg:max-w-md">
+        <span class="material-icons-round absolute top-1/2 left-4 -translate-y-1/2 text-gray-500">search</span>
+        <input
+          id="search-input"
+          type="search"
+          placeholder="Buscar cuadernos o apuntes…"
+          class="w-full rounded-xl border border-white/10 bg-white/5 py-3 pr-4 pl-12 text-sm transition-all focus:border-purple-500 focus:outline-none"
+        />
+      </div>
+      <div class="flex items-center justify-end gap-6">
+        <button type="button" class="relative text-gray-400 transition-all hover:text-white" aria-label="Notificaciones">
+          <span class="material-icons-round">notifications</span>
+          <span class="absolute top-0 right-0 h-2 w-2 rounded-full border-2 border-[#0e0e13] bg-purple-500"></span>
+        </button>
+        <div class="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
+          <div class="hidden text-right sm:block">
+            <p class="text-xs font-bold">Alex</p>
+            <p class="text-[10px] font-black uppercase text-purple-400">Estudiante</p>
+          </div>
+          <div class="flex h-8 w-8 items-center justify-center rounded-full border border-purple-500/50 bg-gradient-to-br from-purple-500 to-purple-700 text-xs font-bold">
+            A
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Header -->
+    <div class="mb-10">
+      <p class="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-purple-400">Estudio</p>
+      <h2 class="mb-4 text-4xl font-bold">Mis cuadernos</h2>
+      <p class="max-w-2xl text-gray-500">
+        Cuadernos por materia: subida con calendario aquí; índice, etiquetas y subida rápida en el lector.
+      </p>
+    </div>
+
+    <!-- Demo banner -->
+    <div class="mb-6 rounded-2xl border border-purple-500/20 bg-purple-500/10 px-4 py-3 text-sm text-purple-200">
+      Modo demo — datos de ejemplo. En la app real esto se conecta a Supabase.
+    </div>
+
+    <!-- Grid -->
+    <div id="notebook-grid" class="mb-12 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+      <!-- New notebook -->
+      <button
+        type="button"
+        id="new-notebook-btn"
+        class="glass-card flex min-h-[320px] flex-col items-center justify-center rounded-3xl border-dashed border-white/10"
+      >
+        <div class="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-white/5 text-gray-400">
+          <span class="material-icons-round text-3xl">add</span>
+        </div>
+        <h3 class="mb-2 text-xl font-bold">Nuevo cuaderno</h3>
+        <p class="text-sm text-gray-500">Crea un nuevo espacio de estudio</p>
+      </button>
+
+      <!-- Notebook: Cálculo -->
+      <article class="notebook-card glass-card group relative overflow-hidden rounded-3xl p-8" data-title="cálculo">
+        <div class="absolute top-0 right-0 p-6">
+          <button type="button" class="text-gray-500 transition-all hover:text-white" aria-label="Opciones">
+            <span class="material-icons-round">more_vert</span>
+          </button>
+        </div>
+        <span class="mb-6 inline-flex rounded-full bg-purple-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-purple-400">Ciencias</span>
+        <h3 class="mb-6 text-2xl font-bold">Cálculo</h3>
+        <div class="mb-8 space-y-4">
+          <div class="flex items-center gap-3 text-sm text-gray-400">
+            <span class="material-icons-round text-lg">description</span>
+            <span>8 apuntes guardados</span>
+          </div>
+          <div class="flex items-center gap-3 text-sm text-gray-400">
+            <span class="material-icons-round text-lg">history</span>
+            <span>Última edición: hace 2 horas</span>
+          </div>
+        </div>
+        <div class="flex items-center justify-between border-t border-white/5 pt-6">
+          <div class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#131318] bg-purple-600/30 text-[10px] font-bold text-purple-200">C</div>
+          <button type="button" class="flex items-center gap-2 text-sm font-bold text-purple-400 transition-all group-hover:gap-3">
+            Abrir lector
+            <span class="material-icons-round text-sm">arrow_forward</span>
+          </button>
+        </div>
+      </article>
+
+      <!-- Notebook: Programación -->
+      <article class="notebook-card glass-card group relative overflow-hidden rounded-3xl p-8" data-title="programación">
+        <div class="absolute top-0 right-0 p-6">
+          <button type="button" class="text-gray-500 transition-all hover:text-white" aria-label="Opciones">
+            <span class="material-icons-round">more_vert</span>
+          </button>
+        </div>
+        <span class="mb-6 inline-flex rounded-full bg-purple-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-purple-400">Ciencias</span>
+        <h3 class="mb-6 text-2xl font-bold">Programación</h3>
+        <div class="mb-8 space-y-4">
+          <div class="flex items-center gap-3 text-sm text-gray-400">
+            <span class="material-icons-round text-lg">description</span>
+            <span>15 apuntes guardados</span>
+          </div>
+          <div class="flex items-center gap-3 text-sm text-green-400">
+            <span class="material-icons-round text-lg">cloud_done</span>
+            <span>Sincronizado recientemente</span>
+          </div>
+        </div>
+        <div class="flex items-center justify-between border-t border-white/5 pt-6">
+          <div class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#131318] bg-purple-600/30 text-[10px] font-bold text-purple-200">P</div>
+          <button type="button" class="flex items-center gap-2 text-sm font-bold text-purple-400 transition-all group-hover:gap-3">
+            Abrir lector
+            <span class="material-icons-round text-sm">arrow_forward</span>
+          </button>
+        </div>
+      </article>
+
+      <!-- Notebook: Bases de datos -->
+      <article class="notebook-card glass-card group relative overflow-hidden rounded-3xl p-8" data-title="bases de datos">
+        <div class="absolute top-0 right-0 p-6">
+          <button type="button" class="text-gray-500 transition-all hover:text-white" aria-label="Opciones">
+            <span class="material-icons-round">more_vert</span>
+          </button>
+        </div>
+        <span class="mb-6 inline-flex rounded-full bg-purple-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-purple-400">Ciencias</span>
+        <h3 class="mb-6 text-2xl font-bold">Bases de datos</h3>
+        <div class="mb-8 space-y-4">
+          <div class="flex items-center gap-3 text-sm text-gray-400">
+            <span class="material-icons-round text-lg">description</span>
+            <span>6 apuntes guardados</span>
+          </div>
+          <div class="flex items-center gap-3 text-sm text-gray-400">
+            <span class="material-icons-round text-lg">history</span>
+            <span>Última edición: ayer</span>
+          </div>
+        </div>
+        <div class="flex items-center justify-between border-t border-white/5 pt-6">
+          <div class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#131318] bg-purple-600/30 text-[10px] font-bold text-purple-200">B</div>
+          <button type="button" class="flex items-center gap-2 text-sm font-bold text-purple-400 transition-all group-hover:gap-3">
+            Abrir lector
+            <span class="material-icons-round text-sm">arrow_forward</span>
+          </button>
+        </div>
+      </article>
+
+      <!-- Notebook: Estadística -->
+      <article class="notebook-card glass-card group relative overflow-hidden rounded-3xl p-8" data-title="estadística">
+        <div class="absolute top-0 right-0 p-6">
+          <button type="button" class="text-gray-500 transition-all hover:text-white" aria-label="Opciones">
+            <span class="material-icons-round">more_vert</span>
+          </button>
+        </div>
+        <span class="mb-6 inline-flex rounded-full bg-orange-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-orange-400">Humanidades</span>
+        <h3 class="mb-6 text-2xl font-bold">Estadística</h3>
+        <div class="mb-8 space-y-4">
+          <div class="flex items-center gap-3 text-sm text-gray-400">
+            <span class="material-icons-round text-lg">description</span>
+            <span>4 apuntes guardados</span>
+          </div>
+          <div class="flex items-center gap-3 text-sm text-gray-400">
+            <span class="material-icons-round text-lg">history</span>
+            <span>Última edición: hace 3 días</span>
+          </div>
+        </div>
+        <div class="flex items-center justify-between border-t border-white/5 pt-6">
+          <div class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#131318] bg-purple-600/30 text-[10px] font-bold text-purple-200">E</div>
+          <button type="button" class="flex items-center gap-2 text-sm font-bold text-purple-400 transition-all group-hover:gap-3">
+            Abrir lector
+            <span class="material-icons-round text-sm">arrow_forward</span>
+          </button>
+        </div>
+      </article>
+    </div>
+
+    <!-- Cloud sync widget -->
+    <section class="glass-card flex flex-col items-center gap-12 rounded-[40px] bg-gradient-to-r from-purple-900/10 to-transparent p-8 md:flex-row">
+      <div class="relative flex h-40 w-40 items-center justify-center">
+        <svg class="h-full w-full -rotate-90" viewBox="0 0 160 160" aria-hidden="true">
+          <circle cx="80" cy="80" r="70" stroke="currentColor" stroke-width="12" fill="transparent" class="text-white/5" />
+          <circle cx="80" cy="80" r="70" stroke="currentColor" stroke-width="12" fill="transparent" stroke-dasharray="440" stroke-dashoffset="114" stroke-linecap="round" class="text-purple-500" />
+        </svg>
+        <div class="absolute text-center">
+          <p class="text-3xl font-bold">74%</p>
+          <p class="text-[8px] uppercase tracking-widest text-gray-500">Uso Cloud</p>
+        </div>
+      </div>
+      <div class="flex-1 text-center md:text-left">
+        <div class="mb-4 flex items-center justify-center gap-3 md:justify-start">
+          <span class="material-icons-round text-purple-400">cloud_sync</span>
+          <h3 class="text-2xl font-bold">Sincronización en la Nube</h3>
+        </div>
+        <p class="mb-8 max-w-xl leading-relaxed text-gray-400">
+          Todos tus cuadernos se están sincronizando con Kampus Lumina Cloud. No pierdas nunca tu progreso, incluso sin conexión.
+        </p>
+        <div class="flex flex-wrap justify-center gap-4 md:justify-start">
+          <button type="button" class="rounded-xl border border-purple-500/20 bg-purple-600/20 px-6 py-3 text-sm font-bold text-purple-300 transition-all hover:bg-purple-600/30">
+            Ver historial
+          </button>
+          <button type="button" class="rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-bold text-white transition-all hover:bg-white/10">
+            Configurar backup
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- FAB -->
+  <button
+    type="button"
+    id="fab-btn"
+    class="fixed bottom-10 right-10 z-[100] flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-600 text-white shadow-2xl shadow-purple-600/40 transition-all hover:scale-110 hover:bg-purple-500 active:scale-95"
+    aria-label="Nuevo cuaderno"
+  >
+    <span class="material-icons-round text-3xl transition-transform">note_add</span>
+  </button>
+
+  <!-- Modal -->
+  <div id="modal" class="fixed inset-0 z-[110] hidden items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="relative w-full max-w-md rounded-3xl border border-white/10 bg-[#1b1b20] p-6 shadow-2xl">
+      <button type="button" id="modal-close" class="absolute top-4 right-4 text-gray-400 hover:text-white" aria-label="Cerrar">
+        <span class="material-icons-round">close</span>
+      </button>
+      <h3 id="modal-title" class="mb-2 text-xl font-bold">Nuevo cuaderno</h3>
+      <p class="mb-6 text-sm text-gray-400">Un cuaderno por materia. Después podrás subir apuntes en el lector.</p>
+      <label class="mb-4 block space-y-2 text-sm">
+        <span class="text-gray-300">Nombre de la materia</span>
+        <input id="modal-input" type="text" placeholder="Ej. Econometría" class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500/80" />
+      </label>
+      <button type="button" id="modal-create" class="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 py-3 font-semibold text-white hover:bg-purple-500">
+        <span class="material-icons-round text-lg">add</span>
+        Crear cuaderno
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const searchInput = document.getElementById('search-input');
+    const cards = document.querySelectorAll('.notebook-card');
+    const modal = document.getElementById('modal');
+    const modalInput = document.getElementById('modal-input');
+    const openModal = () => {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      modalInput.focus();
+    };
+    const closeModal = () => {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      modalInput.value = '';
+    };
+
+    document.getElementById('new-notebook-btn').addEventListener('click', openModal);
+    document.getElementById('fab-btn').addEventListener('click', openModal);
+    document.getElementById('modal-close').addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+    document.getElementById('modal-create').addEventListener('click', () => {
+      const name = modalInput.value.trim();
+      if (name) alert('Demo: crearías el cuaderno "' + name + '". En la app real esto va a Supabase.');
+      closeModal();
+    });
+
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim().toLowerCase();
+      cards.forEach((card) => {
+        const title = card.getAttribute('data-title') || '';
+        card.classList.toggle('hidden-by-search', q.length > 0 && !title.includes(q));
+      });
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeModal();
+    });
+  </script>
+</body>
+</html>

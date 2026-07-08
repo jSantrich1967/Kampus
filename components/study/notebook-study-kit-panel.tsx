@@ -2,8 +2,9 @@
 
 import { Sparkles, Wand2 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { buildPassModeSubjectHref } from "@/lib/today/block-action-href";
 import { ShareLinkButton } from "@/components/growth/share-link-button";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { RescuePackDisplay } from "@/components/rescue/rescue-pack-display";
@@ -29,9 +30,19 @@ type Props = {
   currentPage: NotebookDocumentRow;
   subjectLabel: string;
   subjectSlug: string;
+  /** Desde quiz de presión: genera kit de esta hoja y hace scroll al panel. */
+  autoGenerateKit?: boolean;
 };
 
-export function NotebookStudyKitPanel({ pages, currentPage, subjectLabel, subjectSlug }: Props) {
+export function NotebookStudyKitPanel({
+  pages,
+  currentPage,
+  subjectLabel,
+  subjectSlug,
+  autoGenerateKit = false,
+}: Props) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const autoKitRanForPage = useRef<string | null>(null);
   const { profile } = useKampus();
   const premium = profile.plan === "premium";
   const [scope, setScope] = useState<Scope>("page");
@@ -85,46 +96,76 @@ export function NotebookStudyKitPanel({ pages, currentPage, subjectLabel, subjec
     };
   }, [scope, kitDocs]);
 
-  async function generateKit() {
-    if (kitDocs.length === 0) return;
-    setPackBusy(true);
-    setPackError(null);
-    const subjectHint = subjectLabel.trim() || "Cuaderno";
-    const body = {
-      subjectHint,
-      sourceLabel,
-      sourceKind,
-      extractedFileText,
-      notes: "",
-      link: "",
-      uploadedFileCount,
-      seedText: "",
-      packMode: premium ? ("full" as const) : ("lite" as const),
-    };
-    const { pack: next, packError: err } = await postRescuePack(body, {
-      seedText: fallbackSeed,
-      subjectHint,
-      sourceLabel,
-      sourceKind,
+  const generateKit = useCallback(
+    async (docOverride?: NotebookDocumentRow[]) => {
+      const docs = docOverride ?? kitDocs;
+      if (docs.length === 0) return;
+
+      const combined = combineNotebookExtractedTextForPack(docs);
+      const label =
+        docs.length === 1
+          ? docs[0]!.filename
+          : `Cuaderno (${docs.length} archivos)`;
+      const kind =
+        docs.length === 1 ? mimeToSourceKind(docs[0]!.mime_type ?? "") : ("notes" as const);
+
+      setPackBusy(true);
+      setPackError(null);
+      const subjectHint = subjectLabel.trim() || "Cuaderno";
+      const body = {
+        subjectHint,
+        sourceLabel: label,
+        sourceKind: kind,
+        extractedFileText: combined,
+        notes: "",
+        link: "",
+        uploadedFileCount: docs.length,
+        seedText: "",
+        packMode: premium ? ("full" as const) : ("lite" as const),
+      };
+      const { pack: next, packError: err } = await postRescuePack(body, {
+        seedText: combined,
+        subjectHint,
+        sourceLabel: label,
+        sourceKind: kind,
+      });
+      setPack(next);
+      setPackError(err);
+      setPackBusy(false);
+    },
+    [kitDocs, premium, subjectLabel],
+  );
+
+  useEffect(() => {
+    if (!autoGenerateKit) return;
+    if (autoKitRanForPage.current === currentPage.id) return;
+
+    autoKitRanForPage.current = currentPage.id;
+    setScope("page");
+    void generateKit([currentPage]).then(() => {
+      panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
-    setPack(next);
-    setPackError(err);
-    setPackBusy(false);
-  }
+  }, [autoGenerateKit, currentPage, generateKit]);
 
   const noMatches = kitDocs.length === 0;
 
   return (
-    <div className="mx-auto mt-10 max-w-5xl space-y-4">
-      <Card className="border-indigo-400/20 bg-indigo-500/[0.06]">
+    <div ref={panelRef} id="notebook-study-kit" className="mx-auto mt-10 max-w-5xl space-y-4 scroll-mt-24">
+      <Card
+        className={cn(
+          "border-indigo-400/20 bg-indigo-500/[0.06]",
+          autoGenerateKit && "ring-2 ring-indigo-400/40",
+        )}
+      >
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg text-indigo-100">
             <Sparkles className="h-5 w-5 text-indigo-300" />
             Kit de estudio
           </CardTitle>
           <CardDescription>
-            Genera un kit rápido desde esta hoja o desde todo el cuaderno. Para filtros avanzados por Tema / Punto /
-            Ejercicios, usa «más opciones».
+            {autoGenerateKit
+              ? "Generando kit desde el apunte que repasas (viene del quiz de presión)…"
+              : "Genera un kit rápido desde esta hoja o desde todo el cuaderno. Para filtros avanzados por Tema / Punto / Ejercicios, usa «más opciones»."}
           </CardDescription>
         </CardHeader>
         <div className="space-y-4 px-6 pb-6">
@@ -196,7 +237,7 @@ export function NotebookStudyKitPanel({ pages, currentPage, subjectLabel, subjec
                 label="Compartir kit"
                 copiedLabel="Copiado"
               />
-              <Link href="/pass-mode">
+              <Link href={buildPassModeSubjectHref(subjectLabel.trim() || "General", "kit")}>
                 <Button variant="secondary" size="sm">
                   Llevar esto a Modo aprobar
                 </Button>

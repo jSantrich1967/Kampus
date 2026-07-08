@@ -13,7 +13,8 @@ export type ShareCampaign =
   | "academic_radar"
   | "ai_library"
   | "exam_workflow"
-  | "teacher_workflow";
+  | "teacher_workflow"
+  | "wellbeing_counselor";
 
 export function buildGrowthShareUrl(
   origin: string,

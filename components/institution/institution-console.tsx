@@ -5,6 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { SectionProntoBanner } from "@/components/layout/section-pronto-banner";
+import { InstitutionCounselorAlertsPanel } from "@/components/institution/institution-counselor-alerts-panel";
+import { InstitutionLmsIntegrationPanel } from "@/components/institution/institution-lms-integration-panel";
+import { InstitutionVirtualAttendancePanel } from "@/components/institution/institution-virtual-attendance-panel";
+import { InstitutionWellbeingDashboard } from "@/components/institution/institution-wellbeing-dashboard";
+import { InstitutionWellbeingIntegrationPanel } from "@/components/institution/institution-wellbeing-integration-panel";
+import { InstitutionWellbeingPulsePanel } from "@/components/institution/institution-wellbeing-pulse-panel";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -212,6 +218,18 @@ export function InstitutionConsole() {
       />
 
       <SectionProntoBanner kind="institution" />
+
+      <InstitutionWellbeingPulsePanel />
+
+      <InstitutionWellbeingDashboard />
+
+      <InstitutionCounselorAlertsPanel />
+
+      <InstitutionWellbeingIntegrationPanel />
+
+      <InstitutionVirtualAttendancePanel />
+
+      <InstitutionLmsIntegrationPanel />
 
       {!isSupabaseConfigured() ? (
         <p className="text-sm text-amber-200/90">{es ? "Falta configurar Supabase." : "Supabase is not configured."}</p>

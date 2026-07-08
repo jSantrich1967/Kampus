@@ -59,3 +59,8 @@ export function setStudentWorkCompleted(id: string, completed: boolean) {
 export function removeStudentWork(id: string) {
   saveStudentWorks(loadStudentWorks().filter((w) => w.id !== id));
 }
+
+export function updateStudentWorkDueDate(workId: string, dueDate: string) {
+  const next = loadStudentWorks().map((w) => (w.id === workId ? { ...w, dueDate } : w));
+  saveStudentWorks(next);
+}
