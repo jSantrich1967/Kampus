@@ -169,12 +169,23 @@ function tryParseJsonObject(text: string): unknown {
   } catch {
     const balanced = extractFirstBalancedJsonObject(cleaned);
     if (balanced) {
-      return JSON.parse(balanced);
+      try {
+        return JSON.parse(balanced);
+      } catch {
+        // fall through
+      }
     }
-    throw new Error(
-      "La IA devolvió un formato inválido. Reintenta en unos segundos o usa el modo «lite» (más rápido).",
-    );
+    return null;
   }
+}
+
+function packOutputTokenBudget(packMode: "lite" | "full", extractUseful: boolean, attempt: number): number {
+  if (packMode === "lite") {
+    if (extractUseful) return attempt === 0 ? 4500 : 6000;
+    return attempt === 0 ? 2400 : 3600;
+  }
+  if (extractUseful) return attempt === 0 ? 5000 : 6500;
+  return attempt === 0 ? 3200 : 4500;
 }
 
 export async function POST(req: Request) {
@@ -316,72 +327,108 @@ export async function POST(req: Request) {
     ].join("\n");
 
     const openaiUrl = "https://api.openai.com/v1/responses";
-    const openaiPayload = {
-      model,
-      input: [
-        { role: "system", content: [{ type: "input_text", text: system }] },
-        { role: "user", content: [{ type: "input_text", text: user }] },
-      ],
-      temperature: extractUseful ? 0.25 : 0.35,
-      max_output_tokens: packMode === "lite" ? 1800 : 3200,
-      text: { format: { type: "json_object" } },
-    };
-
-    // Retries for transient OpenAI issues (e.g., HTTP 500/503).
     const transientStatuses = new Set([500, 502, 503, 504]);
-    let lastRes: Response | null = null;
-    let attempts = 0;
-    const maxAttempts = 3;
     const backoffMs = [350, 900, 1800];
 
-    while (attempts < maxAttempts) {
-      attempts += 1;
-      lastRes = await fetchOpenAi("rescue_pack", openaiUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(openaiPayload),
-      });
-      if (lastRes.ok) break;
-      if (!transientStatuses.has(lastRes.status)) break;
-      await sleep(backoffMs[Math.min(attempts - 1, backoffMs.length - 1)] ?? 900);
-    }
+    let pack: z.infer<typeof rescuePackSchema> | null = null;
+    let lastParseError = "";
 
-    const res = lastRes!;
-
-    if (!res.ok) {
-      let message = "";
-      const requestId = res.headers.get("x-request-id") || res.headers.get("x-openai-request-id") || "";
-      try {
-        const json = (await res.json()) as { error?: { message?: string } };
-        message = json.error?.message ?? "";
-      } catch {
-        message = (await res.text()).slice(0, 400);
-      }
-      if (res.status === 429) {
-        return NextResponse.json(
+    for (let parseAttempt = 0; parseAttempt < 2 && !pack; parseAttempt += 1) {
+      const max_output_tokens = packOutputTokenBudget(packMode, extractUseful, parseAttempt);
+      const openaiPayload = {
+        model,
+        input: [
+          { role: "system", content: [{ type: "input_text", text: system }] },
           {
-            error:
-              "Generación no disponible ahora: tu cuenta de OpenAI se quedó sin cuota/saldo (HTTP 429). " +
-              "Revisa OpenAI Platform → Billing/Usage y reintenta.",
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text:
+                  parseAttempt === 0
+                    ? user
+                    : `${user}\n\nIMPORTANTE: Tu respuesta anterior quedó incompleta o no era JSON válido. ` +
+                      "Devuelve UN solo objeto JSON COMPLETO con todas las llaves requeridas. " +
+                      "Sin markdown, sin texto antes ni después del objeto.",
+              },
+            ],
           },
-          { status: 429 },
+        ],
+        temperature: extractUseful ? 0.25 : 0.35,
+        max_output_tokens,
+        text: { format: { type: "json_object" } },
+      };
+
+      let lastRes: Response | null = null;
+      let attempts = 0;
+      const maxAttempts = 3;
+
+      while (attempts < maxAttempts) {
+        attempts += 1;
+        lastRes = await fetchOpenAi("rescue_pack", openaiUrl, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(openaiPayload),
+        });
+        if (lastRes.ok) break;
+        if (!transientStatuses.has(lastRes.status)) break;
+        await sleep(backoffMs[Math.min(attempts - 1, backoffMs.length - 1)] ?? 900);
+      }
+
+      const res = lastRes!;
+
+      if (!res.ok) {
+        let message = "";
+        const requestId = res.headers.get("x-request-id") || res.headers.get("x-openai-request-id") || "";
+        try {
+          const json = (await res.json()) as { error?: { message?: string } };
+          message = json.error?.message ?? "";
+        } catch {
+          message = (await res.text()).slice(0, 400);
+        }
+        if (res.status === 429) {
+          return NextResponse.json(
+            {
+              error:
+                "Generación no disponible ahora: tu cuenta de OpenAI se quedó sin cuota/saldo (HTTP 429). " +
+                "Revisa OpenAI Platform → Billing/Usage y reintenta.",
+            },
+            { status: 429 },
+          );
+        }
+        const retryNote = attempts > 1 ? ` (reintentamos ${attempts} veces)` : "";
+        const idNote = requestId ? ` · request_id: ${requestId}` : "";
+        return NextResponse.json(
+          { error: `OpenAI error (HTTP ${res.status})${retryNote}: ${message || "Unknown error"}${idNote}` },
+          { status: 502 },
         );
       }
-      const retryNote = attempts > 1 ? ` (reintentamos ${attempts} veces)` : "";
-      const idNote = requestId ? ` · request_id: ${requestId}` : "";
-      return NextResponse.json(
-        { error: `OpenAI error (HTTP ${res.status})${retryNote}: ${message || "Unknown error"}${idNote}` },
-        { status: 502 },
-      );
+
+      const payload = (await res.json()) as unknown;
+      const text = extractTextFromOpenAIResponses(payload);
+      const parsedJson = tryParseJsonObject(text);
+      if (!parsedJson) {
+        lastParseError = "JSON inválido o truncado";
+        continue;
+      }
+
+      const validated = rescuePackSchema.safeParse(parsedJson);
+      if (!validated.success) {
+        lastParseError = validated.error.issues[0]?.message ?? "esquema inválido";
+        continue;
+      }
+      pack = validated.data;
     }
 
-    const payload = (await res.json()) as unknown;
-    const text = extractTextFromOpenAIResponses(payload);
-    const parsedJson = tryParseJsonObject(text);
-    const pack = rescuePackSchema.parse(parsedJson);
+    if (!pack) {
+      throw new Error(
+        "La IA devolvió un formato inválido. Reintenta en unos segundos o usa el modo «lite» (más rápido)." +
+          (lastParseError ? ` (${lastParseError})` : ""),
+      );
+    }
 
     return NextResponse.json({ pack });
     });
