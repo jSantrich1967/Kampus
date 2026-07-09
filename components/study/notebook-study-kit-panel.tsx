@@ -13,8 +13,11 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { cn } from "@/lib/cn";
 import type { RescuePack } from "@/lib/class-rescue";
 import { combineNotebookExtractedTextForPack } from "@/lib/notebooks/document-tags";
+import { resolveNotebookDocumentsExtractedText } from "@/lib/notebooks/resolve-extracted-text";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 import { postRescuePack } from "@/lib/rescue/post-rescue-pack";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 type Scope = "page" | "notebook";
 
@@ -101,37 +104,48 @@ export function NotebookStudyKitPanel({
       const docs = docOverride ?? kitDocs;
       if (docs.length === 0) return;
 
-      const combined = combineNotebookExtractedTextForPack(docs);
-      const label =
-        docs.length === 1
-          ? docs[0]!.filename
-          : `Cuaderno (${docs.length} archivos)`;
-      const kind =
-        docs.length === 1 ? mimeToSourceKind(docs[0]!.mime_type ?? "") : ("notes" as const);
-
       setPackBusy(true);
       setPackError(null);
-      const subjectHint = subjectLabel.trim() || "Cuaderno";
-      const body = {
-        subjectHint,
-        sourceLabel: label,
-        sourceKind: kind,
-        extractedFileText: combined,
-        notes: "",
-        link: "",
-        uploadedFileCount: docs.length,
-        seedText: "",
-        packMode: premium ? ("full" as const) : ("lite" as const),
-      };
-      const { pack: next, packError: err } = await postRescuePack(body, {
-        seedText: combined,
-        subjectHint,
-        sourceLabel: label,
-        sourceKind: kind,
-      });
-      setPack(next);
-      setPackError(err);
-      setPackBusy(false);
+      try {
+        let resolvedDocs = docs;
+        if (isSupabaseConfigured()) {
+          const supabase = createSupabaseBrowserClient();
+          resolvedDocs = await resolveNotebookDocumentsExtractedText(supabase, docs);
+        }
+
+        const combined = combineNotebookExtractedTextForPack(resolvedDocs);
+        const label =
+          resolvedDocs.length === 1
+            ? resolvedDocs[0]!.filename
+            : `Cuaderno (${resolvedDocs.length} archivos)`;
+        const kind =
+          resolvedDocs.length === 1 ? mimeToSourceKind(resolvedDocs[0]!.mime_type ?? "") : ("notes" as const);
+
+        const subjectHint = subjectLabel.trim() || "Cuaderno";
+        const body = {
+          subjectHint,
+          sourceLabel: label,
+          sourceKind: kind,
+          extractedFileText: combined,
+          notes: "",
+          link: "",
+          uploadedFileCount: resolvedDocs.length,
+          seedText: "",
+          packMode: premium ? ("full" as const) : ("lite" as const),
+        };
+        const { pack: next, packError: err } = await postRescuePack(body, {
+          seedText: combined,
+          subjectHint,
+          sourceLabel: label,
+          sourceKind: kind,
+        });
+        setPack(next);
+        setPackError(err);
+      } catch (e) {
+        setPackError(e instanceof Error ? e.message : "No se pudo generar el kit de estudio.");
+      } finally {
+        setPackBusy(false);
+      }
     },
     [kitDocs, premium, subjectLabel],
   );
