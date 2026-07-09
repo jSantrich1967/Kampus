@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { sanitizeStorageFilename, subjectToPathSegment } from "@/lib/notebooks/paths";
 import { readRescueExtractJson, rescueExtractRejectReason } from "@/lib/rescue/extract-upload-limits";
+import { isUsefulExtractedText } from "@/lib/rescue/extract-text-quality";
 
 /** Aligned with bucket limit in migration (50 MiB). */
 export const MAX_NOTEBOOK_UPLOAD_BYTES = 50 * 1024 * 1024;
@@ -26,7 +27,7 @@ export async function extractNotebookTextWithRescueApi(file: File): Promise<stri
     fd.append("files", file);
     const res = await fetch("/api/rescue/extract", { method: "POST", body: fd });
     const json = await readRescueExtractJson<{ combinedText?: string; error?: string }>(res);
-    if (res.ok && json.combinedText?.trim()) {
+    if (res.ok && json.combinedText?.trim() && isUsefulExtractedText(json.combinedText)) {
       return json.combinedText.trim();
     }
   } catch {

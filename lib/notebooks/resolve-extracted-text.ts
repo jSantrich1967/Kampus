@@ -1,16 +1,23 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
-import { extractNotebookTextWithRescueApi } from "@/lib/notebooks/upload-documents";
 import { isUsefulExtractedText } from "@/lib/rescue/extract-text-quality";
 
 function needsNotebookTextExtraction(text: string | null | undefined): boolean {
   return !isUsefulExtractedText(text ?? "");
 }
 
+type NotebookExtractApiResponse = {
+  combinedText?: string;
+  useful?: boolean;
+  cached?: boolean;
+  hint?: string;
+  error?: string;
+};
+
 /**
- * Uses cached `extracted_text` when present; otherwise downloads from Storage and
- * runs `/api/rescue/extract`, persisting the result for future kits.
+ * Uses cached `extracted_text` when useful; otherwise runs server-side extraction
+ * from Storage (`/api/notebooks/extract`) — no 4 MB upload limit.
  */
 export async function resolveNotebookDocumentExtractedText(
   client: SupabaseClient,
@@ -20,28 +27,26 @@ export async function resolveNotebookDocumentExtractedText(
     return doc;
   }
 
-  const { data, error } = await client.storage.from("notebooks").createSignedUrl(doc.storage_path, 180);
-  if (error || !data?.signedUrl) {
-    return doc;
-  }
-
   try {
-    const response = await fetch(data.signedUrl);
-    if (!response.ok) return doc;
-
-    const blob = await response.blob();
-    const file = new File([blob], doc.filename, {
-      type: doc.mime_type || blob.type || "application/octet-stream",
+    const res = await fetch("/api/notebooks/extract", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ documentId: doc.id, force: true }),
     });
-    const extracted = await extractNotebookTextWithRescueApi(file);
-    if (!extracted?.trim()) return doc;
+    const json = (await res.json()) as NotebookExtractApiResponse;
+    if (!res.ok) {
+      return doc;
+    }
 
-    const nextText = extracted.trim();
-    await client.from("notebook_documents").update({ extracted_text: nextText }).eq("id", doc.id);
-    return { ...doc, extracted_text: nextText };
+    const combined = json.combinedText?.trim();
+    if (combined && json.useful) {
+      return { ...doc, extracted_text: combined };
+    }
   } catch {
     return doc;
   }
+
+  return doc;
 }
 
 export async function resolveNotebookDocumentsExtractedText(
@@ -49,4 +54,25 @@ export async function resolveNotebookDocumentsExtractedText(
   docs: NotebookDocumentRow[],
 ): Promise<NotebookDocumentRow[]> {
   return Promise.all(docs.map((doc) => resolveNotebookDocumentExtractedText(client, doc)));
+}
+
+/** Server-side extract with user-visible error message when extraction fails. */
+export async function resolveNotebookDocumentsExtractedTextWithHint(
+  client: SupabaseClient,
+  docs: NotebookDocumentRow[],
+): Promise<{ docs: NotebookDocumentRow[]; extractHint: string | null }> {
+  const resolved = await resolveNotebookDocumentsExtractedText(client, docs);
+  const stillEmpty = resolved.filter((d) => !isUsefulExtractedText(d.extracted_text ?? ""));
+  if (stillEmpty.length === 0) {
+    return { docs: resolved, extractHint: null };
+  }
+
+  const names = stillEmpty.map((d) => d.filename).join(", ");
+  return {
+    docs: resolved,
+    extractHint:
+      `No pudimos extraer texto útil de: ${names}. ` +
+      "Comprueba OPENAI_API_KEY en Vercel, que el archivo sea legible (PDF escaneado o foto nítida) " +
+      "y que no superes la cuota diaria de extracción.",
+  };
 }

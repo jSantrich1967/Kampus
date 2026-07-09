@@ -13,7 +13,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { cn } from "@/lib/cn";
 import type { RescuePack } from "@/lib/class-rescue";
 import { combineNotebookExtractedTextForPack } from "@/lib/notebooks/document-tags";
-import { resolveNotebookDocumentsExtractedText } from "@/lib/notebooks/resolve-extracted-text";
+import { resolveNotebookDocumentsExtractedTextWithHint } from "@/lib/notebooks/resolve-extracted-text";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 import { postRescuePack } from "@/lib/rescue/post-rescue-pack";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -52,6 +52,7 @@ export function NotebookStudyKitPanel({
   const [pack, setPack] = useState<RescuePack | null>(null);
   const [packBusy, setPackBusy] = useState(false);
   const [packError, setPackError] = useState<string | null>(null);
+  const [extractHint, setExtractHint] = useState<string | null>(null);
 
   const kitDocs = useMemo(() => {
     if (scope === "page") {
@@ -106,11 +107,14 @@ export function NotebookStudyKitPanel({
 
       setPackBusy(true);
       setPackError(null);
+      setExtractHint(null);
       try {
         let resolvedDocs = docs;
         if (isSupabaseConfigured()) {
           const supabase = createSupabaseBrowserClient();
-          resolvedDocs = await resolveNotebookDocumentsExtractedText(supabase, docs);
+          const resolved = await resolveNotebookDocumentsExtractedTextWithHint(supabase, docs);
+          resolvedDocs = resolved.docs;
+          setExtractHint(resolved.extractHint);
         }
 
         const combined = combineNotebookExtractedTextForPack(resolvedDocs);
@@ -231,6 +235,9 @@ export function NotebookStudyKitPanel({
             </Link>
           </div>
 
+          {extractHint ? (
+            <p className="text-xs text-amber-200">{extractHint}</p>
+          ) : null}
           {packError ? (
             <p className="text-xs text-amber-200">Usamos un kit básico porque falló la IA: {packError}</p>
           ) : null}
