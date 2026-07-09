@@ -33,23 +33,6 @@ export async function POST(req: Request) {
     );
   }
 
-  const quota = await consumeDailyUserQuota(
-    "rescue_extract",
-    parseInt(process.env.API_DAILY_LIMIT_RESCUE_EXTRACT ?? "5", 10),
-  );
-  if (!quota.ok) {
-    return NextResponse.json(
-      { error: quota.message },
-      {
-        status: quota.status,
-        headers:
-          quota.status === 429 && quota.retryAfterSec
-            ? { "Retry-After": String(quota.retryAfterSec) }
-            : undefined,
-      },
-    );
-  }
-
   try {
     const parsed = bodySchema.parse(await req.json().catch(() => ({})));
     const supabase = await createSupabaseServerClient();
@@ -76,6 +59,23 @@ export async function POST(req: Request) {
     if (!parsed.force && isUsefulExtractedText(doc.extracted_text ?? "")) {
       const combinedText = doc.extracted_text!.trim();
       return NextResponse.json({ combinedText, useful: true, cached: true });
+    }
+
+    const quota = await consumeDailyUserQuota(
+      "rescue_extract",
+      parseInt(process.env.API_DAILY_LIMIT_RESCUE_EXTRACT ?? "5", 10),
+    );
+    if (!quota.ok) {
+      return NextResponse.json(
+        { error: quota.message },
+        {
+          status: quota.status,
+          headers:
+            quota.status === 429 && quota.retryAfterSec
+              ? { "Retry-After": String(quota.retryAfterSec) }
+              : undefined,
+        },
+      );
     }
 
     if (doc.size_bytes > MAX_NOTEBOOK_UPLOAD_BYTES) {
