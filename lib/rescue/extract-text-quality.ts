@@ -20,6 +20,9 @@ export function isUsefulExtractedText(text: string): boolean {
   if (lower.includes("unsupported file type for extraction")) return false;
   if (lower.includes("problemas con el texto extraído")) return false;
   if (lower.includes("material insuficiente")) return false;
+  if (lower.includes("no contiene texto extraíble")) return false;
+  if (lower.includes("sin texto extraíble")) return false;
+  if (lower.includes("recuperación y mejora de material")) return false;
   if (/\b(resp|msg)_[a-z0-9_\-]{8,}\b/i.test(body)) return false;
   if (body.replace(/\s+/g, "").length < MIN_USEFUL_EXTRACT_CHARS) return false;
   return true;
