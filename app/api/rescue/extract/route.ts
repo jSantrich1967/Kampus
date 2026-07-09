@@ -3,11 +3,36 @@ import { NextResponse } from "next/server";
 import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
 import { stripOpenAiResponseLeakage } from "@/lib/notebooks/openai-extract-cleanup";
 import { repairSpuriousAmpersandOcrText } from "@/lib/notebooks/ocr-text-repair";
+import { isUsefulExtractedText } from "@/lib/rescue/extract-text-quality";
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
 import { rescueExtractRateLimits } from "@/lib/rate-limit/openai-defaults";
 import { consumeDailyUserQuota } from "@/lib/rate-limit/user-quota";
 
 export const runtime = "nodejs";
+/** Multi-page PDF OCR can take longer than the default serverless limit. */
+export const maxDuration = 60;
+
+const OPENAI_OCR_PROMPT =
+  "Eres un motor OCR de alta precisión. Transcribe TODO el texto visible en la imagen.\n\n" +
+  "SALIDA:\n" +
+  "- Devuelve SOLO la transcripción. Sin explicaciones, sin JSON, sin etiquetas, sin metadatos ni IDs.\n" +
+  "- Prosa y listas: español normal con tildes y puntuación correctas.\n" +
+  "- Ecuaciones y fórmulas matemáticas: usa LaTeX entre $...$ (en línea) o $$...$$ (bloque).\n" +
+  "  Ejemplos: $E(y_t)=\\mu$, $\\operatorname{Var}(y_t)=\\sigma^2$, " +
+  "$\\operatorname{Cov}(y_t,y_{t+k})=\\gamma_k$, $\\Delta y_t = y_t - y_{t-1}$, " +
+  "$y_t = y_{t-1} + \\varepsilon_t$.\n" +
+  "- PROHIBIDO colocar el carácter & entre letras o símbolos para separar caracteres " +
+  "(nada como &E&(&y&t&) ni &-& al inicio de línea).\n" +
+  "- PROHIBIDO deletrear fórmulas con &; escribe LaTeX legible.\n" +
+  "- Mantén títulos, numeración y viñetas; respeta saltos de línea razonables.\n" +
+  "- No inventes: si algo es ilegible, omite solo esa parte.\n" +
+  "- Si no hay texto legible, responde exactamente: SIN_TEXTO";
+
+function pdfOcrMaxPages(): number {
+  const n = parseInt(process.env.PDF_OCR_MAX_PAGES ?? "5", 10);
+  if (!Number.isFinite(n)) return 5;
+  return Math.min(Math.max(n, 1), 15);
+}
 
 async function preprocessImageForOcrDataUrl(file: File): Promise<string> {
   const inputMime = file.type || "image/png";
@@ -80,14 +105,12 @@ function isPdf(mime: string, name: string): boolean {
   return name.toLowerCase().endsWith(".pdf");
 }
 
-async function ocrImageWithOpenAI(file: File): Promise<string> {
+async function ocrDataUrlWithOpenAI(dataUrl: string): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   const model = process.env.OPENAI_VISION_MODEL?.trim() || "gpt-4.1";
   if (!apiKey) {
     return "[Missing OPENAI_API_KEY on the server. Add it in Vercel env vars to enable OCR for images.]";
   }
-
-  const dataUrl = await preprocessImageForOcrDataUrl(file);
 
   const res = await fetchOpenAi("rescue_extract.ocr", "https://api.openai.com/v1/responses", {
     method: "POST",
@@ -103,25 +126,7 @@ async function ocrImageWithOpenAI(file: File): Promise<string> {
         {
           role: "user",
           content: [
-            {
-              type: "input_text",
-              text:
-                "Eres un motor OCR de alta precisión. Transcribe TODO el texto visible en la imagen.\n\n" +
-                "SALIDA:\n" +
-                "- Devuelve SOLO la transcripción. Sin explicaciones, sin JSON, sin etiquetas, sin metadatos ni IDs.\n" +
-                "- Prosa y listas: español normal con tildes y puntuación correctas.\n" +
-                "- Ecuaciones y fórmulas matemáticas: usa LaTeX entre $...$ (en línea) o $$...$$ (bloque).\n" +
-                "  Ejemplos: $E(y_t)=\\mu$, $\\operatorname{Var}(y_t)=\\sigma^2$, " +
-                "$\\operatorname{Cov}(y_t,y_{t+k})=\\gamma_k$, $\\Delta y_t = y_t - y_{t-1}$, " +
-                "$y_t = y_{t-1} + \\varepsilon_t$.\n" +
-                "- PROHIBIDO colocar el carácter & entre letras o símbolos para separar caracteres " +
-                "(nada como &E&(&y&t&) ni &-& al inicio de línea).\n" +
-                "- PROHIBIDO deletrear fórmulas con &; escribe LaTeX legible.\n" +
-                "- Mantén títulos, numeración y viñetas; respeta saltos de línea razonables.\n" +
-                "- No inventes: si algo es ilegible, omite solo esa parte.\n" +
-                "- Si no hay texto legible, responde exactamente: SIN_TEXTO",
-            },
-            // `detail: high` improves OCR for small text (supported by vision models).
+            { type: "input_text", text: OPENAI_OCR_PROMPT },
             { type: "input_image", image_url: dataUrl, detail: "high" },
           ],
         },
@@ -156,6 +161,47 @@ async function ocrImageWithOpenAI(file: File): Promise<string> {
     return "(sin texto legible en la imagen)";
   }
   return trimmed;
+}
+
+async function ocrImageWithOpenAI(file: File): Promise<string> {
+  const dataUrl = await preprocessImageForOcrDataUrl(file);
+  return ocrDataUrlWithOpenAI(dataUrl);
+}
+
+type PdfScreenshotParser = {
+  getScreenshot: (params?: {
+    first?: number;
+    scale?: number;
+    desiredWidth?: number;
+    imageDataUrl?: boolean;
+    imageBuffer?: boolean;
+  }) => Promise<{ pages: Array<{ pageNumber: number; dataUrl?: string }> }>;
+};
+
+/** Renders PDF pages and runs OpenAI vision OCR when embedded text is missing (scanned PDFs). */
+async function ocrPdfPagesWithOpenAI(parser: PdfScreenshotParser, fileLabel: string): Promise<string> {
+  try {
+    const shots = await parser.getScreenshot({
+      first: pdfOcrMaxPages(),
+      scale: 1.5,
+      desiredWidth: 1600,
+      imageDataUrl: true,
+      imageBuffer: false,
+    });
+
+    const parts: string[] = [];
+    for (const page of shots.pages) {
+      const dataUrl = page.dataUrl?.trim();
+      if (!dataUrl) continue;
+      const pageText = await ocrDataUrlWithOpenAI(dataUrl);
+      if (isUsefulExtractedText(pageText)) {
+        parts.push(`## ${fileLabel} · página ${page.pageNumber}\n${pageText.trim()}`);
+      }
+    }
+    return parts.join("\n\n");
+  } catch {
+    return "";
+  }
 }
 
 function extractTextFromOpenAIResponses(payload: unknown): string {
@@ -281,12 +327,23 @@ export async function POST(req: Request) {
 
         if (isPdf(mime, name)) {
           const buf = Buffer.from(await f.arrayBuffer());
-          // `pdf-parse` v2 exports a class (`PDFParse`), not a callable function like v1.
           const { PDFParse } = await import("pdf-parse");
           const parser = new PDFParse({ data: buf });
           try {
             const parsed = await parser.getText();
-            extracted.push({ name, type: mime, size, text: (parsed.text || "").trim() });
+            let text = (parsed.text || "").trim();
+
+            // Scanned/image PDFs: fall back to OpenAI vision OCR on rendered pages.
+            if (!isUsefulExtractedText(text)) {
+              const ocrText = await ocrPdfPagesWithOpenAI(parser, name);
+              if (isUsefulExtractedText(ocrText)) {
+                text = ocrText.trim();
+              } else if (!text) {
+                text = ocrText.trim() || "(sin texto legible en el PDF)";
+              }
+            }
+
+            extracted.push({ name, type: mime, size, text });
           } finally {
             await parser.destroy();
           }

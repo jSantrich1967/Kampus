@@ -2,16 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 import { extractNotebookTextWithRescueApi } from "@/lib/notebooks/upload-documents";
+import { isUsefulExtractedText } from "@/lib/rescue/extract-text-quality";
 
 function needsNotebookTextExtraction(text: string | null | undefined): boolean {
-  const t = text?.trim() ?? "";
-  if (!t) return true;
-  const lower = t.toLowerCase();
-  if (lower.includes("sin texto extraído")) return true;
-  if (lower.includes("missing openai_api_key")) return true;
-  if (lower.includes("ocr failed") || lower.includes("ocr no disponible")) return true;
-  if (lower.includes("unsupported file type for extraction")) return true;
-  return false;
+  return !isUsefulExtractedText(text ?? "");
 }
 
 /**
