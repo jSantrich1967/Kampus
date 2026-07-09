@@ -281,10 +281,15 @@ export async function POST(req: Request) {
 
         if (isPdf(mime, name)) {
           const buf = Buffer.from(await f.arrayBuffer());
-          // `pdf-parse` ESM export is `PDFParse`, not a default export (Next/Turbopack builds are ESM).
-          const mod = (await import("pdf-parse")) as unknown as { PDFParse: (data: Buffer) => Promise<{ text?: string }> };
-          const parsed = await mod.PDFParse(buf);
-          extracted.push({ name, type: mime, size, text: (parsed.text || "").trim() });
+          // `pdf-parse` v2 exports a class (`PDFParse`), not a callable function like v1.
+          const { PDFParse } = await import("pdf-parse");
+          const parser = new PDFParse({ data: buf });
+          try {
+            const parsed = await parser.getText();
+            extracted.push({ name, type: mime, size, text: (parsed.text || "").trim() });
+          } finally {
+            await parser.destroy();
+          }
           continue;
         }
 
