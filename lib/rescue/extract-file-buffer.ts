@@ -2,7 +2,7 @@ import { fetchOpenAi } from "@/lib/observability/openai-sentry";
 import { stripOpenAiResponseLeakage } from "@/lib/notebooks/openai-extract-cleanup";
 import { repairSpuriousAmpersandOcrText } from "@/lib/notebooks/ocr-text-repair";
 import { isUsefulExtractedText } from "@/lib/rescue/extract-text-quality";
-import { loadPdfParseClass } from "@/lib/rescue/pdf-parse-node-setup";
+import { loadPdfParseClass, CanvasFactory } from "@/lib/rescue/pdf-parse-node-setup";
 
 const OPENAI_OCR_PROMPT =
   "Eres un motor OCR de alta precisión. Transcribe TODO el texto visible en la imagen.\n\n" +
@@ -238,7 +238,7 @@ export async function extractFileBufferToText(input: ExtractFileInput): Promise<
 
   if (isPdf(safeMime, name)) {
     const PDFParse = await loadPdfParseClass();
-    const parser = new PDFParse({ data: buffer });
+    const parser = new PDFParse({ data: buffer, CanvasFactory });
     try {
       const parsed = await parser.getText();
       let text = (parsed.text || "").trim();

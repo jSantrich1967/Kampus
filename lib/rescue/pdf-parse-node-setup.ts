@@ -1,15 +1,17 @@
 import { DOMMatrix, ImageData, Path2D } from "@napi-rs/canvas";
+// Must load before "pdf-parse" (see pdf-parse docs/troubleshooting.md).
+import { CanvasFactory, getData } from "pdf-parse/worker";
 
 let polyfilled = false;
 let workerConfigured = false;
 
-const PDF_PARSE_VERSION = "2.4.5";
+export { CanvasFactory };
 
 function pdfWorkerSrc(): string {
   const fromEnv = process.env.PDF_PARSE_WORKER_URL?.trim();
   if (fromEnv) return fromEnv;
-  // Vercel/Next bundles omit pdf.worker.mjs — load from CDN (pdf-parse README).
-  return `https://cdn.jsdelivr.net/npm/pdf-parse@${PDF_PARSE_VERSION}/dist/pdf-parse/esm/pdf.worker.mjs`;
+  // data: URL works in Node ESM dynamic import; file path needs pdf-parse external on Vercel.
+  return getData();
 }
 
 /** pdfjs-dist expects browser globals; polyfill from @napi-rs/canvas on Node/Vercel. */
