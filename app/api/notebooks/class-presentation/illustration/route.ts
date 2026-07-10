@@ -19,10 +19,37 @@ type ImageGenResponse = {
   error?: { message?: string };
 };
 
+/** Default image model — dall-e-2 ("image 2") works on most OpenAI accounts. */
+const DEFAULT_IMAGE_MODEL = "dall-e-2";
+
+function normalizeImageModel(raw: string): string {
+  const s = raw.trim().toLowerCase();
+  if (s === "image2" || s === "image-2" || s === "dalle2" || s === "dall-e-2" || s === "dall_e_2") {
+    return "dall-e-2";
+  }
+  if (s === "image3" || s === "dalle3" || s === "dall-e-3") {
+    return "dall-e-3";
+  }
+  return raw.trim();
+}
+
+function imageModelsToTry(): string[] {
+  const configured = process.env.OPENAI_IMAGE_MODEL?.trim();
+  const primary = normalizeImageModel(configured || DEFAULT_IMAGE_MODEL);
+  if (primary === "dall-e-2") return ["dall-e-2"];
+  return [primary, "dall-e-2"];
+}
+
+function clipPromptForModel(model: string, prompt: string): string {
+  if (model === "dall-e-2") return prompt.slice(0, 1000);
+  return prompt.slice(0, 3800);
+}
+
 function buildImageRequestBody(model: string, prompt: string): Record<string, unknown> {
+  const clipped = clipPromptForModel(model, prompt);
   const payload: Record<string, unknown> = {
     model,
-    prompt,
+    prompt: clipped,
     n: 1,
   };
 
@@ -37,7 +64,6 @@ function buildImageRequestBody(model: string, prompt: string): Record<string, un
     return payload;
   }
 
-  // gpt-image-1 and other models: minimal params (no response_format / quality)
   payload.size = "1024x1024";
   return payload;
 }
@@ -51,6 +77,17 @@ function parseOpenAiError(raw: string): string {
   }
 }
 
+function shouldRetryWithNextModel(errorMessage: string): boolean {
+  const lower = errorMessage.toLowerCase();
+  return (
+    lower.includes("does not exist") ||
+    lower.includes("unknown parameter") ||
+    lower.includes("not available") ||
+    lower.includes("invalid model") ||
+    lower.includes("model_not_found")
+  );
+}
+
 async function imageItemToBase64(item: { url?: string; b64_json?: string } | undefined): Promise<string | null> {
   if (!item) return null;
   if (item.b64_json?.trim()) return item.b64_json.trim();
@@ -60,6 +97,40 @@ async function imageItemToBase64(item: { url?: string; b64_json?: string } | und
   if (!imgRes.ok) return null;
   const buf = Buffer.from(await imgRes.arrayBuffer());
   return buf.toString("base64");
+}
+
+async function generateIllustrationBase64(
+  apiKey: string,
+  fullPrompt: string,
+): Promise<{ b64: string } | { error: string }> {
+  const models = imageModelsToTry();
+  let lastError = "No se pudo generar la ilustración.";
+
+  for (const model of models) {
+    const res = await fetchOpenAi("class_presentation_illustration", "https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(buildImageRequestBody(model, fullPrompt)),
+    });
+
+    if (res.ok) {
+      const json = (await res.json()) as ImageGenResponse;
+      const b64 = await imageItemToBase64(json.data?.[0]);
+      if (b64) return { b64 };
+      lastError = "Respuesta de imagen vacía.";
+      continue;
+    }
+
+    const errText = await res.text().catch(() => "");
+    lastError = parseOpenAiError(errText);
+    if (shouldRetryWithNextModel(lastError)) continue;
+    return { error: lastError };
+  }
+
+  return { error: lastError };
 }
 
 export async function POST(req: Request) {
@@ -91,7 +162,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Ilustraciones no disponibles sin OPENAI_API_KEY." }, { status: 503 });
     }
 
-    const model = process.env.OPENAI_IMAGE_MODEL?.trim() || "dall-e-3";
     const fullPrompt = [
       "Educational illustration for university students.",
       "Clean modern flat vector style, soft gradients, friendly and clear.",
@@ -100,26 +170,11 @@ export async function POST(req: Request) {
       `Scene: ${userPrompt}`,
     ].join(" ");
 
-    const res = await fetchOpenAi("class_presentation_illustration", "https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(buildImageRequestBody(model, fullPrompt.slice(0, 3800))),
-    });
-
-    if (!res.ok) {
-      const err = await res.text().catch(() => "");
-      return NextResponse.json({ error: parseOpenAiError(err) }, { status: 502 });
+    const result = await generateIllustrationBase64(apiKey, fullPrompt);
+    if ("error" in result) {
+      return NextResponse.json({ error: result.error }, { status: 502 });
     }
 
-    const json = (await res.json()) as ImageGenResponse;
-    const b64 = await imageItemToBase64(json.data?.[0]);
-    if (!b64) {
-      return NextResponse.json({ error: "Respuesta de imagen vacía." }, { status: 502 });
-    }
-
-    return NextResponse.json({ imageBase64: b64, mimeType: "image/png" });
+    return NextResponse.json({ imageBase64: result.b64, mimeType: "image/png" });
   });
 }
