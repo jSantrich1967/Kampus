@@ -14,6 +14,54 @@ const requestSchema = z.object({
   subjectHint: z.string().max(120).optional(),
 });
 
+type ImageGenResponse = {
+  data?: Array<{ url?: string; b64_json?: string }>;
+  error?: { message?: string };
+};
+
+function buildImageRequestBody(model: string, prompt: string): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
+    model,
+    prompt,
+    n: 1,
+  };
+
+  if (model === "dall-e-3") {
+    payload.size = "1024x1024";
+    payload.quality = "standard";
+    return payload;
+  }
+
+  if (model === "dall-e-2") {
+    payload.size = "1024x1024";
+    return payload;
+  }
+
+  // gpt-image-1 and other models: minimal params (no response_format / quality)
+  payload.size = "1024x1024";
+  return payload;
+}
+
+function parseOpenAiError(raw: string): string {
+  try {
+    const json = JSON.parse(raw) as { error?: { message?: string } };
+    return json.error?.message?.trim() || raw.slice(0, 240);
+  } catch {
+    return raw.slice(0, 240) || "No se pudo generar la ilustración.";
+  }
+}
+
+async function imageItemToBase64(item: { url?: string; b64_json?: string } | undefined): Promise<string | null> {
+  if (!item) return null;
+  if (item.b64_json?.trim()) return item.b64_json.trim();
+  if (!item.url?.trim()) return null;
+
+  const imgRes = await fetch(item.url);
+  if (!imgRes.ok) return null;
+  const buf = Buffer.from(await imgRes.arrayBuffer());
+  return buf.toString("base64");
+}
+
 export async function POST(req: Request) {
   const ip = getClientIpKey(req);
   const limits = classPresentationIllustrationRateLimits();
@@ -58,23 +106,16 @@ export async function POST(req: Request) {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model,
-        prompt: fullPrompt.slice(0, 3800),
-        size: "1024x1024",
-        quality: "standard",
-        response_format: "b64_json",
-        n: 1,
-      }),
+      body: JSON.stringify(buildImageRequestBody(model, fullPrompt.slice(0, 3800))),
     });
 
     if (!res.ok) {
       const err = await res.text().catch(() => "");
-      return NextResponse.json({ error: err.slice(0, 240) || "No se pudo generar la ilustración." }, { status: 502 });
+      return NextResponse.json({ error: parseOpenAiError(err) }, { status: 502 });
     }
 
-    const json = (await res.json()) as { data?: Array<{ b64_json?: string }> };
-    const b64 = json.data?.[0]?.b64_json;
+    const json = (await res.json()) as ImageGenResponse;
+    const b64 = await imageItemToBase64(json.data?.[0]);
     if (!b64) {
       return NextResponse.json({ error: "Respuesta de imagen vacía." }, { status: 502 });
     }
