@@ -32,3 +32,8 @@ export function buildDemoProfile(): UserProfile {
     lastActiveDate: new Date().toISOString().slice(0, 10),
   };
 }
+
+/** Same as demo profile but with Premium plan for full kits and pass-mode simulator. */
+export function buildPremiumDemoProfile(): UserProfile {
+  return { ...buildDemoProfile(), plan: "premium" };
+}

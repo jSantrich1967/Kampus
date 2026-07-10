@@ -5,24 +5,15 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
-import { buildDemoProfile } from "@/lib/demo/demo-profile";
-import { buildDemoClassScheduleRows } from "@/lib/demo/demo-class-schedule";
-import { seedDemoStudyStreak } from "@/lib/demo/demo-study-streak";
-import { saveProfile } from "@/lib/storage/kampus-storage";
-import { loadClassSchedule, saveClassSchedule } from "@/lib/storage/class-schedule-storage";
+import { activateDemoMode } from "@/lib/demo/activate-demo-mode";
 
 export default function DemoEntryPage() {
   const router = useRouter();
   const { setProfile } = useKampus();
 
   useEffect(() => {
-    const demo = buildDemoProfile();
-    saveProfile(demo);
+    const demo = activateDemoMode();
     setProfile(demo);
-    if (loadClassSchedule().length === 0) {
-      saveClassSchedule(buildDemoClassScheduleRows(demo.subjects));
-    }
-    seedDemoStudyStreak();
     router.replace("/today");
   }, [router, setProfile]);
 

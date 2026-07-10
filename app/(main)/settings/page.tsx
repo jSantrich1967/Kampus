@@ -9,6 +9,7 @@ import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { activateDemoMode } from "@/lib/demo/activate-demo-mode";
 import { authCopy } from "@/lib/i18n/auth";
 import { onboardingCopy } from "@/lib/i18n/onboarding";
 import type { UserRole } from "@/lib/schemas/profile";
@@ -247,6 +248,34 @@ export default function SettingsPage() {
               Agregar
             </Button>
           </div>
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Modo prueba completo</CardTitle>
+          <CardDescription>
+            Carga un perfil demo con materias, exámenes, racha de estudio y plan{" "}
+            <span className="font-medium text-indigo-200">Premium</span> en un clic. Úsalo para recorrer kits
+            completos, Modo aprobar y el simulador de profesor.
+          </CardDescription>
+        </CardHeader>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            type="button"
+            onClick={() => {
+              const demo = activateDemoMode({ premium: true });
+              setProfile(demo);
+              router.push("/today");
+            }}
+          >
+            Activar modo prueba premium
+          </Button>
+          {profile.plan === "premium" ? (
+            <Badge tone="success">Premium activo</Badge>
+          ) : (
+            <span className="text-xs text-slate-500">Ahora: plan Gratis</span>
+          )}
         </div>
       </Card>
 
