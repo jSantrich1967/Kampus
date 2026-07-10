@@ -17,10 +17,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ClassSlideDiagram } from "@/components/study/class-slide-diagram";
 import { ClassSlideHeroArt } from "@/components/study/class-slide-hero-art";
 import { ClassSlideIllustration } from "@/components/study/class-slide-illustration";
+import { ClassSlide3DViewer } from "@/components/study/class-slide-3d/class-slide-3d-viewer";
 import { ClassSlideMermaid } from "@/components/study/class-slide-mermaid";
 import { NotebookPageAnnotator } from "@/components/study/notebook-page-annotator";
 import { Button } from "@/components/ui/button";
 import { resolveSlideIcon } from "@/lib/class-presentation/slide-icons";
+import { resolve3dScene } from "@/lib/class-presentation/resolve-3d-scene";
 import { slideThemeFor } from "@/lib/class-presentation/slide-theme";
 import { useClassPresentationNarration } from "@/lib/hooks/use-class-presentation-narration";
 import { prefetchSlideIllustration } from "@/lib/hooks/use-slide-illustration";
@@ -60,6 +62,7 @@ export function ClassPresentationViewer({ presentation, mediaByDocId = {}, onClo
   const sourceIsPdf = Boolean(slide.sourceFilename?.toLowerCase().endsWith(".pdf"));
 
   const narrationText = slide.narration.trim();
+  const scene3d = resolve3dScene(slide, presentation.subjectLine);
 
   const goToSlide = useCallback(
     (next: number) => {
@@ -255,7 +258,11 @@ export function ClassPresentationViewer({ presentation, mediaByDocId = {}, onClo
                 </div>
               </div>
 
-              {slide.illustrationPrompt?.trim() ? (
+              {scene3d === "cell" ? (
+                <ClassSlide3DViewer slideTitle={slide.title} bullets={slide.bullets} className="w-full" />
+              ) : null}
+
+              {slide.illustrationPrompt?.trim() && scene3d !== "cell" ? (
                 <ClassSlideIllustration
                   slideId={slide.id}
                   prompt={slide.illustrationPrompt}
