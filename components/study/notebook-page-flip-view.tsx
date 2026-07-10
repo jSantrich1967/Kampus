@@ -1,11 +1,17 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/cn";
 
-const FLIP_MS = 580;
+const SLIDE_MS = 420;
+
+type SlideAnim = {
+  from: number;
+  to: number;
+  dir: "forward" | "backward";
+};
 
 type Props = {
   pageIndex: number;
@@ -13,7 +19,7 @@ type Props = {
   pageFilename?: string;
   onPageIndexChange: (index: number) => void;
   onFlipControlReady?: (flipTo: (target: number) => void) => void;
-  children: ReactNode;
+  renderPage: (index: number) => React.ReactNode;
   className?: string;
   hint?: string;
   pageLabel?: (current: number, total: number) => string;
@@ -25,12 +31,12 @@ export function NotebookPageFlipView({
   pageFilename,
   onPageIndexChange,
   onFlipControlReady,
-  children,
+  renderPage,
   className,
   hint = "Haz clic en los bordes, usa ← → en el teclado o desliza en móvil para hojear.",
   pageLabel = (current, max) => `Hoja ${current} de ${max}`,
 }: Props) {
-  const [flipClass, setFlipClass] = useState<"" | "notebook-flip-forward" | "notebook-flip-back">("");
+  const [slide, setSlide] = useState<SlideAnim | null>(null);
   const busyRef = useRef(false);
   const reducedMotionRef = useRef(false);
   const touchStartX = useRef<number | null>(null);
@@ -41,7 +47,7 @@ export function NotebookPageFlipView({
 
   const flipTo = useCallback(
     (target: number) => {
-      if (busyRef.current || target < 0 || target >= total || target === pageIndex) return;
+      if (busyRef.current || slide || target < 0 || target >= total || target === pageIndex) return;
 
       if (reducedMotionRef.current) {
         onPageIndexChange(target);
@@ -49,14 +55,15 @@ export function NotebookPageFlipView({
       }
 
       busyRef.current = true;
-      setFlipClass(target > pageIndex ? "notebook-flip-forward" : "notebook-flip-back");
+      const dir = target > pageIndex ? "forward" : "backward";
+      setSlide({ from: pageIndex, to: target, dir });
       window.setTimeout(() => {
         onPageIndexChange(target);
-        setFlipClass("");
+        setSlide(null);
         busyRef.current = false;
-      }, FLIP_MS);
+      }, SLIDE_MS);
     },
-    [onPageIndexChange, pageIndex, total],
+    [onPageIndexChange, pageIndex, slide, total],
   );
 
   useEffect(() => {
@@ -76,21 +83,69 @@ export function NotebookPageFlipView({
         flipTo(pageIndex + 1);
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, [flipTo, pageIndex]);
 
-  const flipping = Boolean(flipClass);
+  const animating = Boolean(slide);
+  const canPrev = pageIndex > 0 && !animating;
+  const canNext = pageIndex < total - 1 && !animating;
 
   return (
     <div className={cn("notebook-page-flip relative", className)}>
+      <div className="notebook-page-flip-stage relative overflow-hidden rounded-xl border border-amber-900/25 bg-gradient-to-br from-amber-50/[0.08] via-white/[0.03] to-amber-950/[0.12] shadow-[inset_0_0_48px_rgba(0,0,0,0.2)]">
+        <div className="relative min-h-[300px]">
+          {slide ? (
+            <>
+              <div className="absolute inset-0 z-0 bg-slate-950/40">{renderPage(slide.to)}</div>
+              <div
+                className={cn(
+                  "absolute inset-0 z-10 bg-slate-950/80 shadow-[0_0_40px_rgba(0,0,0,0.45)]",
+                  slide.dir === "forward" ? "notebook-slide-out-left" : "notebook-slide-out-right",
+                )}
+              >
+                {renderPage(slide.from)}
+              </div>
+            </>
+          ) : (
+            renderPage(pageIndex)
+          )}
+        </div>
+
+        <button
+          type="button"
+          className={cn(
+            "absolute left-0 top-0 z-30 flex h-full w-[18%] min-w-[3rem] items-center justify-start bg-gradient-to-r from-black/35 to-transparent pl-2 transition",
+            canPrev ? "cursor-pointer opacity-80 hover:opacity-100" : "cursor-not-allowed opacity-0",
+          )}
+          aria-label="Página anterior"
+          disabled={!canPrev}
+          onClick={() => flipTo(pageIndex - 1)}
+        >
+          <span className="rounded-full bg-black/55 p-2 text-white shadow-lg backdrop-blur-sm">
+            <ChevronLeft className="h-5 w-5" aria-hidden />
+          </span>
+        </button>
+        <button
+          type="button"
+          className={cn(
+            "absolute right-0 top-0 z-30 flex h-full w-[18%] min-w-[3rem] items-center justify-end bg-gradient-to-l from-black/35 to-transparent pr-2 transition",
+            canNext ? "cursor-pointer opacity-80 hover:opacity-100" : "cursor-not-allowed opacity-0",
+          )}
+          aria-label="Página siguiente"
+          disabled={!canNext}
+          onClick={() => flipTo(pageIndex + 1)}
+        >
+          <span className="rounded-full bg-black/55 p-2 text-white shadow-lg backdrop-blur-sm">
+            <ChevronRight className="h-5 w-5" aria-hidden />
+          </span>
+        </button>
+      </div>
+
       <div
-        className={cn(
-          "notebook-page-flip-stage relative [perspective:1400px]",
-          flipping && "notebook-page-flip-stage-active",
-        )}
+        className="mt-3 touch-pan-y"
         onTouchStart={(e) => {
-          touchStartX.current = e.changedTouches[0]?.clientX ?? null;
+          touchStartX.current = e.touches[0]?.clientX ?? null;
         }}
         onTouchEnd={(e) => {
           const start = touchStartX.current;
@@ -98,83 +153,36 @@ export function NotebookPageFlipView({
           if (start == null) return;
           const end = e.changedTouches[0]?.clientX ?? start;
           const dx = end - start;
-          if (dx > 72) flipTo(pageIndex - 1);
-          else if (dx < -72) flipTo(pageIndex + 1);
+          if (dx > 64) flipTo(pageIndex - 1);
+          else if (dx < -64) flipTo(pageIndex + 1);
         }}
       >
-        <div
-          className={cn(
-            "notebook-page-flip-sheet relative overflow-hidden rounded-xl border border-amber-900/25 bg-gradient-to-br from-amber-50/[0.08] via-white/[0.03] to-amber-950/[0.12] shadow-[inset_0_0_48px_rgba(0,0,0,0.22),0_12px_40px_-20px_rgba(0,0,0,0.65)]",
-            flipClass,
-          )}
-        >
-          <div
-            className={cn(
-              "notebook-page-flip-content min-h-[280px] transition-opacity duration-200",
-              flipping && "pointer-events-none opacity-90",
-            )}
+        <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-slate-400">
+          <button
+            type="button"
+            className="inline-flex items-center rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={!canPrev}
+            onClick={() => flipTo(pageIndex - 1)}
           >
-            {children}
-          </div>
-          <div
-            className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-amber-950/35 via-amber-900/10 to-transparent"
-            aria-hidden
-          />
-          <div
-            className="pointer-events-none absolute inset-y-0 left-0 w-3 bg-gradient-to-r from-black/25 to-transparent"
-            aria-hidden
-          />
+            <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
+          </button>
+          <span className="font-medium text-slate-300">
+            {pageLabel(pageIndex + 1, total)}
+            {pageFilename ? (
+              <span className="ml-1 font-normal text-slate-500">· {pageFilename}</span>
+            ) : null}
+          </span>
+          <button
+            type="button"
+            className="inline-flex items-center rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={!canNext}
+            onClick={() => flipTo(pageIndex + 1)}
+          >
+            <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+          </button>
         </div>
+        <p className="mt-1 text-center text-[11px] text-slate-600">{hint}</p>
       </div>
-
-      <button
-        type="button"
-        className="absolute left-0 top-0 z-10 flex h-[calc(100%-3.5rem)] w-[14%] items-center justify-start rounded-l-xl pl-1 text-white/70 transition hover:bg-black/10 focus-visible:bg-black/15 focus-visible:outline-none"
-        aria-label="Página anterior"
-        disabled={pageIndex <= 0 || flipping}
-        onClick={() => flipTo(pageIndex - 1)}
-      >
-        <span className="rounded-full bg-black/45 p-1.5 shadow-lg backdrop-blur-sm">
-          <ChevronLeft className="h-4 w-4" aria-hidden />
-        </span>
-      </button>
-      <button
-        type="button"
-        className="absolute right-0 top-0 z-10 flex h-[calc(100%-3.5rem)] w-[14%] items-center justify-end rounded-r-xl pr-1 text-white/70 transition hover:bg-black/10 focus-visible:bg-black/15 focus-visible:outline-none"
-        aria-label="Página siguiente"
-        disabled={pageIndex >= total - 1 || flipping}
-        onClick={() => flipTo(pageIndex + 1)}
-      >
-        <span className="rounded-full bg-black/45 p-1.5 shadow-lg backdrop-blur-sm">
-          <ChevronRight className="h-4 w-4" aria-hidden />
-        </span>
-      </button>
-
-      <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-400">
-        <button
-          type="button"
-          className="inline-flex items-center rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-          disabled={pageIndex <= 0 || flipping}
-          onClick={() => flipTo(pageIndex - 1)}
-        >
-          <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
-        </button>
-        <span className="font-medium text-slate-300">
-          {pageLabel(pageIndex + 1, total)}
-          {pageFilename ? (
-            <span className="ml-1 font-normal text-slate-500">· {pageFilename}</span>
-          ) : null}
-        </span>
-        <button
-          type="button"
-          className="inline-flex items-center rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-          disabled={pageIndex >= total - 1 || flipping}
-          onClick={() => flipTo(pageIndex + 1)}
-        >
-          <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-        </button>
-      </div>
-      <p className="mt-1 text-center text-[11px] text-slate-600">{hint}</p>
     </div>
   );
 }

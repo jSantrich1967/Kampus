@@ -76,8 +76,9 @@ export function NotebookReader({ subjectSlug }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pageIndex, setPageIndex] = useState(0);
-  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
-  const [mediaBusy, setMediaBusy] = useState(false);
+  const [mediaByDocId, setMediaByDocId] = useState<Record<string, string>>({});
+  const [mediaBusyIds, setMediaBusyIds] = useState<Record<string, boolean>>({});
+  const mediaByDocIdRef = useRef<Record<string, string>>({});
   const [indexOpen, setIndexOpen] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [bookBusy, setBookBusy] = useState(false);
@@ -359,33 +360,118 @@ export function NotebookReader({ subjectSlug }: Props) {
   }
 
   useEffect(() => {
-    if (!current || !authUserId) {
-      setMediaUrl(null);
-      return;
-    }
+    mediaByDocIdRef.current = mediaByDocId;
+  }, [mediaByDocId]);
+
+  useEffect(() => {
+    if (!authUserId || pages.length === 0) return;
+
+    const indices = new Set<number>([pageIndex]);
+    if (pageIndex > 0) indices.add(pageIndex - 1);
+    if (pageIndex < pages.length - 1) indices.add(pageIndex + 1);
+
     let cancelled = false;
-    const run = async () => {
-      setMediaBusy(true);
+
+    const loadDocMedia = async (doc: NotebookDocumentRow) => {
+      if (mediaByDocIdRef.current[doc.id]) return;
+      setMediaBusyIds((prev) => ({ ...prev, [doc.id]: true }));
       try {
         const supabase = createSupabaseBrowserClient();
-        const { data, error: uErr } = await supabase.storage.from("notebooks").createSignedUrl(current.storage_path, 3600);
+        const { data, error: uErr } = await supabase.storage.from("notebooks").createSignedUrl(doc.storage_path, 3600);
         if (uErr || !data?.signedUrl) throw new Error(uErr?.message ?? "Sin enlace al archivo");
-        if (!cancelled) setMediaUrl(data.signedUrl);
+        if (!cancelled) {
+          setMediaByDocId((prev) => ({ ...prev, [doc.id]: data.signedUrl }));
+        }
       } catch {
-        if (!cancelled) setMediaUrl(null);
+        if (!cancelled) {
+          setMediaByDocId((prev) => {
+            const next = { ...prev };
+            delete next[doc.id];
+            return next;
+          });
+        }
       } finally {
-        if (!cancelled) setMediaBusy(false);
+        if (!cancelled) {
+          setMediaBusyIds((prev) => {
+            const next = { ...prev };
+            delete next[doc.id];
+            return next;
+          });
+        }
       }
     };
-    void run();
+
+    void (async () => {
+      for (const idx of indices) {
+        const doc = pages[idx];
+        if (doc) await loadDocMedia(doc);
+      }
+    })();
+
     return () => {
       cancelled = true;
     };
-  }, [current, authUserId]);
+  }, [authUserId, pages, pageIndex]);
 
-  const isImage = Boolean(current?.mime_type?.startsWith("image/"));
-  const isPdf =
-    Boolean(current?.mime_type?.includes("pdf")) || Boolean(current?.filename?.toLowerCase().endsWith(".pdf"));
+  const renderNotebookPage = useCallback(
+    (index: number) => {
+      const doc = pages[index];
+      if (!doc) {
+        return (
+          <div className="flex h-48 items-center justify-center px-4 text-center text-sm text-slate-500">
+            Hoja no disponible.
+          </div>
+        );
+      }
+
+      const url = mediaByDocId[doc.id];
+      const busy = Boolean(mediaBusyIds[doc.id]);
+      const image = Boolean(doc.mime_type?.startsWith("image/"));
+      const pdf = Boolean(doc.mime_type?.includes("pdf")) || Boolean(doc.filename?.toLowerCase().endsWith(".pdf"));
+
+      if (busy && !url) {
+        return (
+          <div className="flex h-64 items-center justify-center text-slate-400">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        );
+      }
+
+      if (url && image) {
+        return (
+          // eslint-disable-next-line @next/next/no-img-element -- signed URL from user storage
+          <img src={url} alt={doc.filename} className="max-h-[480px] w-full object-contain" />
+        );
+      }
+
+      if (url && pdf) {
+        return (
+          <iframe
+            title={doc.filename}
+            src={url}
+            className="pointer-events-auto h-[min(70vh,560px)] w-full bg-slate-900"
+          />
+        );
+      }
+
+      if (url) {
+        return (
+          <div className="p-4 text-center text-sm text-slate-400">
+            <a href={url} target="_blank" rel="noreferrer" className="text-indigo-300 underline">
+              Abrir archivo en pestaña nueva
+            </a>
+          </div>
+        );
+      }
+
+      return (
+        <div className="flex h-48 items-center justify-center px-4 text-center text-sm text-slate-500">
+          Vista previa no disponible. Puedes descargar el archivo o volver a subirlo con Agregar.
+        </div>
+      );
+    },
+    [mediaByDocId, mediaBusyIds, pages],
+  );
 
   if (!isSupabaseConfigured() && authUserId) {
     return (
@@ -738,30 +824,8 @@ export function NotebookReader({ subjectSlug }: Props) {
                     onFlipControlReady={handleFlipControlReady}
                     hint={lib.readerFlipHint}
                     pageLabel={lib.readerFlipPageLabel}
-                  >
-                    <div className="min-h-[280px]">
-                      {mediaBusy ? (
-                        <div className="flex h-64 items-center justify-center text-slate-400">
-                          <Loader2 className="h-6 w-6 animate-spin" />
-                        </div>
-                      ) : mediaUrl && isImage ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- signed URL from user storage
-                        <img src={mediaUrl} alt={current.filename} className="max-h-[480px] w-full object-contain" />
-                      ) : mediaUrl && isPdf ? (
-                        <iframe title={current.filename} src={mediaUrl} className="h-[min(70vh,560px)] w-full bg-slate-900" />
-                      ) : mediaUrl ? (
-                        <div className="p-4 text-center text-sm text-slate-400">
-                          <a href={mediaUrl} target="_blank" rel="noreferrer" className="text-indigo-300 underline">
-                            Abrir archivo en pestaña nueva
-                          </a>
-                        </div>
-                      ) : (
-                        <div className="flex h-48 items-center justify-center px-4 text-center text-sm text-slate-500">
-                          Vista previa no disponible. Puedes descargar el archivo o volver a subirlo con Agregar.
-                        </div>
-                      )}
-                    </div>
-                  </NotebookPageFlipView>
+                    renderPage={renderNotebookPage}
+                  />
 
                   <div className="flex flex-wrap justify-center gap-2 border-t border-white/10 pt-4">
                     <Link
