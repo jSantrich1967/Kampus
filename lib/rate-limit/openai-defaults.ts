@@ -22,6 +22,13 @@ export function classPresentationRateLimits(): { max: number; windowMs: number }
   };
 }
 
+export function classPresentationSpeechRateLimits(): { max: number; windowMs: number } {
+  return {
+    max: parseInt(process.env.API_RL_MAX_CLASS_PRESENTATION_SPEECH ?? "60", 10),
+    windowMs: parseInt(process.env.API_RL_CLASS_PRESENTATION_SPEECH_WINDOW_MS ?? String(60 * 60 * 1000), 10),
+  };
+}
+
 export function rescueExtractRateLimits(): { max: number; windowMs: number } {
   return {
     max: parseInt(process.env.API_RL_MAX_RESCUE_EXTRACT ?? "45", 10),

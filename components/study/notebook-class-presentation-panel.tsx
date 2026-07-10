@@ -126,8 +126,8 @@ export function NotebookClassPresentationPanel({
             Clase visual (pizarra)
           </CardTitle>
           <CardDescription>
-            Recrea las hojas que elijas como una mini-clase con diapositivas, esquemas y narración por voz para entender
-            mejor tus apuntes.
+            Recrea tus hojas como una mini-clase con diapositivas ilustradas, mapas visuales y narración en voz
+            natural (OpenAI). Elige qué páginas incluir antes de empezar.
           </CardDescription>
         </CardHeader>
         <div className="space-y-4 px-6 pb-6">

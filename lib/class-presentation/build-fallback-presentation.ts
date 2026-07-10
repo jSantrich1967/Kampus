@@ -1,4 +1,5 @@
 import type { ClassPresentation } from "@/lib/schemas/class-presentation";
+import type { SlideAccent, SlideVisualIcon } from "@/lib/schemas/class-presentation";
 
 type PageHint = {
   pageNumber: number;
@@ -6,6 +7,9 @@ type PageHint = {
   topic?: string;
   documentId?: string;
 };
+
+const ACCENTS: SlideAccent[] = ["violet", "cyan", "amber", "emerald", "rose"];
+const ICONS: SlideVisualIcon[] = ["lightbulb", "book-open", "chart-line", "brain", "target", "sparkles"];
 
 function splitParagraphs(text: string): string[] {
   return text
@@ -23,15 +27,16 @@ export function buildFallbackClassPresentation(
   const subjectLine = subjectHint.trim() || "Clase visual";
   const intro =
     chunks.length > 0
-      ? "Repasamos tus apuntes en formato de clase visual. Cada diapositiva resume una parte del material que elegiste."
-      : "No hay mucho texto extraído todavía. Te mostramos una guía breve para repasar lo que subiste.";
+      ? "Bienvenido a tu clase visual. Vamos a recorrer tus apuntes paso a paso, con explicaciones claras y un mapa para que todo encaje."
+      : "Todavía hay poco texto extraído de tus archivos. Te guiamos con una estructura básica para que repases lo que subiste.";
+  const outro = "Repasa las ideas clave y vuelve al apunte original si algo no queda claro. ¡Buen estudio!";
 
   const slideSources =
     pageHints.length > 0
       ? pageHints
       : [{ pageNumber: 1, filename: "Apunte", topic: subjectLine }];
 
-  const slideCount = Math.min(8, Math.max(3, chunks.length || slideSources.length));
+  const slideCount = Math.min(8, Math.max(4, chunks.length || slideSources.length));
   const slides = Array.from({ length: slideCount }, (_, i) => {
     const source = slideSources[i % slideSources.length]!;
     const chunk = chunks[i] ?? chunks[chunks.length - 1] ?? source.topic ?? source.filename;
@@ -39,22 +44,33 @@ export function buildFallbackClassPresentation(
       .split(/\n/)
       .map((l) => l.trim())
       .filter(Boolean)
-      .slice(0, 4);
-    const title = source.topic?.trim() || `Parte ${i + 1}`;
+      .slice(0, 5);
+    const title = source.topic?.trim() || `Bloque ${i + 1}`;
     const bullets =
-      lines.length > 0
-        ? lines.map((l) => (l.length > 120 ? `${l.slice(0, 117)}…` : l))
-        : [`Revisa la hoja ${source.pageNumber} con calma y subraya lo esencial.`];
+      lines.length >= 2
+        ? lines.map((l) => (l.length > 120 ? `${l.slice(0, 117)}…` : l)).slice(0, 4)
+        : [
+            `Concepto principal de la hoja ${source.pageNumber}.`,
+            "Relaciónalo con lo que viste en clase y con ejemplos del temario.",
+          ];
+
+    const highlightQuote = bullets[0]!.length > 80 ? `${bullets[0]!.slice(0, 77)}…` : bullets[0]!;
+
+    const diagramTypes = ["concept", "flow", "list"] as const;
+    const diagramType = diagramTypes[i % 3]!;
 
     return {
       id: `slide-${i + 1}`,
       title,
-      narration: `En esta parte hablamos de ${title}. ${bullets[0] ?? "Repasa el apunte original al lado."}`,
-      bullets: bullets.slice(0, 4),
+      narration: `Vamos con ${title}. ${bullets[0] ?? "Fíjate en el apunte de la derecha mientras repasamos."}`,
+      bullets,
+      highlightQuote,
+      visualIcon: ICONS[i % ICONS.length],
+      accent: ACCENTS[i % ACCENTS.length],
       diagram: {
-        type: "flow" as const,
+        type: diagramType,
         items: bullets.slice(0, 3).map((label, idx) => ({
-          label: `Paso ${idx + 1}`,
+          label: idx === 0 ? "Idea clave" : `Punto ${idx + 1}`,
           detail: label,
         })),
       },
@@ -64,5 +80,5 @@ export function buildFallbackClassPresentation(
     };
   });
 
-  return { subjectLine, intro, slides };
+  return { subjectLine, intro, outro, slides };
 }
