@@ -235,32 +235,36 @@ export function ClassPresentationViewer({ presentation, mediaByDocId = {}, onClo
               "bg-slate-950/55",
             )}
           >
-            <div className={cn("grid gap-6", slideExpanded ? "lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)]" : "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]")}>
-              <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-6">
+              <div className={cn("grid gap-6", slideExpanded ? "lg:grid-cols-[auto_minmax(0,1fr)]" : "lg:grid-cols-[auto_minmax(0,1fr)]")}>
                 <ClassSlideHeroArt Icon={Icon} theme={theme} className="mx-auto lg:mx-0" />
+                <div className="min-w-0">
+                  <p className="text-xs font-medium uppercase tracking-widest text-white/45">
+                    Diapositiva {index + 1} / {total}
+                    {slide.sourcePageNumber ? ` · Hoja ${slide.sourcePageNumber}` : ""}
+                  </p>
+                  <h3 className={cn("mt-2 font-bold leading-tight tracking-tight", slideExpanded ? "text-3xl md:text-5xl" : "text-2xl md:text-4xl")}>
+                    {slide.title}
+                  </h3>
+                  {slide.highlightQuote ? (
+                    <blockquote className={cn("mt-4 border-l-4 border-white/25 pl-4 text-lg font-medium italic md:text-xl", theme.quoteText)}>
+                      «{slide.highlightQuote}»
+                    </blockquote>
+                  ) : null}
+                  <p className="mt-4 text-sm leading-relaxed text-slate-300 md:text-base">{slide.narration}</p>
+                </div>
+              </div>
+
+              {slide.illustrationPrompt?.trim() ? (
                 <ClassSlideIllustration
                   slideId={slide.id}
                   prompt={slide.illustrationPrompt}
                   subjectHint={presentation.subjectLine}
                   slideTitle={slide.title}
                   labels={illustrationLabelsForSlide(slide)}
+                  className="w-full"
                 />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-medium uppercase tracking-widest text-white/45">
-                  Diapositiva {index + 1} / {total}
-                  {slide.sourcePageNumber ? ` · Hoja ${slide.sourcePageNumber}` : ""}
-                </p>
-                <h3 className={cn("mt-2 font-bold leading-tight tracking-tight", slideExpanded ? "text-3xl md:text-5xl" : "text-2xl md:text-4xl")}>
-                  {slide.title}
-                </h3>
-                {slide.highlightQuote ? (
-                  <blockquote className={cn("mt-4 border-l-4 border-white/25 pl-4 text-lg font-medium italic md:text-xl", theme.quoteText)}>
-                    «{slide.highlightQuote}»
-                  </blockquote>
-                ) : null}
-                <p className="mt-4 text-sm leading-relaxed text-slate-300 md:text-base">{slide.narration}</p>
-              </div>
+              ) : null}
             </div>
 
             <ul className="mt-8 grid gap-3 sm:grid-cols-2">

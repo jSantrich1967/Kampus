@@ -25,40 +25,49 @@ export function ClassSlideIllustration({ slideId, prompt, subjectHint, slideTitl
 
   return (
     <>
-      <div className={cn("relative overflow-hidden rounded-2xl border border-white/15 bg-black/30 shadow-xl", className)}>
-      {loading ? (
-        <div className="flex aspect-[16/10] flex-col items-center justify-center gap-2 px-4 text-center text-sm text-slate-400">
-          <div className="flex items-center gap-2">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            Ilustración IA…
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-2xl border border-white/15 bg-white shadow-xl",
+          className,
+        )}
+      >
+        {loading ? (
+          <div className="flex min-h-[220px] flex-col items-center justify-center gap-2 bg-slate-950/80 px-4 py-10 text-center text-sm text-slate-400">
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Ilustración IA…
+            </div>
+            <p className="text-xs text-slate-500">Suele tardar 15–30 s</p>
           </div>
-          <p className="text-xs text-slate-500">Suele tardar 10–20 s</p>
-        </div>
-      ) : null}
-      {!loading && error ? (
-        <div className="flex aspect-[16/10] flex-col items-center justify-center gap-3 px-4 text-center">
-          <p className="text-xs text-amber-200/90">{error}</p>
-          <Button type="button" size="sm" variant="secondary" className="gap-1.5" onClick={retry}>
-            <RotateCcw className="h-3.5 w-3.5" />
-            Reintentar
-          </Button>
-        </div>
-      ) : null}
-      {!loading && dataUrl ? (
-        <button
-          type="button"
-          className="group relative block w-full cursor-zoom-in"
-          onClick={() => setLightboxOpen(true)}
-          aria-label="Ampliar ilustración"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={dataUrl} alt="" className="aspect-[16/10] w-full object-cover transition group-hover:brightness-110" />
-          <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white/90 opacity-0 backdrop-blur-sm transition group-hover:opacity-100">
-            <ZoomIn className="h-3.5 w-3.5" />
-            Ampliar
-          </span>
-        </button>
-      ) : null}
+        ) : null}
+        {!loading && error ? (
+          <div className="flex min-h-[220px] flex-col items-center justify-center gap-3 bg-slate-950/80 px-4 py-10 text-center">
+            <p className="text-xs text-amber-200/90">{error}</p>
+            <Button type="button" size="sm" variant="secondary" className="gap-1.5" onClick={retry}>
+              <RotateCcw className="h-3.5 w-3.5" />
+              Reintentar
+            </Button>
+          </div>
+        ) : null}
+        {!loading && dataUrl ? (
+          <button
+            type="button"
+            className="group relative block w-full cursor-zoom-in p-2 sm:p-3"
+            onClick={() => setLightboxOpen(true)}
+            aria-label="Ampliar ilustración"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={dataUrl}
+              alt={slideTitle ? `Diagrama: ${slideTitle}` : "Diagrama educativo"}
+              className="mx-auto block h-auto max-h-[min(56vh,520px)] w-full object-contain object-center"
+            />
+            <span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-black/65 px-2.5 py-1 text-[11px] font-medium text-white/90 opacity-0 backdrop-blur-sm transition group-hover:opacity-100">
+              <ZoomIn className="h-3.5 w-3.5" />
+              Ampliar
+            </span>
+          </button>
+        ) : null}
       </div>
 
       {dataUrl ? (
@@ -66,7 +75,7 @@ export function ClassSlideIllustration({ slideId, prompt, subjectHint, slideTitl
           src={dataUrl}
           open={lightboxOpen}
           onClose={() => setLightboxOpen(false)}
-          caption="Diagrama anotado con etiquetas"
+          caption={slideTitle ? `Diagrama: ${slideTitle}` : "Diagrama anotado con etiquetas"}
         />
       ) : null}
     </>

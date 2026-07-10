@@ -79,7 +79,8 @@ function buildImageRequestBody(model: string, prompt: string): Record<string, un
   };
 
   if (isGptImageModel(model)) {
-    payload.size = "1024x1024";
+    // Landscape fits labeled diagrams (text + figure side by side) without clipping labels.
+    payload.size = "1536x1024";
     payload.quality = "medium";
     return payload;
   }
@@ -192,6 +193,7 @@ function buildIllustrationPrompt(
 
   return [
     "Educational annotated infographic diagram for university students.",
+    "Landscape layout with generous margins; every label and arrow must fit fully inside the image — nothing cropped at the edges.",
     "Textbook-style illustration: clear Spanish text labels, callout arrows, part names on the drawing.",
     "Clean flat vector style, soft gradients, high contrast, legible typography.",
     labelBlock,
