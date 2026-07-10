@@ -19,16 +19,32 @@ type ImageGenResponse = {
   error?: { message?: string };
 };
 
-/** Default image model — dall-e-2 ("image 2") works on most OpenAI accounts. */
-const DEFAULT_IMAGE_MODEL = "dall-e-2";
+/** Default: GPT Image 2 — OpenAI retired dall-e-2 / dall-e-3 in 2026. */
+const DEFAULT_IMAGE_MODEL = "gpt-image-2";
+
+const FALLBACK_IMAGE_MODELS = ["gpt-image-2", "gpt-image-1-mini", "gpt-image-1"] as const;
 
 function normalizeImageModel(raw: string): string {
   const s = raw.trim().toLowerCase();
-  if (s === "image2" || s === "image-2" || s === "dalle2" || s === "dall-e-2" || s === "dall_e_2") {
-    return "dall-e-2";
+  if (
+    s === "image2" ||
+    s === "image-2" ||
+    s === "gptimage2" ||
+    s === "gpt-image-2" ||
+    s === "gpt_image_2" ||
+    s === "chatgpt-images-2"
+  ) {
+    return "gpt-image-2";
   }
-  if (s === "image3" || s === "dalle3" || s === "dall-e-3") {
-    return "dall-e-3";
+  if (s === "image1" || s === "gptimage1" || s === "gpt-image-1") {
+    return "gpt-image-1";
+  }
+  if (s === "mini" || s === "gpt-image-1-mini" || s === "gptimage1mini") {
+    return "gpt-image-1-mini";
+  }
+  // Legacy env values from the DALL-E era → map to the current API.
+  if (s === "dalle2" || s === "dall-e-2" || s === "dalle3" || s === "dall-e-3" || s === "image3") {
+    return "gpt-image-2";
   }
   return raw.trim();
 }
@@ -36,13 +52,17 @@ function normalizeImageModel(raw: string): string {
 function imageModelsToTry(): string[] {
   const configured = process.env.OPENAI_IMAGE_MODEL?.trim();
   const primary = normalizeImageModel(configured || DEFAULT_IMAGE_MODEL);
-  if (primary === "dall-e-2") return ["dall-e-2"];
-  return [primary, "dall-e-2"];
+  const rest = FALLBACK_IMAGE_MODELS.filter((m) => m !== primary);
+  return [primary, ...rest];
 }
 
 function clipPromptForModel(model: string, prompt: string): string {
   if (model === "dall-e-2") return prompt.slice(0, 1000);
   return prompt.slice(0, 3800);
+}
+
+function isGptImageModel(model: string): boolean {
+  return model.startsWith("gpt-image-");
 }
 
 function buildImageRequestBody(model: string, prompt: string): Record<string, unknown> {
@@ -52,6 +72,14 @@ function buildImageRequestBody(model: string, prompt: string): Record<string, un
     prompt: clipped,
     n: 1,
   };
+
+  if (isGptImageModel(model)) {
+    payload.size = "1024x1024";
+    if (model !== "gpt-image-2") {
+      payload.quality = "low";
+    }
+    return payload;
+  }
 
   if (model === "dall-e-3") {
     payload.size = "1024x1024";
