@@ -32,6 +32,7 @@ export const navCopy = {
       teaching: "Copiloto docente",
       institution: "Panel institucional",
       settings: "Ajustes",
+      guide: "Guía de Kampus",
     },
     badges: {
       premium: "Premium",

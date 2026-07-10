@@ -61,6 +61,11 @@ export default function SettingsPage() {
         eyebrow="Sistema"
         title="Ajustes"
         description="Controla plan, cuenta en la nube y reinicio del onboarding."
+        actions={
+          <Button type="button" size="sm" variant="secondary" onClick={() => router.push("/guide")}>
+            Guía de Kampus
+          </Button>
+        }
       />
 
       {showAuthBypassUi ? (

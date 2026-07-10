@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Building2,
+  BookOpen,
   Calendar,
   CalendarDays,
   Heart,
@@ -91,7 +92,10 @@ export const navigationGroups: NavGroup[] = [
   },
   {
     id: "system",
-    items: [{ href: "/settings", key: "settings", icon: Settings, roles: ["student", "teacher", "institution", "learner"] }],
+    items: [
+      { href: "/guide", key: "guide", icon: BookOpen, roles: ["student", "teacher", "institution", "learner"] },
+      { href: "/settings", key: "settings", icon: Settings, roles: ["student", "teacher", "institution", "learner"] },
+    ],
   },
 ];
 

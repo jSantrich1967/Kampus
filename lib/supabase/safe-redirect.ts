@@ -17,6 +17,7 @@ const ALLOWED_FIRST_SEGMENTS = new Set([
   "wellbeing",
   "teaching",
   "pass-mode",
+  "guide",
   "settings",
   "login",
   "register",
