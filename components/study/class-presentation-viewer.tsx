@@ -4,8 +4,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  Maximize2,
   Mic,
   MicOff,
+  Minimize2,
   Presentation,
   Volume2,
   X,
@@ -35,6 +37,7 @@ export function ClassPresentationViewer({ presentation, mediaByDocId = {}, onClo
   const [index, setIndex] = useState(0);
   const [voiceOn, setVoiceOn] = useState(true);
   const [autoAdvance, setAutoAdvance] = useState(false);
+  const [slideExpanded, setSlideExpanded] = useState(false);
   const { speak, stop, prefetch, speaking, loading, voiceMode } = useClassPresentationNarration();
   const narratedIndexRef = useRef<number | null>(null);
 
@@ -92,6 +95,10 @@ export function ClassPresentationViewer({ presentation, mediaByDocId = {}, onClo
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
+        if (slideExpanded) {
+          setSlideExpanded(false);
+          return;
+        }
         stop();
         onClose();
       }
@@ -108,10 +115,14 @@ export function ClassPresentationViewer({ presentation, mediaByDocId = {}, onClo
         if (speaking || loading) stop();
         else playCurrentSlide();
       }
+      if (e.key === "f" || e.key === "F") {
+        e.preventDefault();
+        setSlideExpanded((v) => !v);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [goToSlide, index, loading, onClose, playCurrentSlide, speaking, stop]);
+  }, [goToSlide, index, loading, onClose, playCurrentSlide, slideExpanded, speaking, stop]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -175,6 +186,17 @@ export function ClassPresentationViewer({ presentation, mediaByDocId = {}, onClo
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
             {loading ? "Cargando…" : speaking ? "Parar" : "Escuchar"}
           </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={slideExpanded ? "secondary" : "ghost"}
+            className="gap-1.5"
+            onClick={() => setSlideExpanded((v) => !v)}
+            aria-pressed={slideExpanded}
+          >
+            {slideExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            {slideExpanded ? "Reducir" : "Ampliar"}
+          </Button>
           <Button type="button" size="sm" variant="ghost" onClick={() => setAutoAdvance((v) => !v)}>
             {autoAdvance ? "Auto ✓" : "Auto"}
           </Button>
@@ -184,7 +206,7 @@ export function ClassPresentationViewer({ presentation, mediaByDocId = {}, onClo
         </div>
       </header>
 
-      <div className="relative flex min-h-0 flex-1 flex-col xl:flex-row">
+      <div className={cn("relative flex min-h-0 flex-1 flex-col", !slideExpanded && "xl:flex-row")}>
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 md:p-8">
           {index === 0 ? (
             <p className="class-presentation-enter mb-6 max-w-2xl text-sm leading-relaxed text-white/70 md:text-base">
@@ -195,13 +217,14 @@ export function ClassPresentationViewer({ presentation, mediaByDocId = {}, onClo
           <article
             key={slide.id}
             className={cn(
-              "class-presentation-enter mx-auto w-full max-w-3xl rounded-3xl border p-6 shadow-2xl backdrop-blur-xl md:p-8",
+              "class-presentation-enter mx-auto w-full rounded-3xl border p-6 shadow-2xl backdrop-blur-xl md:p-8",
+              slideExpanded ? "max-w-6xl" : "max-w-3xl",
               theme.border,
               theme.glow,
               "bg-slate-950/55",
             )}
           >
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+            <div className={cn("grid gap-6", slideExpanded ? "lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)]" : "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]")}>
               <div className="flex flex-col gap-4">
                 <ClassSlideHeroArt Icon={Icon} theme={theme} className="mx-auto lg:mx-0" />
                 <ClassSlideIllustration
@@ -215,7 +238,9 @@ export function ClassPresentationViewer({ presentation, mediaByDocId = {}, onClo
                   Diapositiva {index + 1} / {total}
                   {slide.sourcePageNumber ? ` · Hoja ${slide.sourcePageNumber}` : ""}
                 </p>
-                <h3 className="mt-2 text-2xl font-bold leading-tight tracking-tight md:text-4xl">{slide.title}</h3>
+                <h3 className={cn("mt-2 font-bold leading-tight tracking-tight", slideExpanded ? "text-3xl md:text-5xl" : "text-2xl md:text-4xl")}>
+                  {slide.title}
+                </h3>
                 {slide.highlightQuote ? (
                   <blockquote className={cn("mt-4 border-l-4 border-white/25 pl-4 text-lg font-medium italic md:text-xl", theme.quoteText)}>
                     «{slide.highlightQuote}»
@@ -263,7 +288,12 @@ export function ClassPresentationViewer({ presentation, mediaByDocId = {}, onClo
           ) : null}
         </main>
 
-        <aside className="relative flex w-full shrink-0 flex-col border-t border-white/10 bg-black/40 backdrop-blur-md xl:w-[min(38vw,440px)] xl:border-l xl:border-t-0">
+        <aside
+          className={cn(
+            "relative flex w-full shrink-0 flex-col border-t border-white/10 bg-black/40 backdrop-blur-md xl:w-[min(38vw,440px)] xl:border-l xl:border-t-0",
+            slideExpanded && "hidden",
+          )}
+        >
           <div className="border-b border-white/10 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-white/45">
             Tu apunte · {slide.sourceFilename ?? "sin archivo"}
           </div>

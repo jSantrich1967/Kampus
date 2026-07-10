@@ -1,7 +1,9 @@
 "use client";
 
-import { Loader2, RotateCcw } from "lucide-react";
+import { Loader2, RotateCcw, ZoomIn } from "lucide-react";
+import { useState } from "react";
 
+import { ImageLightbox } from "@/components/study/image-lightbox";
 import { Button } from "@/components/ui/button";
 import { useSlideIllustration } from "@/lib/hooks/use-slide-illustration";
 import { cn } from "@/lib/cn";
@@ -15,11 +17,13 @@ type Props = {
 
 export function ClassSlideIllustration({ slideId, prompt, subjectHint, className }: Props) {
   const { dataUrl, loading, error, retry } = useSlideIllustration(slideId, prompt, subjectHint);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   if (!prompt?.trim()) return null;
 
   return (
-    <div className={cn("relative overflow-hidden rounded-2xl border border-white/15 bg-black/30 shadow-xl", className)}>
+    <>
+      <div className={cn("relative overflow-hidden rounded-2xl border border-white/15 bg-black/30 shadow-xl", className)}>
       {loading ? (
         <div className="flex aspect-[16/10] flex-col items-center justify-center gap-2 px-4 text-center text-sm text-slate-400">
           <div className="flex items-center gap-2">
@@ -39,9 +43,30 @@ export function ClassSlideIllustration({ slideId, prompt, subjectHint, className
         </div>
       ) : null}
       {!loading && dataUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- base64 illustration from OpenAI
-        <img src={dataUrl} alt="" className="aspect-[16/10] w-full object-cover" />
+        <button
+          type="button"
+          className="group relative block w-full cursor-zoom-in"
+          onClick={() => setLightboxOpen(true)}
+          aria-label="Ampliar ilustración"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={dataUrl} alt="" className="aspect-[16/10] w-full object-cover transition group-hover:brightness-110" />
+          <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white/90 opacity-0 backdrop-blur-sm transition group-hover:opacity-100">
+            <ZoomIn className="h-3.5 w-3.5" />
+            Ampliar
+          </span>
+        </button>
       ) : null}
-    </div>
+      </div>
+
+      {dataUrl ? (
+        <ImageLightbox
+          src={dataUrl}
+          open={lightboxOpen}
+          onClose={() => setLightboxOpen(false)}
+          caption="Ilustración generada con IA"
+        />
+      ) : null}
+    </>
   );
 }
