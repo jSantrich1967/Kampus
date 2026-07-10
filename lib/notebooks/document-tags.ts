@@ -24,6 +24,19 @@ export function filterDocumentsByTags(docs: NotebookDocumentRow[], filters: Note
   return docs.filter((d) => documentMatchesTagFilters(d, filters));
 }
 
+export function filterDocumentsByIds(
+  docs: NotebookDocumentRow[],
+  ids: ReadonlySet<string> | readonly string[],
+): NotebookDocumentRow[] {
+  const set = ids instanceof Set ? ids : new Set(ids);
+  if (set.size === 0) return [];
+  return docs.filter((d) => set.has(d.id));
+}
+
+export function allNotebookDocumentIds(docs: NotebookDocumentRow[]): Set<string> {
+  return new Set(docs.map((d) => d.id));
+}
+
 /** Combined blob for `/api/rescue/pack` — includes materia / tema / punto / ejercicios in headers. */
 export function combineNotebookExtractedTextForPack(docs: NotebookDocumentRow[]): string {
   return docs

@@ -7,19 +7,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildPassModeSubjectHref } from "@/lib/today/block-action-href";
 import { ShareLinkButton } from "@/components/growth/share-link-button";
 import { useKampus } from "@/components/kampus/kampus-provider";
+import { NotebookPagePicker } from "@/components/study/notebook-page-picker";
 import { RescuePackDisplay } from "@/components/rescue/rescue-pack-display";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 import type { RescuePack } from "@/lib/class-rescue";
-import { combineNotebookExtractedTextForPack } from "@/lib/notebooks/document-tags";
+import { combineNotebookExtractedTextForPack, filterDocumentsByIds } from "@/lib/notebooks/document-tags";
 import { resolveNotebookDocumentsExtractedTextWithHint } from "@/lib/notebooks/resolve-extracted-text";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 import { postRescuePack } from "@/lib/rescue/post-rescue-pack";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
-type Scope = "page" | "notebook";
+type Scope = "page" | "notebook" | "selection";
 
 function mimeToSourceKind(mime: string): "pdf" | "audio" | "image" | "slides" | "link" | "notes" {
   const m = mime.toLowerCase();
@@ -49,6 +50,7 @@ export function NotebookStudyKitPanel({
   const { profile } = useKampus();
   const premium = profile.plan === "premium";
   const [scope, setScope] = useState<Scope>("page");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [pack, setPack] = useState<RescuePack | null>(null);
   const [packBusy, setPackBusy] = useState(false);
   const [packError, setPackError] = useState<string | null>(null);
@@ -58,10 +60,24 @@ export function NotebookStudyKitPanel({
     if (scope === "page") {
       return [currentPage];
     }
+    if (scope === "selection") {
+      return filterDocumentsByIds(pages, selectedIds);
+    }
     return pages;
-  }, [scope, pages, currentPage]);
+  }, [scope, pages, currentPage, selectedIds]);
 
   const total = pages.length;
+
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      const valid = new Set(pages.map((p) => p.id));
+      const next = new Set([...prev].filter((id) => valid.has(id)));
+      if (next.size === 0 && pages.length > 0) {
+        pages.forEach((p) => next.add(p.id));
+      }
+      return next;
+    });
+  }, [pages]);
 
   useEffect(() => {
     if (scope !== "page") return;
@@ -87,6 +103,16 @@ export function NotebookStudyKitPanel({
         sourceLabel: d.filename,
         uploadedFileCount: 1,
         sourceKind: mimeToSourceKind(d.mime_type ?? ""),
+        fallbackSeed: combined,
+      };
+    }
+    if (scope === "selection") {
+      const combined = combineNotebookExtractedTextForPack(kitDocs);
+      return {
+        extractedFileText: combined,
+        sourceLabel: `Selección (${kitDocs.length} archivos)`,
+        uploadedFileCount: kitDocs.length,
+        sourceKind: "notes" as const,
         fallbackSeed: combined,
       };
     }
@@ -121,7 +147,9 @@ export function NotebookStudyKitPanel({
         const label =
           resolvedDocs.length === 1
             ? resolvedDocs[0]!.filename
-            : `Cuaderno (${resolvedDocs.length} archivos)`;
+            : scope === "selection"
+              ? `Selección (${resolvedDocs.length} archivos)`
+              : `Cuaderno (${resolvedDocs.length} archivos)`;
         const kind =
           resolvedDocs.length === 1 ? mimeToSourceKind(resolvedDocs[0]!.mime_type ?? "") : ("notes" as const);
 
@@ -151,7 +179,7 @@ export function NotebookStudyKitPanel({
         setPackBusy(false);
       }
     },
-    [kitDocs, premium, subjectLabel],
+    [kitDocs, premium, scope, subjectLabel],
   );
 
   useEffect(() => {
@@ -183,7 +211,7 @@ export function NotebookStudyKitPanel({
           <CardDescription>
             {autoGenerateKit
               ? "Generando kit desde el apunte que repasas (viene del quiz de presión)…"
-              : "Genera un kit rápido desde esta hoja o desde todo el cuaderno. Para filtros avanzados por Tema / Punto / Ejercicios, usa «más opciones»."}
+              : "Genera un kit desde esta hoja, desde hojas que elijas, o desde todo el cuaderno. Para más filtros por etiquetas, usa «más opciones»."}
           </CardDescription>
         </CardHeader>
         <div className="space-y-4 px-6 pb-6">
@@ -216,10 +244,37 @@ export function NotebookStudyKitPanel({
             >
               Todo el cuaderno ({total} archivos)
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setScope("selection");
+                setSelectedIds(new Set(pages.map((p) => p.id)));
+                setPack(null);
+                setPackError(null);
+              }}
+              className={cn(
+                "rounded-full px-3 py-1 text-xs ring-1 transition",
+                scope === "selection" ? "bg-indigo-500/25 text-white ring-indigo-400/50" : "bg-white/5 text-slate-300 ring-white/10 hover:bg-white/10",
+              )}
+            >
+              Elegir hojas…
+            </button>
           </div>
+
+          {scope === "selection" ? (
+            <NotebookPagePicker
+              pages={pages}
+              selectedIds={selectedIds}
+              onSelectedIdsChange={setSelectedIds}
+              currentPageId={currentPage.id}
+            />
+          ) : null}
 
           <p className="text-xs text-slate-500">
             Se usarán <strong className="text-slate-300">{kitDocs.length}</strong> archivo{kitDocs.length === 1 ? "" : "s"} en este kit.
+            {scope === "selection" && kitDocs.length === 0 ? (
+              <span className="text-amber-200"> Marca al menos una hoja.</span>
+            ) : null}
           </p>
 
           <div className="flex flex-wrap items-center gap-3">

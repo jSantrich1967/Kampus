@@ -13,9 +13,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RescueNotebookPicker } from "@/components/rescue/rescue-notebook-picker";
 import { RescuePackDisplay } from "@/components/rescue/rescue-pack-display";
+import { NotebookPagePicker } from "@/components/study/notebook-page-picker";
 import type { RescuePack } from "@/lib/class-rescue";
 import { cn } from "@/lib/cn";
-import { combineNotebookExtractedTextForPack } from "@/lib/notebooks/document-tags";
+import {
+  allNotebookDocumentIds,
+  combineNotebookExtractedTextForPack,
+  filterDocumentsByIds,
+} from "@/lib/notebooks/document-tags";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 import {
   buildNotebookTagOptions,
@@ -25,6 +30,7 @@ import {
 } from "@/lib/notebooks/notebook-filter-options";
 import { subjectToPathSegment } from "@/lib/notebooks/paths";
 import { buildRescueSourceDocumentBody, buildRescueTagNotesSection } from "@/lib/notebooks/rescue-pack-plain-text";
+import { resolveNotebookDocumentsExtractedTextWithHint } from "@/lib/notebooks/resolve-extracted-text";
 import { saveRescueNotebookSource } from "@/lib/notebooks/save-rescue-source-document";
 import { postRescuePack } from "@/lib/rescue/post-rescue-pack";
 import { readRescueExtractJson, rescueExtractRejectReason } from "@/lib/rescue/extract-upload-limits";
@@ -68,7 +74,10 @@ export function ClassRescueWorkspace() {
   const [libraryExtractBusy, setLibraryExtractBusy] = useState(false);
   /** Whole-notebook import from URL ?notebook=slug (combined extracted text). */
   const [notebookBundleSlug, setNotebookBundleSlug] = useState<string | null>(null);
+  const [notebookBundleDocs, setNotebookBundleDocs] = useState<NotebookDocumentRow[]>([]);
+  const [selectedPageIds, setSelectedPageIds] = useState<Set<string>>(() => new Set());
   const [notebookDocCount, setNotebookDocCount] = useState(0);
+  const [notebookPagesBusy, setNotebookPagesBusy] = useState(false);
   const lastNotebookFromUrl = useRef<string>("");
   /** Misma clasificación que al subir hojas en Mis cuadernos (Tema / Punto / Ejercicios). */
   const [kitTopic, setKitTopic] = useState("");
@@ -212,6 +221,78 @@ export function ClassRescueWorkspace() {
     setKitPracticeExercises((e) => (e.trim() ? e : kit.practiceExercises));
   }, [notebookTagRows, profile.subjects, subjectHint]);
 
+  function clearNotebookBundle() {
+    setNotebookBundleSlug(null);
+    setNotebookBundleDocs([]);
+    setSelectedPageIds(new Set());
+    setNotebookDocCount(0);
+    lastNotebookFromUrl.current = "";
+  }
+
+  function applyNotebookBundleDocs(docs: NotebookDocumentRow[], slug: string | null) {
+    setFiles(null);
+    setLibrarySelection(null);
+    setNotebookBundleDocs(docs);
+    setSelectedPageIds(allNotebookDocumentIds(docs));
+    setNotebookBundleSlug(slug);
+    setNotebookDocCount(docs.length);
+    setExtractedText(combineNotebookExtractedTextForPack(docs));
+    if (docs[0]) {
+      setSubjectHint((prev) => (prev.trim() ? prev : docs[0]!.subject));
+      setKitTopic(docs[0]!.topic ?? "");
+      setKitLessonPoint(docs[0]!.lesson_point ?? "");
+      setKitPracticeExercises(docs[0]!.practice_exercises ?? "");
+    }
+    setKind("notes");
+    setExtractError(null);
+  }
+
+  async function loadNotebookPagesForSubject() {
+    const focus = subjectHint.trim();
+    if (!focus) {
+      setGenHint("Elige primero una materia foco (cuaderno).");
+      return;
+    }
+    if (!authUserId || !isSupabaseConfigured()) {
+      setGenHint("Inicia sesión con Supabase para cargar hojas del cuaderno.");
+      return;
+    }
+    setNotebookPagesBusy(true);
+    setGenHint(null);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error } = await supabase
+        .from("notebook_documents")
+        .select("*")
+        .eq("user_id", authUserId)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      const rows = (data as NotebookDocumentRow[]) ?? [];
+      const filtered = rows.filter((d) => notebookSubjectsMatch(String(d.subject ?? ""), focus));
+      if (filtered.length === 0) {
+        setGenHint(`No hay hojas en el cuaderno «${focus}». Sube material en Mis cuadernos.`);
+        clearNotebookBundle();
+        return;
+      }
+      const slug = subjectToPathSegment(filtered[0]!.subject);
+      applyNotebookBundleDocs(filtered, slug);
+      setGenHint(
+        `${filtered.length} hoja${filtered.length === 1 ? "" : "s"} cargadas. Marca las que quieras incluir en el kit y pulsa «Generar kit de estudios del cuaderno».`,
+      );
+    } catch (e) {
+      setGenHint(e instanceof Error ? e.message : "No pudimos cargar las hojas del cuaderno.");
+    } finally {
+      setNotebookPagesBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    if (notebookBundleDocs.length === 0) return;
+    const selected = filterDocumentsByIds(notebookBundleDocs, selectedPageIds);
+    setNotebookDocCount(selected.length);
+    setExtractedText(combineNotebookExtractedTextForPack(selected));
+  }, [notebookBundleDocs, selectedPageIds]);
+
   function handleNotebookFocusChange(next: string) {
     const prev = subjectHintRef.current;
     if (prev.trim() !== next.trim()) {
@@ -241,7 +322,7 @@ export function ClassRescueWorkspace() {
     const list = files ?? [];
     if (list.length === 0) {
       setExtractBusy(false);
-      if (!librarySelection && !notebookBundleSlug) {
+      if (!librarySelection && !notebookBundleSlug && notebookBundleDocs.length === 0) {
         setExtractedText("");
         setExtractError(null);
       }
@@ -277,8 +358,7 @@ export function ClassRescueWorkspace() {
   }, [files, librarySelection, notebookBundleSlug]);
 
   async function applyLibraryDocument(doc: NotebookDocumentRow) {
-    setNotebookBundleSlug(null);
-    setNotebookDocCount(0);
+    clearNotebookBundle();
     setLibrarySelection(doc);
     setFiles(null);
     setKind(mimeToSourceKind(doc.mime_type));
@@ -328,6 +408,7 @@ export function ClassRescueWorkspace() {
     setKitTopic("");
     setKitLessonPoint("");
     setKitPracticeExercises("");
+    clearNotebookBundle();
   }
 
   useEffect(() => {
@@ -361,24 +442,14 @@ export function ClassRescueWorkspace() {
           }
           return;
         }
-        const combined = combineNotebookExtractedTextForPack(filtered);
         if (cancelled) return;
         lastNotebookFromUrl.current = loadKey;
-        setFiles(null);
-        setLibrarySelection(null);
-        setNotebookBundleSlug(nb);
-        setNotebookDocCount(filtered.length);
-        setExtractedText(combined);
-        const first = filtered[0]!;
-        setSubjectHint((prev) => (prev.trim() ? prev : first.subject));
-        setKitTopic(first.topic ?? "");
-        setKitLessonPoint(first.lesson_point ?? "");
-        setKitPracticeExercises(first.practice_exercises ?? "");
-        setKind("notes");
-        setExtractError(null);
-        setGenHint(
-          `Cuaderno enlazado: ${filtered.length} archivo${filtered.length === 1 ? "" : "s"}. Revisa la vista previa y pulsa «Generar kit de estudios del cuaderno».`,
-        );
+        if (!cancelled) {
+          applyNotebookBundleDocs(filtered, nb);
+          setGenHint(
+            `Cuaderno enlazado: ${filtered.length} archivo${filtered.length === 1 ? "" : "s"}. Marca las hojas que quieras incluir y pulsa «Generar kit de estudios del cuaderno».`,
+          );
+        }
       } catch {
         if (!cancelled) setGenHint("No pudimos leer tu cuaderno desde Mis cuadernos. ¿Sesión iniciada?");
       }
@@ -410,12 +481,23 @@ export function ClassRescueWorkspace() {
   async function runRescue() {
     const f = readFilesAsSeed(files);
     const list = files ?? [];
-    const fromNotebookBundle = Boolean(notebookBundleSlug && notebookDocCount > 0);
+    const fromNotebookBundle = Boolean(notebookBundleSlug && notebookBundleDocs.length > 0);
     const fromLibrary = librarySelection !== null || fromNotebookBundle;
     const tagSection = buildRescueTagNotesSection(subjectHint, kitTopic, kitLessonPoint, kitPracticeExercises);
     const notesForApi = [tagSection, notes].filter(Boolean).join("\n\n---\n\n");
-    // Prioritize real extracted content over pasted notes for the demo hash / fallback pack.
-    const seedText = [extractedText, notesForApi, f.seed, link].filter(Boolean).join("\n");
+
+    let extractedForApi = extractedText;
+    let bundleSelectedCount = notebookDocCount;
+    let bundleSelected: NotebookDocumentRow[] = [];
+
+    if (fromNotebookBundle) {
+      bundleSelected = filterDocumentsByIds(notebookBundleDocs, selectedPageIds);
+      if (bundleSelected.length === 0) {
+        setGenHint("Marca al menos una hoja del cuaderno para generar el kit.");
+        return;
+      }
+      bundleSelectedCount = bundleSelected.length;
+    }
 
     setGenHint(null);
     if (list.length > 0 && extractBusy) {
@@ -431,7 +513,7 @@ export function ClassRescueWorkspace() {
         "No hay texto extraído del archivo todavía (o está vacío). El kit de estudios será breve y no inventará temario genérico de la materia.",
       );
     }
-    if (fromLibrary && !libraryExtractBusy && !extractedText.trim()) {
+    if (fromLibrary && !libraryExtractBusy && !extractedForApi.trim() && !fromNotebookBundle) {
       setGenHint("No hay texto extraído del archivo en Mis cuadernos. Revisa permisos o vuelve a subir el archivo allí.");
     }
 
@@ -439,7 +521,7 @@ export function ClassRescueWorkspace() {
       fromLibrary && librarySelection
         ? librarySelection.filename
         : fromNotebookBundle
-          ? `Cuaderno (${notebookDocCount} archivos)`
+          ? `Cuaderno (${bundleSelectedCount} hoja${bundleSelectedCount === 1 ? "" : "s"})`
           : f.seed
             ? f.label
             : link.trim()
@@ -449,19 +531,31 @@ export function ClassRescueWorkspace() {
     setPackBusy(true);
     setPackError(null);
     try {
+      if (fromNotebookBundle && bundleSelected.length > 0) {
+        if (isSupabaseConfigured()) {
+          const supabase = createSupabaseBrowserClient();
+          const resolved = await resolveNotebookDocumentsExtractedTextWithHint(supabase, bundleSelected);
+          extractedForApi = combineNotebookExtractedTextForPack(resolved.docs);
+          if (resolved.extractHint) setGenHint(resolved.extractHint);
+        } else {
+          extractedForApi = combineNotebookExtractedTextForPack(bundleSelected);
+        }
+      }
+
+      const finalSeedText = [extractedForApi, notesForApi, f.seed, link].filter(Boolean).join("\n");
       const { pack: nextPack, packError: err } = await postRescuePack(
         {
           subjectHint,
           sourceLabel,
           sourceKind: kind,
-          extractedFileText: extractedText,
+          extractedFileText: extractedForApi,
           notes: notesForApi,
           link,
-          uploadedFileCount: librarySelection ? 1 : fromNotebookBundle ? notebookDocCount : list.length,
-          seedText: f.seed && !extractedText && !notesForApi && !link ? f.seed : "",
+          uploadedFileCount: librarySelection ? 1 : fromNotebookBundle ? bundleSelectedCount : list.length,
+          seedText: f.seed && !extractedForApi && !notesForApi && !link ? f.seed : "",
           packMode: premium ? ("full" as const) : ("lite" as const),
         },
-        { seedText, subjectHint, sourceLabel, sourceKind: kind },
+        { seedText: finalSeedText, subjectHint, sourceLabel, sourceKind: kind },
       );
       setPack(nextPack);
       setPackError(err);
@@ -557,7 +651,7 @@ export function ClassRescueWorkspace() {
       <PageHeader
         eyebrow="Mis cuadernos"
         title="Kit de estudios del cuaderno"
-        description="Con la materia foco y las mismas etiquetas que en Mis cuadernos (Tema, Punto, Ejercicios), la IA arma un kit de estudio a partir del material que elijas: hojas guardadas, subida local o todo el cuaderno de una materia."
+        description="Con la materia foco y las etiquetas (Tema, Punto, Ejercicios), elige qué hojas del cuaderno entran en el kit. También puedes subir archivos locales o un solo archivo guardado."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone={premium ? "success" : "neutral"}>{premium ? "Premium" : "Gratis"}</Badge>
@@ -780,6 +874,52 @@ export function ClassRescueWorkspace() {
             ) : null}
           </div>
 
+          <div className="rounded-xl border border-indigo-400/20 bg-indigo-500/[0.06] p-4 md:col-span-2">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-indigo-200/90">
+                  Selección de hojas del cuaderno
+                </p>
+                <p className="mt-1 text-[11px] text-slate-400">
+                  Elige qué páginas entran en el kit, exámenes y tarjetas. Puedes filtrar también por las etiquetas de arriba.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={notebookPagesBusy || !subjectHint.trim()}
+                  onClick={() => void loadNotebookPagesForSubject()}
+                >
+                  {notebookPagesBusy ? "Cargando…" : "Cargar hojas del cuaderno"}
+                </Button>
+                {notebookBundleDocs.length > 0 ? (
+                  <Button type="button" size="sm" variant="ghost" onClick={clearNotebookBundle}>
+                    Quitar selección
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+            {notebookBundleDocs.length > 0 ? (
+              <NotebookPagePicker
+                pages={notebookBundleDocs}
+                selectedIds={selectedPageIds}
+                onSelectedIdsChange={setSelectedPageIds}
+                tagFilters={{
+                  topic: kitTopic,
+                  lessonPoint: kitLessonPoint,
+                  practiceExercises: kitPracticeExercises,
+                }}
+              />
+            ) : (
+              <p className="text-[11px] text-slate-500">
+                Pulsa «Cargar hojas del cuaderno» o abre un enlace con{" "}
+                <code className="rounded bg-white/10 px-1 py-0.5">?notebook=materia</code> para marcar páginas concretas.
+              </p>
+            )}
+          </div>
+
           <div className="md:col-span-2">
             <RescueNotebookPicker
               subjectFilter={subjectHint}
@@ -799,10 +939,7 @@ export function ClassRescueWorkspace() {
               onChange={(e) => {
                 const next = e.target.files ? Array.from(e.target.files) : null;
                 if (next && next.length > 0) {
-                  setLibrarySelection(null);
-                  setNotebookBundleSlug(null);
-                  setNotebookDocCount(0);
-                  lastNotebookFromUrl.current = "";
+                  clearNotebookBundle();
                 }
                 setFiles(next);
               }}
