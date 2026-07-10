@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { PageHeader } from "@/components/layout/page-header";
+import { NotebookCoverSpread } from "@/components/study/notebook-cover-spread";
 import { NotebookPageFlipView } from "@/components/study/notebook-page-flip-view";
 import { NotebookStudyKitPanel } from "@/components/study/notebook-study-kit-panel";
 import { NotebookSubjectHub } from "@/components/study/notebook-subject-hub";
@@ -88,10 +89,21 @@ export function NotebookReader({ subjectSlug }: Props) {
   const [editPractice, setEditPractice] = useState("");
   const [savingTags, setSavingTags] = useState(false);
   const flipToRef = useRef<(target: number) => void>(() => {});
+  const skipCoverOnLoad = Boolean(docIdFromUrl || classDateFromUrl);
+  const [showCover, setShowCover] = useState(!skipCoverOnLoad);
 
   const handleFlipControlReady = useCallback((flipTo: (target: number) => void) => {
     flipToRef.current = flipTo;
   }, []);
+
+  const openNotebookFromCover = useCallback(() => {
+    setShowCover(false);
+    setPageIndex(0);
+  }, []);
+
+  useEffect(() => {
+    setShowCover(!skipCoverOnLoad);
+  }, [subjectSlug, skipCoverOnLoad]);
 
   const subjectLabel =
     pages[0]?.subject ?? (subjectSlug && subjectSlug.length > 0 ? subjectSlug.replace(/_/g, " ") : "Cuaderno");
@@ -144,6 +156,7 @@ export function NotebookReader({ subjectSlug }: Props) {
       setPages(filtered);
       const targetIdx = docIdFromUrl ? filtered.findIndex((d) => d.id === docIdFromUrl) : -1;
       setPageIndex(targetIdx >= 0 ? targetIdx : 0);
+      if (docIdFromUrl && targetIdx >= 0) setShowCover(false);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "No se pudo cargar el cuaderno.";
       setError(formatNotebookCloudError(msg));
@@ -162,8 +175,23 @@ export function NotebookReader({ subjectSlug }: Props) {
   useEffect(() => {
     if (!pages.length || docIdFromUrl || !classDateFromUrl) return;
     const idx = pages.findIndex((d) => (d.class_date ?? "").slice(0, 10) === classDateFromUrl);
-    if (idx >= 0) setPageIndex(idx);
+    if (idx >= 0) {
+      setPageIndex(idx);
+      setShowCover(false);
+    }
   }, [pages, classDateFromUrl, docIdFromUrl]);
+
+  useEffect(() => {
+    if (!showCover) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === "ArrowRight" || e.key === " ") {
+        e.preventDefault();
+        openNotebookFromCover();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showCover, openNotebookFromCover]);
 
   useEffect(() => {
     void load();
@@ -563,7 +591,7 @@ export function NotebookReader({ subjectSlug }: Props) {
         </div>
       ) : null}
 
-      {!loading ? (
+      {!loading && !showCover ? (
         <NotebookSubjectHub
           subject={subjectLabel}
           subjectSlug={subjectSlug}
@@ -608,8 +636,34 @@ export function NotebookReader({ subjectSlug }: Props) {
         </div>
       ) : null}
 
-      {!loading && total > 0 && current ? (
+      {!loading && total > 0 ? (
         <>
+          {showCover ? (
+            <div className="mx-auto max-w-5xl">
+              <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-950/80 shadow-2xl shadow-black/40 ring-1 ring-white/5">
+                <div className="flex min-h-[520px] flex-col md:flex-row">
+                  <div
+                    className="hidden w-4 shrink-0 border-r border-black/30 md:block"
+                    style={{ background: spine }}
+                    aria-hidden
+                  />
+                  <div className="min-w-0 flex-1">
+                    <NotebookCoverSpread
+                      subject={subjectLabel}
+                      pageCount={total}
+                      onOpen={openNotebookFromCover}
+                    />
+                  </div>
+                </div>
+              </div>
+              <p className="mt-3 text-center text-xs text-slate-500">
+                Pulsa Enter, espacio o la flecha → para abrir el cuaderno
+              </p>
+            </div>
+          ) : null}
+
+          {!showCover && current ? (
+          <>
           <div className="mx-auto max-w-5xl">
             <div className="rounded-2xl border border-white/10 bg-slate-950/70 shadow-lg shadow-black/20 ring-1 ring-white/5">
               <button
@@ -711,6 +765,9 @@ export function NotebookReader({ subjectSlug }: Props) {
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-2">
+                      <Button type="button" size="sm" variant="secondary" onClick={() => setShowCover(true)}>
+                        Carátula
+                      </Button>
                       <NotebookUploadDropZone
                         variant="compact"
                         label={uploading ? lib.quickUploadProgress : "Agregar (rápido)"}
@@ -846,7 +903,10 @@ export function NotebookReader({ subjectSlug }: Props) {
             </div>
           </div>
           </div>
+          </>
+          ) : null}
 
+          {!showCover && current ? (
           <NotebookStudyKitPanel
             pages={pages}
             currentPage={current}
@@ -854,6 +914,7 @@ export function NotebookReader({ subjectSlug }: Props) {
             subjectSlug={subjectSlug}
             autoGenerateKit={openKitFromUrl}
           />
+          ) : null}
         </>
       ) : null}
     </div>
