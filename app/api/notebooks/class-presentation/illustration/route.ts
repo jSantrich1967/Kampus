@@ -7,7 +7,8 @@ import { classPresentationIllustrationRateLimits } from "@/lib/rate-limit/openai
 import { consumeDailyUserQuota, refundDailyUserQuotaForCurrentUser } from "@/lib/rate-limit/user-quota";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+/** gpt-image-2 can exceed 60s; Pro allows up to 300s. Mini usually finishes in ~10s. */
+export const maxDuration = 300;
 
 const requestSchema = z.object({
   prompt: z.string().min(8).max(900),
@@ -19,10 +20,12 @@ type ImageGenResponse = {
   error?: { message?: string };
 };
 
-/** Default: GPT Image 2 — OpenAI retired dall-e-2 / dall-e-3 in 2026. */
-const DEFAULT_IMAGE_MODEL = "gpt-image-2";
+/** Default: fast model for slide illustrations (gpt-image-2 often exceeds 60s on serverless). */
+const DEFAULT_IMAGE_MODEL = "gpt-image-1-mini";
 
-const FALLBACK_IMAGE_MODELS = ["gpt-image-2", "gpt-image-1-mini", "gpt-image-1"] as const;
+const FALLBACK_IMAGE_MODELS = ["gpt-image-1-mini", "gpt-image-1", "gpt-image-2"] as const;
+
+const OPENAI_IMAGE_TIMEOUT_MS = 55_000;
 
 function normalizeImageModel(raw: string): string {
   const s = raw.trim().toLowerCase();
@@ -112,7 +115,9 @@ function shouldRetryWithNextModel(errorMessage: string): boolean {
     lower.includes("unknown parameter") ||
     lower.includes("not available") ||
     lower.includes("invalid model") ||
-    lower.includes("model_not_found")
+    lower.includes("model_not_found") ||
+    lower.includes("tardó demasiado") ||
+    lower.includes("timed out")
   );
 }
 
@@ -135,14 +140,26 @@ async function generateIllustrationBase64(
   let lastError = "No se pudo generar la ilustración.";
 
   for (const model of models) {
-    const res = await fetchOpenAi("class_presentation_illustration", "https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(buildImageRequestBody(model, fullPrompt)),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), OPENAI_IMAGE_TIMEOUT_MS);
+
+    let res: Response;
+    try {
+      res = await fetchOpenAi("class_presentation_illustration", "https://api.openai.com/v1/images/generations", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(buildImageRequestBody(model, fullPrompt)),
+        signal: controller.signal,
+      });
+    } catch (e) {
+      clearTimeout(timeout);
+      lastError = e instanceof Error && e.name === "AbortError" ? "La generación tardó demasiado." : "Error de red al generar la ilustración.";
+      continue;
+    }
+    clearTimeout(timeout);
 
     if (res.ok) {
       const json = (await res.json()) as ImageGenResponse;
