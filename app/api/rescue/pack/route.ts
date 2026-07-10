@@ -181,11 +181,11 @@ function tryParseJsonObject(text: string): unknown {
 
 function packOutputTokenBudget(packMode: "lite" | "full", extractUseful: boolean, attempt: number): number {
   if (packMode === "lite") {
-    if (extractUseful) return attempt === 0 ? 4500 : 6000;
-    return attempt === 0 ? 2400 : 3600;
+    if (extractUseful) return attempt === 0 ? 5200 : 7000;
+    return attempt === 0 ? 2800 : 4000;
   }
-  if (extractUseful) return attempt === 0 ? 5000 : 6500;
-  return attempt === 0 ? 3200 : 4500;
+  if (extractUseful) return attempt === 0 ? 6200 : 8000;
+  return attempt === 0 ? 3800 : 5200;
 }
 
 export async function POST(req: Request) {
@@ -297,7 +297,7 @@ export async function POST(req: Request) {
             "- keyIdeas: 4–6 bullets cortos.",
             "- probableExamQuestions: 4–6 preguntas tipo examen (enunciado).",
             "- flashcards: 4–6 tarjetas (front/back).",
-            "- quiz: 3–5 preguntas de opción múltiple con 4 opciones y answerIndex correcto (0-3).",
+            "- quiz: 6–8 preguntas de opción múltiple con 4 opciones y answerIndex correcto (0-3).",
             "- studyChecklist: 4–6 pasos concretos.",
             "- fullSummary/deepExplanation/easyExplanation/technicalExplanation: cortos (1–3 párrafos).",
           ]
@@ -305,7 +305,7 @@ export async function POST(req: Request) {
             "- keyIdeas: 6–10 bullets cortos.",
             "- probableExamQuestions: 6–10 preguntas tipo examen (enunciado).",
             "- flashcards: 8–12 tarjetas (front/back).",
-            "- quiz: 6–10 preguntas de opción múltiple con 4 opciones y answerIndex correcto (0-3).",
+            "- quiz: 12–15 preguntas de opción múltiple con 4 opciones y answerIndex correcto (0-3).",
             "- studyChecklist: 6–10 pasos concretos (con tiempos si aplica).",
           ]),
       "- mindMapOutline: un outline tipo mapa mental (texto con indentación).",

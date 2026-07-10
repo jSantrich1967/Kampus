@@ -11,9 +11,9 @@ import {
   tagQuizWithSource,
 } from "@/lib/study/pressure-quiz";
 
-const MAX_QUESTIONS = 8;
-const QUESTIONS_PER_CLASS = 2;
-const MAX_CLASS_GROUPS = 4;
+const MAX_QUESTIONS = 12;
+const QUESTIONS_PER_CLASS = 3;
+const MAX_CLASS_GROUPS = 5;
 
 function hasUsableExtractedText(combined: string): boolean {
   return combined.replace(/\(sin texto extraído[^)]*\)/g, "").trim().length > 80;
