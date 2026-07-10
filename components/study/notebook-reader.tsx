@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { PageHeader } from "@/components/layout/page-header";
+import { NotebookClassPresentationPanel } from "@/components/study/notebook-class-presentation-panel";
 import { NotebookCoverSpread } from "@/components/study/notebook-cover-spread";
 import { NotebookPageFlipView } from "@/components/study/notebook-page-flip-view";
 import { NotebookStudyKitPanel } from "@/components/study/notebook-study-kit-panel";
@@ -913,6 +914,15 @@ export function NotebookReader({ subjectSlug }: Props) {
             subjectLabel={subjectLabel}
             subjectSlug={subjectSlug}
             autoGenerateKit={openKitFromUrl}
+          />
+          ) : null}
+
+          {!showCover && current ? (
+          <NotebookClassPresentationPanel
+            pages={pages}
+            currentPage={current}
+            subjectLabel={subjectLabel}
+            mediaByDocId={mediaByDocId}
           />
           ) : null}
         </>
