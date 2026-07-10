@@ -2,11 +2,12 @@
 
 import { ArrowLeft, BookOpenText, ChevronLeft, ChevronRight, Loader2, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { PageHeader } from "@/components/layout/page-header";
+import { NotebookPageFlipView } from "@/components/study/notebook-page-flip-view";
 import { NotebookStudyKitPanel } from "@/components/study/notebook-study-kit-panel";
 import { NotebookSubjectHub } from "@/components/study/notebook-subject-hub";
 import { NotebookUploadDropZone } from "@/components/study/notebook-upload-drop-zone";
@@ -85,6 +86,11 @@ export function NotebookReader({ subjectSlug }: Props) {
   const [editLessonPoint, setEditLessonPoint] = useState("");
   const [editPractice, setEditPractice] = useState("");
   const [savingTags, setSavingTags] = useState(false);
+  const flipToRef = useRef<(target: number) => void>(() => {});
+
+  const handleFlipControlReady = useCallback((flipTo: (target: number) => void) => {
+    flipToRef.current = flipTo;
+  }, []);
 
   const subjectLabel =
     pages[0]?.subject ?? (subjectSlug && subjectSlug.length > 0 ? subjectSlug.replace(/_/g, " ") : "Cuaderno");
@@ -377,15 +383,6 @@ export function NotebookReader({ subjectSlug }: Props) {
     };
   }, [current, authUserId]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft") setPageIndex((i) => Math.max(0, i - 1));
-      if (e.key === "ArrowRight") setPageIndex((i) => Math.min(total - 1, i + 1));
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [total]);
-
   const isImage = Boolean(current?.mime_type?.startsWith("image/"));
   const isPdf =
     Boolean(current?.mime_type?.includes("pdf")) || Boolean(current?.filename?.toLowerCase().endsWith(".pdf"));
@@ -457,7 +454,7 @@ export function NotebookReader({ subjectSlug }: Props) {
       <PageHeader
         eyebrow="Cuaderno"
         title={loading ? "Abriendo…" : subjectLabel}
-        description="Navega como en un cuaderno: cada archivo es una hoja. Aquí puedes hacer subida rápida de archivos y editar etiquetas; para vincular material a una clase del horario y fechas del calendario, usa Mis cuadernos."
+        description="Navega como en un cuaderno: cada archivo es una hoja — hojea con efecto de página, clic en los bordes o flechas ← →. Aquí puedes hacer subida rápida y editar etiquetas; para vincular material a una clase del horario, usa Mis cuadernos."
         actions={
           <Link href="/study/library">
             <Button variant="secondary" size="sm" className="gap-2">
@@ -669,7 +666,7 @@ export function NotebookReader({ subjectSlug }: Props) {
                         size="sm"
                         variant="secondary"
                         disabled={pageIndex <= 0}
-                        onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
+                        onClick={() => flipToRef.current(Math.max(0, pageIndex - 1))}
                         aria-label="Página anterior"
                       >
                         <ChevronLeft className="h-4 w-4" />
@@ -679,7 +676,7 @@ export function NotebookReader({ subjectSlug }: Props) {
                         size="sm"
                         variant="secondary"
                         disabled={pageIndex >= total - 1}
-                        onClick={() => setPageIndex((i) => Math.min(total - 1, i + 1))}
+                        onClick={() => flipToRef.current(Math.min(total - 1, pageIndex + 1))}
                         aria-label="Página siguiente"
                       >
                         <ChevronRight className="h-4 w-4" />
@@ -733,30 +730,38 @@ export function NotebookReader({ subjectSlug }: Props) {
                     <p className="truncate text-sm font-medium text-slate-100">{current.filename}</p>
                   </div>
 
-                  <div className="min-h-[280px] flex-1 overflow-hidden rounded-xl border border-amber-900/20 bg-amber-50/[0.04]">
-                    {mediaBusy ? (
-                      <div className="flex h-64 items-center justify-center text-slate-400">
-                        <Loader2 className="h-6 w-6 animate-spin" />
-                      </div>
-                    ) : mediaUrl && isImage ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- signed URL from user storage
-                      <img src={mediaUrl} alt={current.filename} className="max-h-[480px] w-full object-contain" />
-                    ) : mediaUrl && isPdf ? (
-                      <iframe title={current.filename} src={mediaUrl} className="h-[min(70vh,560px)] w-full bg-slate-900" />
-                    ) : mediaUrl ? (
-                      <div className="p-4 text-center text-sm text-slate-400">
-                        <a href={mediaUrl} target="_blank" rel="noreferrer" className="text-indigo-300 underline">
-                          Abrir archivo en pestaña nueva
-                        </a>
-                      </div>
-                    ) : (
-                      <div className="flex h-48 items-center justify-center px-4 text-center text-sm text-slate-500">
-                        Vista previa no disponible. Puedes descargar el archivo o volver a subirlo con Agregar.
-                      </div>
-                    )}
-                  </div>
-
-                  <p className="text-center text-[11px] text-slate-600">Tip: usa las flechas del teclado ← → para pasar de clase.</p>
+                  <NotebookPageFlipView
+                    pageIndex={pageIndex}
+                    total={total}
+                    pageFilename={current.filename}
+                    onPageIndexChange={setPageIndex}
+                    onFlipControlReady={handleFlipControlReady}
+                    hint={lib.readerFlipHint}
+                    pageLabel={lib.readerFlipPageLabel}
+                  >
+                    <div className="min-h-[280px]">
+                      {mediaBusy ? (
+                        <div className="flex h-64 items-center justify-center text-slate-400">
+                          <Loader2 className="h-6 w-6 animate-spin" />
+                        </div>
+                      ) : mediaUrl && isImage ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- signed URL from user storage
+                        <img src={mediaUrl} alt={current.filename} className="max-h-[480px] w-full object-contain" />
+                      ) : mediaUrl && isPdf ? (
+                        <iframe title={current.filename} src={mediaUrl} className="h-[min(70vh,560px)] w-full bg-slate-900" />
+                      ) : mediaUrl ? (
+                        <div className="p-4 text-center text-sm text-slate-400">
+                          <a href={mediaUrl} target="_blank" rel="noreferrer" className="text-indigo-300 underline">
+                            Abrir archivo en pestaña nueva
+                          </a>
+                        </div>
+                      ) : (
+                        <div className="flex h-48 items-center justify-center px-4 text-center text-sm text-slate-500">
+                          Vista previa no disponible. Puedes descargar el archivo o volver a subirlo con Agregar.
+                        </div>
+                      )}
+                    </div>
+                  </NotebookPageFlipView>
 
                   <div className="flex flex-wrap justify-center gap-2 border-t border-white/10 pt-4">
                     <Link

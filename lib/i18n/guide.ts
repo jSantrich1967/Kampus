@@ -89,7 +89,7 @@ export const guideCopy: Record<
         roles: ["student", "teacher", "learner"],
         objective: "Guardar y estudiar todo el material de tus materias en un solo lugar.",
         howItWorks:
-          "Subes PDFs, fotos o notas por materia. La app extrae el texto, lo organiza por clase o etiqueta y puedes generar un kit de estudio con resumen, ideas clave, quiz y tarjetas basados en tus archivos.",
+          "Subes PDFs, fotos o notas por materia. La app extrae el texto, lo organiza por clase o etiqueta y puedes hojear cada archivo con efecto de página (clic en bordes, flechas o deslizar). También puedes generar un kit de estudio con resumen, ideas clave, quiz y tarjetas.",
         benefits: [
           "Tus apuntes dejan de estar dispersos en el móvil o en carpetas sueltas.",
           "La IA trabaja sobre tu contenido real, no sobre temarios genéricos.",

@@ -58,6 +58,8 @@ export const libraryCopy: Record<
     demoReaderTitle: string;
     demoReaderBody: string;
     readerDropOverlay: string;
+    readerFlipHint: string;
+    readerFlipPageLabel: (current: number, total: number) => string;
   }
 > = {
   es: {
@@ -117,5 +119,7 @@ export const libraryCopy: Record<
     demoReaderTitle: "Modo demo del lector",
     demoReaderBody: "Inicia sesión para subir PDFs e imágenes y vincularlos a tus clases.",
     readerDropOverlay: "Suelta para agregar al cuaderno",
+    readerFlipHint: "Haz clic en los bordes, usa ← → en el teclado o desliza en móvil para hojear como un cuaderno.",
+    readerFlipPageLabel: (current, total) => `Hoja ${current} de ${total}`,
   },
 };
