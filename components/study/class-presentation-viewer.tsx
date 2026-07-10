@@ -14,10 +14,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ClassSlideDiagram } from "@/components/study/class-slide-diagram";
 import { ClassSlideHeroArt } from "@/components/study/class-slide-hero-art";
+import { ClassSlideIllustration } from "@/components/study/class-slide-illustration";
+import { ClassSlideMermaid } from "@/components/study/class-slide-mermaid";
+import { NotebookPageAnnotator } from "@/components/study/notebook-page-annotator";
 import { Button } from "@/components/ui/button";
 import { resolveSlideIcon } from "@/lib/class-presentation/slide-icons";
 import { slideThemeFor } from "@/lib/class-presentation/slide-theme";
 import { useClassPresentationNarration } from "@/lib/hooks/use-class-presentation-narration";
+import { prefetchSlideIllustration } from "@/lib/hooks/use-slide-illustration";
 import type { ClassPresentation } from "@/lib/schemas/class-presentation";
 import { cn } from "@/lib/cn";
 
@@ -65,7 +69,14 @@ export function ClassPresentationViewer({ presentation, mediaByDocId = {}, onClo
     });
     const nextSlide = presentation.slides[index + 1];
     if (nextSlide?.narration) void prefetch(nextSlide.narration.trim());
-  }, [autoAdvance, goToSlide, index, narrationText, prefetch, presentation.slides, speak, total, voiceOn]);
+    if (nextSlide?.illustrationPrompt?.trim()) {
+      void prefetchSlideIllustration(
+        nextSlide.id,
+        nextSlide.illustrationPrompt.trim(),
+        presentation.subjectLine,
+      );
+    }
+  }, [autoAdvance, goToSlide, index, narrationText, prefetch, presentation.slides, presentation.subjectLine, speak, total, voiceOn]);
 
   useEffect(() => {
     if (!voiceOn) {
@@ -190,9 +201,16 @@ export function ClassPresentationViewer({ presentation, mediaByDocId = {}, onClo
               "bg-slate-950/55",
             )}
           >
-            <div className="flex flex-col gap-6 md:flex-row md:items-start">
-              <ClassSlideHeroArt Icon={Icon} theme={theme} />
-              <div className="min-w-0 flex-1">
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+              <div className="flex flex-col gap-4">
+                <ClassSlideHeroArt Icon={Icon} theme={theme} className="mx-auto lg:mx-0" />
+                <ClassSlideIllustration
+                  slideId={slide.id}
+                  prompt={slide.illustrationPrompt}
+                  subjectHint={presentation.subjectLine}
+                />
+              </div>
+              <div className="min-w-0">
                 <p className="text-xs font-medium uppercase tracking-widest text-white/45">
                   Diapositiva {index + 1} / {total}
                   {slide.sourcePageNumber ? ` · Hoja ${slide.sourcePageNumber}` : ""}
@@ -221,6 +239,15 @@ export function ClassPresentationViewer({ presentation, mediaByDocId = {}, onClo
               ))}
             </ul>
 
+            {slide.mermaidCode?.trim() ? (
+              <div className="mt-8 border-t border-white/10 pt-8">
+                <p className="mb-4 text-center text-xs font-semibold uppercase tracking-[0.25em] text-white/40">
+                  Diagrama interactivo
+                </p>
+                <ClassSlideMermaid code={slide.mermaidCode} />
+              </div>
+            ) : null}
+
             {slide.diagram && slide.diagram.items.length > 0 ? (
               <div className="mt-8 border-t border-white/10 pt-8">
                 <p className="mb-4 text-center text-xs font-semibold uppercase tracking-[0.25em] text-white/40">
@@ -240,12 +267,18 @@ export function ClassPresentationViewer({ presentation, mediaByDocId = {}, onClo
           <div className="border-b border-white/10 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-white/45">
             Tu apunte · {slide.sourceFilename ?? "sin archivo"}
           </div>
-          <div className="flex flex-1 items-center justify-center p-5">
-            <div className="relative w-full max-w-sm">
+          <div className="flex flex-1 flex-col justify-center p-5">
+            <div className="relative mx-auto w-full max-w-sm">
               <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-white/10 to-transparent blur-sm" />
-              <div className="relative overflow-hidden rounded-xl border border-white/15 bg-slate-900 shadow-2xl ring-1 ring-white/10">
-                {sourceUrl ? (
-                  sourceIsPdf ? (
+              {sourceUrl && !sourceIsPdf && slide.sourceDocumentId ? (
+                <NotebookPageAnnotator
+                  documentId={slide.sourceDocumentId}
+                  imageUrl={sourceUrl}
+                  className="relative"
+                />
+              ) : sourceUrl ? (
+                <div className="relative overflow-hidden rounded-xl border border-white/15 bg-slate-900 shadow-2xl ring-1 ring-white/10">
+                  {sourceIsPdf ? (
                     <iframe
                       title={slide.sourceFilename ?? "Apunte PDF"}
                       src={sourceUrl}
@@ -258,13 +291,13 @@ export function ClassPresentationViewer({ presentation, mediaByDocId = {}, onClo
                       alt={slide.sourceFilename ?? "Apunte"}
                       className="max-h-[min(42vh,480px)] w-full object-contain"
                     />
-                  )
-                ) : (
-                  <div className="flex h-48 items-center justify-center px-6 text-center text-sm text-slate-500">
-                    Abre el cuaderno para ver el apunte junto a la explicación.
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              ) : (
+                <div className="relative flex h-48 items-center justify-center rounded-xl border border-dashed border-white/15 px-6 text-center text-sm text-slate-500">
+                  Abre el cuaderno para ver el apunte junto a la explicación.
+                </div>
+              )}
             </div>
           </div>
         </aside>

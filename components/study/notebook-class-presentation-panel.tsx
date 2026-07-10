@@ -126,8 +126,8 @@ export function NotebookClassPresentationPanel({
             Clase visual (pizarra)
           </CardTitle>
           <CardDescription>
-            Recrea tus hojas como una mini-clase con diapositivas ilustradas, mapas visuales y narración en voz
-            natural (OpenAI). Elige qué páginas incluir antes de empezar.
+            Clase visual con ilustraciones generadas por IA, diagramas Mermaid, voz natural HD y anotaciones sobre tu
+            apunte. Elige las hojas y pulsa iniciar.
           </CardDescription>
         </CardHeader>
         <div className="space-y-4 px-6 pb-6">

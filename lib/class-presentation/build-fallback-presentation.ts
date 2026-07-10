@@ -58,6 +58,11 @@ export function buildFallbackClassPresentation(
 
     const diagramTypes = ["concept", "flow", "list"] as const;
     const diagramType = diagramTypes[i % 3]!;
+    const illustrationPrompt = `Educational scene about ${title}, abstract symbols and charts, no text`;
+    const mermaidCode =
+      i % 2 === 0
+        ? `flowchart TD\n  A["${title.slice(0, 40).replace(/"/g, "'")}"] --> B["${bullets[0]?.slice(0, 40).replace(/"/g, "'") ?? "Idea"}"]\n  B --> C["${bullets[1]?.slice(0, 40).replace(/"/g, "'") ?? "Detalle"}"]`
+        : undefined;
 
     return {
       id: `slide-${i + 1}`,
@@ -67,6 +72,8 @@ export function buildFallbackClassPresentation(
       highlightQuote,
       visualIcon: ICONS[i % ICONS.length],
       accent: ACCENTS[i % ACCENTS.length],
+      illustrationPrompt,
+      mermaidCode,
       diagram: {
         type: diagramType,
         items: bullets.slice(0, 3).map((label, idx) => ({
