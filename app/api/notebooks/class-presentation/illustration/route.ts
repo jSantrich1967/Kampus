@@ -4,7 +4,7 @@ import { z } from "zod";
 import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
 import { classPresentationIllustrationRateLimits } from "@/lib/rate-limit/openai-defaults";
-import { consumeDailyUserQuota } from "@/lib/rate-limit/user-quota";
+import { consumeDailyUserQuota, refundDailyUserQuotaForCurrentUser } from "@/lib/rate-limit/user-quota";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -174,7 +174,7 @@ export async function POST(req: Request) {
 
   const quota = await consumeDailyUserQuota(
     "class_presentation_illustration",
-    parseInt(process.env.API_DAILY_LIMIT_CLASS_PRESENTATION_ILLUSTRATION ?? "24", 10),
+    parseInt(process.env.API_DAILY_LIMIT_CLASS_PRESENTATION_ILLUSTRATION ?? "100", 10),
   );
   if (!quota.ok) {
     return NextResponse.json({ error: quota.message }, { status: quota.status });
@@ -200,6 +200,7 @@ export async function POST(req: Request) {
 
     const result = await generateIllustrationBase64(apiKey, fullPrompt);
     if ("error" in result) {
+      await refundDailyUserQuotaForCurrentUser("class_presentation_illustration");
       return NextResponse.json({ error: result.error }, { status: 502 });
     }
 

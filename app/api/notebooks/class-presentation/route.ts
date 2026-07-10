@@ -44,7 +44,7 @@ export async function POST(req: Request) {
 
   const quota = await consumeDailyUserQuota(
     "class_presentation",
-    parseInt(process.env.API_DAILY_LIMIT_CLASS_PRESENTATION ?? "15", 10),
+    parseInt(process.env.API_DAILY_LIMIT_CLASS_PRESENTATION ?? "50", 10),
   );
   if (!quota.ok) {
     return NextResponse.json(

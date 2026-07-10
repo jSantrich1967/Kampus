@@ -4,7 +4,7 @@ import { z } from "zod";
 import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
 import { classPresentationSpeechRateLimits } from "@/lib/rate-limit/openai-defaults";
-import { consumeDailyUserQuota } from "@/lib/rate-limit/user-quota";
+import { consumeDailyUserQuota, refundDailyUserQuotaForCurrentUser } from "@/lib/rate-limit/user-quota";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
 
   const quota = await consumeDailyUserQuota(
     "class_presentation_speech",
-    parseInt(process.env.API_DAILY_LIMIT_CLASS_PRESENTATION_SPEECH ?? "40", 10),
+    parseInt(process.env.API_DAILY_LIMIT_CLASS_PRESENTATION_SPEECH ?? "100", 10),
   );
   if (!quota.ok) {
     return NextResponse.json({ error: quota.message }, { status: quota.status });
@@ -61,6 +61,7 @@ export async function POST(req: Request) {
 
     if (!res.ok) {
       const err = await res.text().catch(() => "");
+      await refundDailyUserQuotaForCurrentUser("class_presentation_speech");
       return NextResponse.json({ error: err.slice(0, 200) || "No se pudo generar el audio." }, { status: 502 });
     }
 

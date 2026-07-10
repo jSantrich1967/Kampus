@@ -1,9 +1,14 @@
 import { isAuthRouteProtectionEnabled } from "@/lib/supabase/env";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type QuotaResult =
   | { ok: true; used: number; limit: number; resetAtIso: string }
   | { ok: false; status: 401 | 429; message: string; retryAfterSec?: number; resetAtIso?: string };
+
+function todayUtcDate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
 function secondsUntil(iso: string): number {
   const ms = new Date(iso).getTime() - Date.now();
@@ -70,5 +75,41 @@ export async function consumeDailyUserQuota(
   }
 
   return { ok: true, used: Number.isFinite(used) ? used : 0, limit, resetAtIso };
+}
+
+/** Refund one quota unit when an OpenAI call fails after consume (e.g. bad model). */
+export async function refundDailyUserQuota(quotaKey: string, userId: string): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return;
+
+  const { data } = await admin
+    .from("api_usage_quotas")
+    .select("used_count")
+    .eq("user_id", userId)
+    .eq("quota_key", quotaKey)
+    .eq("quota_day", todayUtcDate())
+    .maybeSingle();
+
+  if (!data || typeof data.used_count !== "number" || data.used_count <= 0) return;
+
+  await admin
+    .from("api_usage_quotas")
+    .update({ used_count: data.used_count - 1, updated_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .eq("quota_key", quotaKey)
+    .eq("quota_day", todayUtcDate());
+}
+
+/** Refund for the current authenticated user (no-op if auth is disabled). */
+export async function refundDailyUserQuotaForCurrentUser(quotaKey: string): Promise<void> {
+  if (!isAuthRouteProtectionEnabled()) return;
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await refundDailyUserQuota(quotaKey, user.id);
 }
 
