@@ -58,7 +58,8 @@ export function buildFallbackClassPresentation(
 
     const diagramTypes = ["concept", "flow", "list"] as const;
     const diagramType = diagramTypes[i % 3]!;
-    const illustrationPrompt = `Educational scene about ${title}, abstract symbols and charts, no text`;
+    const labelParts = bullets.slice(0, 4).map((b) => (b.length > 40 ? b.slice(0, 37) : b));
+    const illustrationPrompt = `Annotated educational diagram of ${title}, cross-section or schematic with Spanish labels and arrows for: ${labelParts.join(", ")}`;
     const mermaidCode =
       i % 2 === 0
         ? `flowchart TD\n  A["${title.slice(0, 40).replace(/"/g, "'")}"] --> B["${bullets[0]?.slice(0, 40).replace(/"/g, "'") ?? "Idea"}"]\n  B --> C["${bullets[1]?.slice(0, 40).replace(/"/g, "'") ?? "Detalle"}"]`

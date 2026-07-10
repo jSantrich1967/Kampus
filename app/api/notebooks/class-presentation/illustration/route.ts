@@ -13,6 +13,8 @@ export const maxDuration = 300;
 const requestSchema = z.object({
   prompt: z.string().min(8).max(900),
   subjectHint: z.string().max(120).optional(),
+  slideTitle: z.string().max(120).optional(),
+  labels: z.array(z.string().min(1).max(80)).max(8).optional(),
 });
 
 type ImageGenResponse = {
@@ -20,10 +22,10 @@ type ImageGenResponse = {
   error?: { message?: string };
 };
 
-/** Default: fast model for slide illustrations (gpt-image-2 often exceeds 60s on serverless). */
-const DEFAULT_IMAGE_MODEL = "gpt-image-1-mini";
+/** Default: gpt-image-1 renders Spanish labels better than mini; still under Vercel timeout. */
+const DEFAULT_IMAGE_MODEL = "gpt-image-1";
 
-const FALLBACK_IMAGE_MODELS = ["gpt-image-1-mini", "gpt-image-1", "gpt-image-2"] as const;
+const FALLBACK_IMAGE_MODELS = ["gpt-image-1", "gpt-image-1-mini", "gpt-image-2"] as const;
 
 const OPENAI_IMAGE_TIMEOUT_MS = 55_000;
 
@@ -78,9 +80,7 @@ function buildImageRequestBody(model: string, prompt: string): Record<string, un
 
   if (isGptImageModel(model)) {
     payload.size = "1024x1024";
-    if (model !== "gpt-image-2") {
-      payload.quality = "low";
-    }
+    payload.quality = "medium";
     return payload;
   }
 
@@ -178,6 +178,32 @@ async function generateIllustrationBase64(
   return { error: lastError };
 }
 
+function buildIllustrationPrompt(
+  subject: string,
+  userPrompt: string,
+  slideTitle?: string,
+  labels?: string[],
+): string {
+  const uniqueLabels = [...new Set((labels ?? []).map((l) => l.trim()).filter(Boolean))].slice(0, 8);
+  const labelBlock =
+    uniqueLabels.length > 0
+      ? `Must show these Spanish labels with arrows or leader lines pointing to each part: ${uniqueLabels.join(", ")}.`
+      : "Include 3–6 short Spanish labels with arrows pointing to the main parts of the diagram.";
+
+  return [
+    "Educational annotated infographic diagram for university students.",
+    "Textbook-style illustration: clear Spanish text labels, callout arrows, part names on the drawing.",
+    "Clean flat vector style, soft gradients, high contrast, legible typography.",
+    labelBlock,
+    "No watermarks, no logos, no photorealistic faces.",
+    slideTitle ? `Slide topic: ${slideTitle}.` : "",
+    `Subject context: ${subject}.`,
+    `Diagram content: ${userPrompt}`,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 export async function POST(req: Request) {
   const ip = getClientIpKey(req);
   const limits = classPresentationIllustrationRateLimits();
@@ -200,6 +226,8 @@ export async function POST(req: Request) {
   const body = requestSchema.parse(await req.json().catch(() => ({})));
   const subject = body.subjectHint?.trim() || "academic topic";
   const userPrompt = body.prompt.trim();
+  const slideTitle = body.slideTitle?.trim();
+  const labels = body.labels;
 
   return runOpenAiRoute("class_presentation_illustration", async () => {
     const apiKey = process.env.OPENAI_API_KEY?.trim();
@@ -207,13 +235,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Ilustraciones no disponibles sin OPENAI_API_KEY." }, { status: 503 });
     }
 
-    const fullPrompt = [
-      "Educational illustration for university students.",
-      "Clean modern flat vector style, soft gradients, friendly and clear.",
-      "No text, no letters, no watermarks, no faces of real people.",
-      `Subject context: ${subject}.`,
-      `Scene: ${userPrompt}`,
-    ].join(" ");
+    const fullPrompt = buildIllustrationPrompt(subject, userPrompt, slideTitle, labels);
 
     const result = await generateIllustrationBase64(apiKey, fullPrompt);
     if ("error" in result) {

@@ -12,11 +12,13 @@ type Props = {
   slideId: string;
   prompt?: string;
   subjectHint: string;
+  slideTitle?: string;
+  labels?: string[];
   className?: string;
 };
 
-export function ClassSlideIllustration({ slideId, prompt, subjectHint, className }: Props) {
-  const { dataUrl, loading, error, retry } = useSlideIllustration(slideId, prompt, subjectHint);
+export function ClassSlideIllustration({ slideId, prompt, subjectHint, slideTitle, labels, className }: Props) {
+  const { dataUrl, loading, error, retry } = useSlideIllustration(slideId, prompt, subjectHint, slideTitle, labels);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   if (!prompt?.trim()) return null;
@@ -64,7 +66,7 @@ export function ClassSlideIllustration({ slideId, prompt, subjectHint, className
           src={dataUrl}
           open={lightboxOpen}
           onClose={() => setLightboxOpen(false)}
-          caption="Ilustración generada con IA"
+          caption="Diagrama anotado con etiquetas"
         />
       ) : null}
     </>

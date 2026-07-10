@@ -7,11 +7,20 @@ const inFlight = new Map<string, Promise<string | null>>();
 
 const CLIENT_FETCH_TIMEOUT_MS = 90_000;
 
-function cacheKey(slideId: string, prompt: string) {
-  return `${slideId}::${prompt}`;
+export type SlideIllustrationContext = {
+  slideId: string;
+  prompt: string;
+  subjectHint: string;
+  slideTitle?: string;
+  labels?: string[];
+};
+
+function cacheKey(ctx: SlideIllustrationContext): string {
+  const labels = (ctx.labels ?? []).map((l) => l.trim()).filter(Boolean).join("|");
+  return `${ctx.slideId}::${ctx.prompt.trim()}::${labels}`;
 }
 
-async function fetchIllustrationDataUrl(prompt: string, subjectHint: string): Promise<string | null> {
+async function fetchIllustrationDataUrl(ctx: SlideIllustrationContext): Promise<string | null> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), CLIENT_FETCH_TIMEOUT_MS);
 
@@ -19,7 +28,12 @@ async function fetchIllustrationDataUrl(prompt: string, subjectHint: string): Pr
     const res = await fetch("/api/notebooks/class-presentation/illustration", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: prompt.trim(), subjectHint }),
+      body: JSON.stringify({
+        prompt: ctx.prompt.trim(),
+        subjectHint: ctx.subjectHint,
+        slideTitle: ctx.slideTitle,
+        labels: ctx.labels,
+      }),
       signal: controller.signal,
     });
     const json = (await res.json()) as { imageBase64?: string; mimeType?: string; error?: string };
@@ -36,16 +50,15 @@ async function fetchIllustrationDataUrl(prompt: string, subjectHint: string): Pr
   }
 }
 
-function loadIllustration(slideId: string, prompt: string, subjectHint: string): Promise<string | null> {
-  const trimmed = prompt.trim();
-  const key = cacheKey(slideId, trimmed);
+function loadIllustration(ctx: SlideIllustrationContext): Promise<string | null> {
+  const key = cacheKey(ctx);
   const cached = illustrationCache.get(key);
   if (cached) return Promise.resolve(cached.dataUrl);
 
   const pending = inFlight.get(key);
   if (pending) return pending;
 
-  const task = fetchIllustrationDataUrl(trimmed, subjectHint)
+  const task = fetchIllustrationDataUrl(ctx)
     .then((dataUrl) => {
       if (dataUrl) illustrationCache.set(key, { dataUrl });
       return dataUrl;
@@ -58,15 +71,21 @@ function loadIllustration(slideId: string, prompt: string, subjectHint: string):
   return task;
 }
 
-export async function prefetchSlideIllustration(slideId: string, prompt: string, subjectHint: string) {
+export async function prefetchSlideIllustration(ctx: SlideIllustrationContext) {
   try {
-    await loadIllustration(slideId, prompt, subjectHint);
+    await loadIllustration(ctx);
   } catch {
     // ignore prefetch errors
   }
 }
 
-export function useSlideIllustration(slideId: string, prompt: string | undefined, subjectHint: string) {
+export function useSlideIllustration(
+  slideId: string,
+  prompt: string | undefined,
+  subjectHint: string,
+  slideTitle?: string,
+  labels?: string[],
+) {
   const requestRef = useRef(0);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -79,7 +98,13 @@ export function useSlideIllustration(slideId: string, prompt: string | undefined
       setError(null);
 
       try {
-        const url = await loadIllustration(slideId, targetPrompt, subjectHint);
+        const url = await loadIllustration({
+          slideId,
+          prompt: targetPrompt,
+          subjectHint,
+          slideTitle,
+          labels,
+        });
         if (gen !== requestRef.current) return;
         if (!url) throw new Error("Imagen vacía.");
         setDataUrl(url);
@@ -91,7 +116,7 @@ export function useSlideIllustration(slideId: string, prompt: string | undefined
         if (gen === requestRef.current) setLoading(false);
       }
     },
-    [slideId, subjectHint],
+    [labels, slideId, slideTitle, subjectHint],
   );
 
   const retry = useCallback(() => {

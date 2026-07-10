@@ -107,7 +107,7 @@ export async function POST(req: Request) {
         "- visualIcon: uno de lightbulb, book-open, chart-line, brain, calculator, layers, target, sparkles, flask-conical, globe, scale, code, atom.",
         "- accent: uno de violet, cyan, amber, rose, emerald (varía entre diapositivas).",
         "- diagram: { type: 'flow'|'compare'|'list'|'cycle'|'concept', items: [{ label, detail? }] } con 2–5 items. Usa 'concept' para idea central + ramas.",
-        "- illustrationPrompt: descripción corta en inglés para una ilustración educativa SIN texto (escena visual concreta del concepto).",
+        "- illustrationPrompt: descripción en inglés de un diagrama educativo ANOTADO: nombres de partes en español, flechas o líneas señalando cada zona, estilo infografía de libro de texto. Incluye 3–6 etiquetas concretas (ej. núcleo, membrana, mitocondria).",
         "- mermaidCode: diagrama Mermaid válido (flowchart TD, mindmap, timeline) que resuma la diapositiva; máx 12 nodos, etiquetas en español entre comillas.",
         "- Usa sourcePageNumber, sourceDocumentId y sourceFilename cuando encaje con una hoja.",
         "- narration: tono de profesor cercano, frases cortas, sin emojis.",

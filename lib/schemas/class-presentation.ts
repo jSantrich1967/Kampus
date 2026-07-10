@@ -42,7 +42,7 @@ export const classPresentationSlideSchema = z.object({
   visualIcon: slideVisualIconSchema.optional(),
   accent: slideAccentSchema.optional(),
   diagram: classSlideDiagramSchema.nullable().optional(),
-  /** Short scene description for AI illustration (no text in image). */
+  /** Scene + labels for an annotated educational diagram (Spanish text in image). */
   illustrationPrompt: z.string().max(500).optional(),
   /** Optional Mermaid diagram source (flowchart, mindmap, timeline). */
   mermaidCode: z.string().max(2000).optional(),

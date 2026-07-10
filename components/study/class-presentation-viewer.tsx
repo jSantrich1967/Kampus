@@ -24,7 +24,7 @@ import { resolveSlideIcon } from "@/lib/class-presentation/slide-icons";
 import { slideThemeFor } from "@/lib/class-presentation/slide-theme";
 import { useClassPresentationNarration } from "@/lib/hooks/use-class-presentation-narration";
 import { prefetchSlideIllustration } from "@/lib/hooks/use-slide-illustration";
-import type { ClassPresentation } from "@/lib/schemas/class-presentation";
+import type { ClassPresentation, ClassPresentationSlide } from "@/lib/schemas/class-presentation";
 import { cn } from "@/lib/cn";
 
 type Props = {
@@ -32,6 +32,15 @@ type Props = {
   mediaByDocId?: Record<string, string>;
   onClose: () => void;
 };
+
+function illustrationLabelsForSlide(slide: ClassPresentationSlide): string[] {
+  const fromDiagram = slide.diagram?.items.map((item) => item.label.trim()).filter(Boolean) ?? [];
+  const fromBullets = slide.bullets
+    .map((bullet) => bullet.trim())
+    .filter(Boolean)
+    .map((bullet) => (bullet.length > 50 ? `${bullet.slice(0, 47)}…` : bullet));
+  return [...new Set([...fromDiagram, ...fromBullets])].slice(0, 6);
+}
 
 export function ClassPresentationViewer({ presentation, mediaByDocId = {}, onClose }: Props) {
   const [index, setIndex] = useState(0);
@@ -73,11 +82,13 @@ export function ClassPresentationViewer({ presentation, mediaByDocId = {}, onClo
     const nextSlide = presentation.slides[index + 1];
     if (nextSlide?.narration) void prefetch(nextSlide.narration.trim());
     if (nextSlide?.illustrationPrompt?.trim()) {
-      void prefetchSlideIllustration(
-        nextSlide.id,
-        nextSlide.illustrationPrompt.trim(),
-        presentation.subjectLine,
-      );
+      void prefetchSlideIllustration({
+        slideId: nextSlide.id,
+        prompt: nextSlide.illustrationPrompt.trim(),
+        subjectHint: presentation.subjectLine,
+        slideTitle: nextSlide.title,
+        labels: illustrationLabelsForSlide(nextSlide),
+      });
     }
   }, [autoAdvance, goToSlide, index, narrationText, prefetch, presentation.slides, presentation.subjectLine, speak, total, voiceOn]);
 
@@ -231,6 +242,8 @@ export function ClassPresentationViewer({ presentation, mediaByDocId = {}, onClo
                   slideId={slide.id}
                   prompt={slide.illustrationPrompt}
                   subjectHint={presentation.subjectLine}
+                  slideTitle={slide.title}
+                  labels={illustrationLabelsForSlide(slide)}
                 />
               </div>
               <div className="min-w-0">
