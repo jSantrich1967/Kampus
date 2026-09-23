@@ -41,7 +41,7 @@ export type NavItem = {
 };
 
 export type NavGroup = {
-  id: "command" | "learn" | "evaluate" | "work" | "wellbeing" | "teach" | "org" | "system" | "classes" | "social";
+  id: "command" | "learn" | "evaluate" | "work" | "wellbeing" | "teach" | "org" | "system" | "classes" | "social" | "followup";
   items: NavItem[];
 };
 
@@ -123,13 +123,13 @@ export const navigationGroups: NavGroup[] = [
 ];
 
 /**
- * Menú estudiante simplificado: 9 destinos directos, sin herramientas
+ * Menú estudiante simplificado: destinos directos, sin herramientas
  * plegadas en el menú (siguen vivas dentro de sus pantallas).
  * Principal → Estudiar → Exámenes → Clases → Comunidad → Bienestar → Sistema.
  */
 const studentNavStructure: Array<{ id: NavGroup["id"]; keys: NavItemKey[] }> = [
   { id: "command", keys: ["today"] },
-  { id: "learn", keys: ["library", "convertir", "studyPlan", "myWorks", "studentNotices", "flashcards"] },
+  { id: "learn", keys: ["library", "convertir", "studyPlan", "myWorks", "studentNotices", "flashcards", "myCertificates", "familyReport"] },
   { id: "evaluate", keys: ["exams", "agendaCalendar"] },
   { id: "classes", keys: ["collaborate"] },
   { id: "social", keys: ["community"] },
@@ -139,12 +139,13 @@ const studentNavStructure: Array<{ id: NavGroup["id"]; keys: NavItemKey[] }> = [
 
 /**
  * Menú docente con estructura propia: no es el menú de estudiante maquillado.
- * Principal → Enseñanza → Evaluación → Comunidad → Sistema.
+ * Principal → Enseñanza → Evaluación → Seguimiento → Comunidad → Sistema.
  */
 const teacherNavStructure: Array<{ id: NavGroup["id"]; keys: NavItemKey[] }> = [
   { id: "command", keys: ["today"] },
   { id: "teach", keys: ["library", "classes", "reviewWorks", "teacherNotices"] },
-  { id: "evaluate", keys: ["exams", "risk"] },
+  { id: "evaluate", keys: ["exams", "examGenerator", "risk"] },
+  { id: "followup", keys: ["teacherAlerts", "teacherReports", "issueCertificates"] },
   { id: "social", keys: ["community"] },
   { id: "system", keys: ["settings"] },
 ];

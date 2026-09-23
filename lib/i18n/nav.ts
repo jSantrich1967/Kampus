@@ -15,6 +15,7 @@ export const navCopy = {
       system: "Sistema",
       classes: "Clases",
       social: "Comunidad",
+      followup: "Seguimiento",
     },
     items: {
       today: "Hoy",
@@ -68,7 +69,7 @@ export type NavItemKey = keyof typeof navCopy.es.items;
 export const teacherNavItemOverrides: Partial<Record<NavItemKey, string>> = {
   library: "Cuadernos",
   exams: "Evaluaciones",
-  risk: "Seguimiento",
+  risk: "Radar académico",
 };
 
 export function navLabelForRole(role: UserRole, key: NavItemKey): string {
