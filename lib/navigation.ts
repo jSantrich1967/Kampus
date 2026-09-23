@@ -22,6 +22,10 @@ import {
   Users,
   Video,
   GraduationCap,
+  Send,
+  Bell,
+  ClipboardCheck,
+  Megaphone,
 } from "lucide-react";
 
 import type { UserRole } from "@/lib/schemas/profile";
@@ -56,6 +60,8 @@ export const navigationGroups: NavGroup[] = [
       { href: "/study/library", key: "library", icon: Library, roles: ["student", "teacher", "learner"] },
       { href: "/study/convertir", key: "convertir", icon: FileUp, roles: ["student", "learner"] },
       { href: "/study/plan", key: "studyPlan", icon: CalendarCheck, roles: ["student", "learner"] },
+      { href: "/study/trabajos", key: "myWorks", icon: Send, roles: ["student", "learner"] },
+      { href: "/study/avisos", key: "studentNotices", icon: Bell, roles: ["student", "learner"] },
       { href: "/study/library/rescue", key: "rescue", icon: LifeBuoy, roles: ["student", "learner"] },
       { href: "/study/flashcards", key: "flashcards", icon: Layers3, roles: ["student", "institution", "learner"] },
     ],
@@ -90,7 +96,11 @@ export const navigationGroups: NavGroup[] = [
   },
   {
     id: "teach",
-    items: [{ href: "/teaching", key: "teaching", icon: School, roles: ["teacher"] }],
+    items: [
+      { href: "/teaching", key: "teaching", icon: School, roles: ["teacher"] },
+      { href: "/teaching/trabajos", key: "reviewWorks", icon: ClipboardCheck, roles: ["teacher"] },
+      { href: "/teaching/avisos", key: "teacherNotices", icon: Megaphone, roles: ["teacher"] },
+    ],
   },
   {
     id: "org",
@@ -112,7 +122,7 @@ export const navigationGroups: NavGroup[] = [
  */
 const studentNavStructure: Array<{ id: NavGroup["id"]; keys: NavItemKey[] }> = [
   { id: "command", keys: ["today"] },
-  { id: "learn", keys: ["library", "convertir", "studyPlan", "flashcards"] },
+  { id: "learn", keys: ["library", "convertir", "studyPlan", "myWorks", "studentNotices", "flashcards"] },
   { id: "evaluate", keys: ["exams", "agendaCalendar"] },
   { id: "classes", keys: ["collaborate"] },
   { id: "social", keys: ["community"] },
@@ -126,7 +136,7 @@ const studentNavStructure: Array<{ id: NavGroup["id"]; keys: NavItemKey[] }> = [
  */
 const teacherNavStructure: Array<{ id: NavGroup["id"]; keys: NavItemKey[] }> = [
   { id: "command", keys: ["today"] },
-  { id: "teach", keys: ["library", "classes"] },
+  { id: "teach", keys: ["library", "classes", "reviewWorks", "teacherNotices"] },
   { id: "evaluate", keys: ["exams", "risk"] },
   { id: "social", keys: ["community"] },
   { id: "system", keys: ["settings"] },

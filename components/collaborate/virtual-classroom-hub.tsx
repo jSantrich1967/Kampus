@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Video } from "lucide-react";
+import { MessageCircle, Video } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { collaborateCopy } from "@/lib/i18n/collaborate";
+import { mailboxCopy, buildVcWhatsappMessage, vcWhatsappShareUrl } from "@/lib/i18n/mailbox";
 import { navCopy } from "@/lib/i18n/nav";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -301,13 +302,32 @@ export function VirtualClassroomHub() {
                 </div>
                 <div className="flex flex-wrap gap-2 pt-1">
                   {isTeacher ? (
-                    <Link
-                      href={`/collaborate/aula-virtual/${encodeURIComponent(s.id)}`}
-                      className={buttonClasses({ size: "sm", className: "gap-2" })}
-                    >
-                      <Video className="h-4 w-4" />
-                      {c.virtualClassEnter}
-                    </Link>
+                    <>
+                      <Link
+                        href={`/collaborate/aula-virtual/${encodeURIComponent(s.id)}`}
+                        className={buttonClasses({ size: "sm", className: "gap-2" })}
+                      >
+                        <Video className="h-4 w-4" />
+                        {c.virtualClassEnter}
+                      </Link>
+                      <a
+                        href={vcWhatsappShareUrl(
+                          buildVcWhatsappMessage({
+                            course: s.course,
+                            startsAt: s.startsAt,
+                            roomLabel: s.roomLabel,
+                            joinUrl: s.joinUrl,
+                          }),
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={mailboxCopy.es.whatsappHint}
+                        className={buttonClasses({ size: "sm", variant: "secondary", className: "gap-2" })}
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        {mailboxCopy.es.whatsappCta}
+                      </a>
+                    </>
                   ) : full ? (
                     <Button type="button" size="sm" disabled>
                       {c.virtualClassNoSeats}
