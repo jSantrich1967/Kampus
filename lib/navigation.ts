@@ -51,8 +51,8 @@ export const navigationGroups: NavGroup[] = [
     id: "learn",
     items: [
       { href: "/study/library", key: "library", icon: Library, roles: ["student", "teacher", "learner"] },
-      { href: "/study/library/rescue", key: "rescue", icon: LifeBuoy, roles: ["student", "teacher", "learner"] },
-      { href: "/study/flashcards", key: "flashcards", icon: Layers3, roles: ["student", "teacher", "institution", "learner"] },
+      { href: "/study/library/rescue", key: "rescue", icon: LifeBuoy, roles: ["student", "learner"] },
+      { href: "/study/flashcards", key: "flashcards", icon: Layers3, roles: ["student", "institution", "learner"] },
     ],
   },
   {

@@ -60,4 +60,15 @@ export const teacherNavItemOverrides: Partial<Record<NavItemKey, string>> = {
 export function navLabelForRole(role: UserRole, key: NavItemKey): string {
   if (role === "teacher") return teacherNavItemOverrides[key] ?? navCopy.es.items[key];
   return navCopy.es.items[key];
+}
+
+/** Para docentes, el grupo "Estudio" (material de clase) se llama "Material". */
+export const teacherNavGroupOverrides: Partial<Record<string, string>> = {
+  learn: "Material",
+};
+
+export function navGroupLabelForRole(role: UserRole, groupId: string): string {
+  const groups = navCopy.es.groups as Record<string, string>;
+  if (role === "teacher") return teacherNavGroupOverrides[groupId] ?? groups[groupId];
+  return groups[groupId];
 };

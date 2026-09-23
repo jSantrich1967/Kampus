@@ -7,7 +7,7 @@ import { KampusLogo } from "@/components/brand/kampus-logo";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { navCopy, navLabelForRole } from "@/lib/i18n/nav";
+import { navCopy, navLabelForRole, navGroupLabelForRole } from "@/lib/i18n/nav";
 import { shellThemeFromRole } from "@/lib/layout/shell-theme";
 import { filterNavForRole, type NavItem } from "@/lib/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -105,7 +105,7 @@ export function AppSidebar({ onNavigate, luminaMode = false }: AppSidebarProps) 
         {groups.map((group) => (
           <div key={group.id}>
             <div className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-              {t.groups[group.id]}
+              {navGroupLabelForRole(profile.role, group.id)}
             </div>
             <div className="space-y-1">
               {group.items.map((item) => {
