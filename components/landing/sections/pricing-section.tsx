@@ -38,16 +38,7 @@ export function PricingSection() {
             </div>
             {"usdPrice" in plan && typeof plan.usdPrice === "number" ? (
               <BcvPrice usdPrice={plan.usdPrice} />
-            ) : (
-              <>
-                {"altPrice" in plan && plan.altPrice ? (
-                  <p className="text-sm font-semibold text-purple-300">{plan.altPrice}</p>
-                ) : null}
-                {"priceNote" in plan && plan.priceNote ? (
-                  <p className="mb-2 text-xs text-gray-400">{plan.priceNote}</p>
-                ) : null}
-              </>
-            )}
+            ) : null}
             <p className="mb-8 text-sm leading-relaxed text-gray-400">{plan.description}</p>
             <ul className="mb-8 flex-1 space-y-3">
               {plan.features.map((feature) => (
