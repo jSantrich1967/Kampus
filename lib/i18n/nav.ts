@@ -6,13 +6,15 @@ export const navCopy = {
   es: {
     groups: {
       command: "Principal",
-      learn: "Estudio",
-      evaluate: "Evaluación",
+      learn: "Estudiar",
+      evaluate: "Exámenes",
       work: "Colaborar",
       wellbeing: "Bienestar",
       teach: "Docencia",
       org: "Institución",
       system: "Sistema",
+      classes: "Clases",
+      social: "Comunidad",
     },
     items: {
       today: "Hoy",
@@ -21,9 +23,11 @@ export const navCopy = {
       flashcards: "Tarjetas",
       library: "Mis cuadernos",
       exams: "Exámenes",
-      agendaCalendar: "Mi calendario",
+      agendaCalendar: "Calendario",
       risk: "Radar académico",
       community: "Comunidad",
+      collaborate: "Clases",
+      classes: "Clases",
       rooms: "Aula virtual",
       myPresentations: "Mis exposiciones",
       myResearch: "Mis investigaciones",
@@ -52,11 +56,7 @@ export type NavItemKey = keyof typeof navCopy.es.items;
 export const teacherNavItemOverrides: Partial<Record<NavItemKey, string>> = {
   library: "Cuadernos",
   exams: "Evaluaciones",
-  agendaCalendar: "Calendario",
   risk: "Seguimiento",
-  rooms: "Aula virtual",
-  myPresentations: "Exposiciones",
-  myResearch: "Investigaciones",
 };
 
 export function navLabelForRole(role: UserRole, key: NavItemKey): string {
@@ -64,10 +64,11 @@ export function navLabelForRole(role: UserRole, key: NavItemKey): string {
   return navCopy.es.items[key];
 }
 
-/** Grupos del menú docente: Enseñanza y Comunidad en vez de Estudio/Colaborar. */
+/** Grupos del menú docente: Enseñanza y Comunidad en vez de Docencia/Colaborar. */
 export const teacherNavGroupOverrides: Partial<Record<string, string>> = {
   teach: "Enseñanza",
-  work: "Comunidad",
+  evaluate: "Evaluación",
+  social: "Comunidad",
 };
 
 export function navGroupLabelForRole(role: UserRole, groupId: string): string {

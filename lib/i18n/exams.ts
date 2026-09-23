@@ -8,6 +8,7 @@ export const examsCopy: Record<
     listDescriptionCloud: string;
     listDescriptionLocal: string;
     calendarCta: string;
+    passModeCta: string;
     backTodayCta: string;
     loginHint: string;
     loading: string;
@@ -83,6 +84,7 @@ export const examsCopy: Record<
     listDescriptionCloud: "Tus exámenes e intentos se guardan en tu cuenta.",
     listDescriptionLocal: "Modo demo local en este navegador si no hay sesión.",
     calendarCta: "Mi calendario",
+    passModeCta: "Modo aprobar",
     backTodayCta: "Volver a Hoy",
     loginHint: "Inicia sesión para cargar exámenes desde la nube.",
     loading: "Cargando exámenes…",

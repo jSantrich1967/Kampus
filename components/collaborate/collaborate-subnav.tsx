@@ -4,14 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { collaborateCopy, type CollaborateSubnavKey } from "@/lib/i18n/collaborate";
+import { useKampus } from "@/components/kampus/kampus-provider";
 import { cn } from "@/lib/cn";
 
-const TABS: { key: CollaborateSubnavKey; href: string; label: string }[] = [
+const TABS: { key: CollaborateSubnavKey; href: string; label: string; teacher?: boolean }[] = [
   { key: "hub", href: "/collaborate", label: collaborateCopy.es.subnavHub },
-  { key: "presentations", href: "/collaborate/exposiciones", label: collaborateCopy.es.subnavPresentations },
+  { key: "presentations", href: "/collaborate/exposiciones", label: collaborateCopy.es.subnavPresentations, teacher: true },
   { key: "research", href: "/collaborate/investigaciones", label: collaborateCopy.es.subnavResearch },
   { key: "studyRoom", href: "/collaborate/sala-estudio", label: collaborateCopy.es.subnavStudyRoom },
-  { key: "classroom", href: "/collaborate/aula-virtual", label: collaborateCopy.es.subnavClassroom },
+  { key: "classroom", href: "/collaborate/aula-virtual", label: collaborateCopy.es.subnavClassroom, teacher: true },
 ];
 
 function activeTab(pathname: string): CollaborateSubnavKey {
@@ -29,15 +30,18 @@ function activeTab(pathname: string): CollaborateSubnavKey {
 
 export function CollaborateSubnav() {
   const pathname = usePathname() ?? "";
+  const { profile } = useKampus();
   const t = collaborateCopy.es;
   const current = activeTab(pathname);
+  // Los docentes solo ven las pestañas con vista docente (aula y exposiciones).
+  const tabs = profile.role === "teacher" ? TABS.filter((tab) => tab.teacher) : TABS;
 
   return (
     <nav
       className="flex flex-wrap gap-2 rounded-2xl border border-white/10 bg-slate-950/40 p-1.5"
       aria-label={t.eyebrow}
     >
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const isActive = current === tab.key;
         return (
           <Link

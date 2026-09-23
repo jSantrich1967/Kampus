@@ -14,7 +14,8 @@ import {
   type LibrarySnapshot,
 } from "@/components/study/notebook-library-panel";
 import { libraryCopy } from "@/lib/i18n/library";
-import { navCopy } from "@/lib/i18n/nav";
+import { navCopy, navLabelForRole } from "@/lib/i18n/nav";
+import { useKampus } from "@/components/kampus/kampus-provider";
 import { buildCalendarUploadNotebookHref } from "@/lib/study/notebook-insights";
 import { buildLibraryFilterCounts } from "@/lib/study/library-filter-counts";
 import type { LibraryQuickUploadTarget } from "@/lib/study/library-quick-upload";
@@ -42,6 +43,8 @@ export function LibraryHub() {
   const [libraryRefreshKey, setLibraryRefreshKey] = useState(0);
   const t = navCopy.es;
   const lib = libraryCopy.es;
+  const { profile } = useKampus();
+  const isTeacher = profile.role === "teacher";
 
   useEffect(() => {
     const subject = searchParams.get("subject")?.trim();
@@ -99,10 +102,12 @@ export function LibraryHub() {
       <LibraryLuminaTopBar search={search} onSearchChange={setSearch} />
 
       <div className="mb-10">
-        <p className="mb-2 text-xs font-bold tracking-[0.2em] text-purple-400 uppercase">{t.groups.learn}</p>
-        <h1 className="mb-4 text-4xl font-bold text-white">{t.items.library}</h1>
+        <p className="mb-2 text-xs font-bold tracking-[0.2em] text-purple-400 uppercase">{isTeacher ? "Enseñanza" : t.groups.learn}</p>
+        <h1 className="mb-4 text-4xl font-bold text-white">{navLabelForRole(profile.role, "library")}</h1>
         <p className="max-w-2xl text-gray-500">
-          Cuadernos por materia: sube apuntes, vincula clases del calendario y lanza quiz desde material real.
+          {isTeacher
+            ? "Tu material por materia: sube recursos, vincula clases del calendario y prepara contenido para tu alumnado."
+            : "Tus apuntes por materia: sube, organiza y repasa con quizzes hechos de tu propio material."}
         </p>
       </div>
 

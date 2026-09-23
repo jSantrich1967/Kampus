@@ -82,6 +82,9 @@ export function StudentExamsList() {
             <Link href="/exams/calendar">
               <Button variant="secondary">{t.calendarCta}</Button>
             </Link>
+            <Link href="/pass-mode">
+              <Button variant="secondary">{t.passModeCta}</Button>
+            </Link>
             <Link href="/today">
               <Button variant="ghost">{t.backTodayCta}</Button>
             </Link>

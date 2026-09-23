@@ -19,6 +19,7 @@ import {
   Trophy,
   Users,
   Video,
+  GraduationCap,
 } from "lucide-react";
 
 import type { UserRole } from "@/lib/schemas/profile";
@@ -33,7 +34,7 @@ export type NavItem = {
 };
 
 export type NavGroup = {
-  id: "command" | "learn" | "evaluate" | "work" | "wellbeing" | "teach" | "org" | "system";
+  id: "command" | "learn" | "evaluate" | "work" | "wellbeing" | "teach" | "org" | "system" | "classes" | "social";
   items: NavItem[];
 };
 
@@ -68,9 +69,11 @@ export const navigationGroups: NavGroup[] = [
     id: "work",
     items: [
       { href: "/community", key: "community", icon: Users, roles: ["student", "teacher", "learner"] },
-      { href: "/collaborate/aula-virtual", key: "rooms", icon: Video, roles: ["student", "teacher", "institution", "learner"] },
-      { href: "/collaborate/exposiciones", key: "myPresentations", icon: Presentation, roles: ["student", "teacher", "institution", "learner"] },
-      { href: "/collaborate/investigaciones", key: "myResearch", icon: Microscope, roles: ["student", "teacher", "institution", "learner"] },
+      { href: "/collaborate", key: "collaborate", icon: GraduationCap, roles: ["student", "learner"] },
+      { href: "/collaborate/aula-virtual", key: "classes", icon: Video, roles: ["teacher"] },
+      { href: "/collaborate/aula-virtual", key: "rooms", icon: Video, roles: ["institution", "learner"] },
+      { href: "/collaborate/exposiciones", key: "myPresentations", icon: Presentation, roles: ["institution", "learner"] },
+      { href: "/collaborate/investigaciones", key: "myResearch", icon: Microscope, roles: ["institution", "learner"] },
     ],
   },
   {
@@ -99,29 +102,47 @@ export const navigationGroups: NavGroup[] = [
 ];
 
 /**
+ * Menú estudiante simplificado: 9 destinos directos, sin herramientas
+ * plegadas en el menú (siguen vivas dentro de sus pantallas).
+ * Principal → Estudiar → Exámenes → Clases → Comunidad → Bienestar → Sistema.
+ */
+const studentNavStructure: Array<{ id: NavGroup["id"]; keys: NavItemKey[] }> = [
+  { id: "command", keys: ["today"] },
+  { id: "learn", keys: ["library", "flashcards"] },
+  { id: "evaluate", keys: ["exams", "agendaCalendar"] },
+  { id: "classes", keys: ["collaborate"] },
+  { id: "social", keys: ["community"] },
+  { id: "wellbeing", keys: ["wellbeing"] },
+  { id: "system", keys: ["settings"] },
+];
+
+/**
  * Menú docente con estructura propia: no es el menú de estudiante maquillado.
  * Principal → Enseñanza → Evaluación → Comunidad → Sistema.
  */
 const teacherNavStructure: Array<{ id: NavGroup["id"]; keys: NavItemKey[] }> = [
-  { id: "command", keys: ["today", "teaching"] },
-  { id: "teach", keys: ["library", "rooms", "myPresentations", "myResearch"] },
-  { id: "evaluate", keys: ["exams", "agendaCalendar", "risk"] },
-  { id: "work", keys: ["community"] },
-  { id: "system", keys: ["guide", "settings"] },
+  { id: "command", keys: ["today"] },
+  { id: "teach", keys: ["library", "classes"] },
+  { id: "evaluate", keys: ["exams", "risk"] },
+  { id: "social", keys: ["community"] },
+  { id: "system", keys: ["settings"] },
 ];
 
+function pickCurated(structure: Array<{ id: NavGroup["id"]; keys: NavItemKey[] }>): NavGroup[] {
+  const byKey = new Map(navigationGroups.flatMap((g) => g.items).map((item) => [item.key, item]));
+  return structure
+    .map((group) => ({
+      id: group.id,
+      items: group.keys
+        .map((key) => byKey.get(key))
+        .filter((item): item is NavItem => Boolean(item)),
+    }))
+    .filter((g) => g.items.length > 0);
+}
+
 export function filterNavForRole(role: UserRole): NavGroup[] {
-  if (role === "teacher") {
-    const byKey = new Map(navigationGroups.flatMap((g) => g.items).map((item) => [item.key, item]));
-    return teacherNavStructure
-      .map((group) => ({
-        id: group.id,
-        items: group.keys
-          .map((key) => byKey.get(key))
-          .filter((item): item is NavItem => Boolean(item)),
-      }))
-      .filter((g) => g.items.length > 0);
-  }
+  if (role === "teacher") return pickCurated(teacherNavStructure);
+  if (role === "student") return pickCurated(studentNavStructure);
   return navigationGroups
     .map((group) => ({
       ...group,

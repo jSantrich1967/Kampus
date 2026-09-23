@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, BellRing, Bot, Calendar, ClipboardList, Cloud, Download, DoorOpen, FileAudio, Film, GraduationCap, Link2, MessageSquare, PlusCircle, Radio, RefreshCw, UserPlus, Users, Activity, Microscope, Presentation, Timer, Video } from "lucide-react";
+import { ClipboardList, Microscope, Presentation, Timer, Video } from "lucide-react";
 
 import { CollaborateDeadlineNotifyPanel } from "@/components/collaborate/collaborate-deadline-notify-panel";
 import { CollaborateNextFocusPanel } from "@/components/collaborate/collaborate-next-focus-panel";
@@ -22,46 +22,17 @@ export function CollaborateHub() {
   const upcomingPresentations = useUpcomingPresentationsCount();
   const { next: virtualSession } = useUpcomingVirtualSessions(24);
 
-  const features = [
-    { label: t.hubFeatureDeadlineNotify, icon: Bell },
-    { label: t.hubFeatureDeadlineServerPush, icon: BellRing },
-    { label: t.hubFeatureStudyRoomCloud, icon: Cloud },
-    { label: t.hubFeatureStudyRoomRealtime, icon: Radio },
-    { label: t.hubFeatureStudyRoomPresence, icon: Users },
-    { label: t.hubFeatureStudyRoomChat, icon: MessageSquare },
-    { label: t.hubFeatureVirtualEnroll, icon: UserPlus },
-    { label: t.hubFeatureRosterManage, icon: UserPlus },
-    { label: t.hubFeatureVirtualClassCalendar, icon: Calendar },
-    { label: t.hubFeatureCreateSession, icon: PlusCircle },
-    { label: t.hubFeatureExportIcs, icon: Download },
-    { label: t.hubFeatureNativeVideo, icon: Video },
-    { label: t.hubFeatureRosterEmail, icon: UserPlus },
-    { label: t.hubFeatureWebcal, icon: Link2 },
-    { label: t.hubFeatureBreakout, icon: DoorOpen },
-    { label: t.hubFeatureRecording, icon: Film },
-    { label: t.hubFeatureScheduleSync, icon: RefreshCw },
-    { label: t.hubFeatureStudyRoomAssistant, icon: Bot },
-    { label: t.hubFeatureTranscript, icon: FileAudio },
-    { label: t.hubFeatureInstitutionAttendance, icon: ClipboardList },
-    { label: t.hubFeatureBreakoutVideo, icon: Video },
-    { label: t.hubFeatureLms, icon: GraduationCap },
-    { label: t.hubFeatureParticipationLive, icon: Activity },
-  ] as const;
 
   return (
     <div className="space-y-10">
-      <PageHeader eyebrow={t.eyebrow} title={t.hubTitle} description={t.hubDescription} />
+      <PageHeader
+        eyebrow="Clases"
+        title="Clases"
+        description="Tus sesiones en vivo, exposiciones, trabajos y sala de estudio, en un solo lugar."
+      />
 
       <CollaborateSubnav />
 
-      <div className="flex flex-wrap gap-2">
-        {features.map(({ label, icon: Icon }) => (
-          <Badge key={label} tone="neutral" className="gap-1.5 px-3 py-1.5 text-xs">
-            <Icon className="h-3.5 w-3.5 opacity-80" aria-hidden />
-            {label}
-          </Badge>
-        ))}
-      </div>
 
       <CollaborateDeadlineNotifyPanel />
 
