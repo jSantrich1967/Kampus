@@ -206,6 +206,8 @@ export async function POST(req: Request) {
           "- percentage: 0–100.",
           `- label: frase corta con la nota, p. ej. '${body.totalPoints}/... — ' en formato 'X/${body.totalPoints} — resumen de una frase'.`,
           "- items: una entrada por pregunta de la clave, con question, expected (lo que pedía la clave), studentAnswer (lo que puso el estudiante), maxPoints, points, correct (true/false) y comment (una frase explicando la corrección).",
+          "- maxPoints: si la clave NO indica los puntos de cada pregunta, reparte el puntaje total del examen entre las preguntas de forma proporcional (por defecto en partes iguales). La suma de maxPoints de TODOS los items debe ser EXACTAMENTE igual al puntaje total del examen. points nunca puede ser mayor que maxPoints.",
+          "- totalEarned: suma de los points de todos los items (no inventes otro número).",
           "- strengths: 2–6 bullets de lo que hizo bien.",
           "- toImprove: 2–6 bullets de qué debe reforzar.",
           "- generalComment: 2–3 frases de cierre para el docente, con tono constructivo.",
