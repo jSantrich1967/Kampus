@@ -3,7 +3,9 @@ import {
   Building2,
   BookOpen,
   Calendar,
+  CalendarCheck,
   CalendarDays,
+  FileUp,
   Heart,
   Layers3,
   LayoutDashboard,
@@ -52,6 +54,8 @@ export const navigationGroups: NavGroup[] = [
     id: "learn",
     items: [
       { href: "/study/library", key: "library", icon: Library, roles: ["student", "teacher", "learner"] },
+      { href: "/study/convertir", key: "convertir", icon: FileUp, roles: ["student", "learner"] },
+      { href: "/study/plan", key: "studyPlan", icon: CalendarCheck, roles: ["student", "learner"] },
       { href: "/study/library/rescue", key: "rescue", icon: LifeBuoy, roles: ["student", "learner"] },
       { href: "/study/flashcards", key: "flashcards", icon: Layers3, roles: ["student", "institution", "learner"] },
     ],

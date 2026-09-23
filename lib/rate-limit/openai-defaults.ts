@@ -64,6 +64,20 @@ export function examCorrectorRateLimits(): { max: number; windowMs: number } {
   };
 }
 
+export function selfExamCorrectorRateLimits(): { max: number; windowMs: number } {
+  return {
+    max: parseInt(process.env.API_RL_MAX_SELF_EXAM_CORRECTOR ?? "20", 10),
+    windowMs: parseInt(process.env.API_RL_WINDOW_MS ?? String(15 * 60 * 1000), 10),
+  };
+}
+
+export function materialConverterRateLimits(): { max: number; windowMs: number } {
+  return {
+    max: parseInt(process.env.API_RL_MAX_MATERIAL_CONVERT ?? "15", 10),
+    windowMs: parseInt(process.env.API_RL_MATERIAL_CONVERT_WINDOW_MS ?? String(60 * 60 * 1000), 10),
+  };
+}
+
 export function studyRoomAssistantRateLimits(): { max: number; windowMs: number } {
   return {
     max: parseInt(process.env.API_RL_MAX_STUDY_ROOM_ASSISTANT ?? "35", 10),

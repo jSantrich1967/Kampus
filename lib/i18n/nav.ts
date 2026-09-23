@@ -22,6 +22,8 @@ export const navCopy = {
       rescue: "Kit de estudios",
       flashcards: "Tarjetas",
       library: "Mis cuadernos",
+      convertir: "Convertir material",
+      studyPlan: "Mi plan",
       exams: "Exámenes",
       agendaCalendar: "Calendario",
       risk: "Radar académico",

@@ -11,6 +11,7 @@ import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Sparkles } from "lucide-react";
 import { useUpcomingExamsSync } from "@/hooks/use-upcoming-exams-sync";
 import { buildExamListInsights, pickNextExamInsight } from "@/lib/exams/exam-insights";
 import { examsCopy } from "@/lib/i18n/exams";
@@ -108,6 +109,27 @@ export function StudentExamsList() {
       {!loading && nextExam ? <StudentNextExamPanel next={nextExam} /> : null}
 
       {!loading && nextExam ? <ExamPracticePanel subject={nextExam.exam.subject} /> : null}
+
+      <Card className="border-indigo-400/20 bg-indigo-500/[0.06]">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-indigo-100">
+            <Sparkles className="h-4 w-4" />
+            Mi corrección con IA
+          </CardTitle>
+          <CardDescription>
+            Sube tu examen ya resuelto (texto o foto) y recibe qué salió mal, tus temas débiles
+            y un plan de 48 horas para reforzarlos.
+          </CardDescription>
+        </CardHeader>
+        <div className="flex flex-wrap gap-2 px-6 pb-6">
+          <Link href="/exams/mi-correccion">
+            <Button size="sm" className="gap-2">
+              <Sparkles className="h-4 w-4" />
+              Analizar mis errores
+            </Button>
+          </Link>
+        </div>
+      </Card>
 
       {!loading && exams.length === 0 ? <p className="text-sm text-slate-500">{t.empty}</p> : null}
 
