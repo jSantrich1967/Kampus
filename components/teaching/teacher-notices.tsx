@@ -53,6 +53,7 @@ export function TeacherNotices() {
   const [sessionId, setSessionId] = useState("");
   const [publishing, setPublishing] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
@@ -145,7 +146,13 @@ export function TeacherNotices() {
   }
 
   async function removeNotice(id: string) {
-    if (!window.confirm("¿Eliminar este aviso? Los estudiantes dejarán de verlo.")) return;
+    // Confirmación en dos pasos (sin window.confirm: no funciona bien en
+    // todos los navegadores y bloquea la prueba automatizada).
+    if (confirmDeleteId !== id) {
+      setConfirmDeleteId(id);
+      return;
+    }
+    setConfirmDeleteId(null);
     setDeletingId(id);
     setMessage(null);
     try {
@@ -327,7 +334,7 @@ export function TeacherNotices() {
                       ) : (
                         <Trash2 className="h-4 w-4" />
                       )}
-                      {t.deleteCta}
+                      {confirmDeleteId === notice.id ? "¿Confirmar?" : t.deleteCta}
                     </Button>
                   </div>
                 </div>
