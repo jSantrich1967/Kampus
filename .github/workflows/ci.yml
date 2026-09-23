@@ -17,8 +17,12 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
-       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-dummy-anon-key
+       runs-on: ${{ matrix.os }}
+       env:
+         NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+         NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-dummy-anon-key
+steps:
+
     steps:
       - uses: actions/checkout@v4
 
