@@ -53,6 +53,10 @@ export const examsCopy: Record<
     attemptSent: string;
     attemptLast: string;
     attemptNoFeedback: string;
+    submitSuccessTitle: string;
+    submitSuccessBody: string;
+    submitSuccessCorrectionHint: string;
+    submitSuccessCorrectionCta: string;
     strengths: string;
     improvements: string;
     notFoundTitle: string;
@@ -130,6 +134,11 @@ export const examsCopy: Record<
     attemptSent: "ENVIADO",
     attemptLast: "Último intento enviado.",
     attemptNoFeedback: "Aún sin feedback.",
+    submitSuccessTitle: "¡Examen enviado!",
+    submitSuccessBody:
+      "Tus respuestas quedaron registradas como un intento. Si el profesor publica la corrección, la verás aquí.",
+    submitSuccessCorrectionHint: "¿Quieres saber en qué te equivocaste? Súbelo resuelto en Mi corrección y recibe el análisis con IA.",
+    submitSuccessCorrectionCta: "Ir a Mi corrección",
     strengths: "Fortalezas",
     improvements: "Mejoras",
     notFoundTitle: "Examen no encontrado",

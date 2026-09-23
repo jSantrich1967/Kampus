@@ -4,12 +4,11 @@ import { ArrowRight, BookOpen, Upload } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { libraryCopy } from "@/lib/i18n/library";
 import type { NotebookCardInsight } from "@/lib/study/notebook-insights";
 import type { LibraryQuickUploadTarget } from "@/lib/study/library-quick-upload";
-import { cn } from "@/lib/cn";
 
 type LibraryNextNotebookPanelProps = {
   next: NotebookCardInsight | null;
@@ -82,20 +81,18 @@ export function LibraryNextNotebookPanel({
               <ArrowRight className="h-4 w-4" aria-hidden />
             </Button>
           ) : (
-            <Link href={next.nextActionHref}>
-              <Button className={cn("gap-2", next.status === "empty" ? "" : "")}>
-                {next.status === "empty" ? <Upload className="h-4 w-4" aria-hidden /> : null}
-                {next.nextActionLabel}
-                <ArrowRight className="h-4 w-4" aria-hidden />
-              </Button>
+            <Link href={next.nextActionHref} className={buttonClasses({ className: "gap-2" })}>
+              {next.status === "empty" ? <Upload className="h-4 w-4" aria-hidden /> : null}
+              {next.nextActionLabel}
+              <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
           )}
-          <Link href={next.href}>
-            <Button variant="secondary">{t.openReader}</Button>
+          <Link href={next.href} className={buttonClasses({ variant: "secondary" })}>
+            {t.openReader}
           </Link>
           {next.pageCount > 0 ? (
-            <Link href={next.kitHref}>
-              <Button variant="ghost">{t.quickKit}</Button>
+            <Link href={next.kitHref} className={buttonClasses({ variant: "ghost" })}>
+              {t.quickKit}
             </Link>
           ) : null}
         </div>

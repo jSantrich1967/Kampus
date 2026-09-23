@@ -14,7 +14,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { RescuePackDisplay } from "@/components/rescue/rescue-pack-display";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   buildAgendaEvents,
@@ -963,20 +963,20 @@ export function AcademicCalendarHub() {
         description={pageDescription}
         actions={
           <div className="flex flex-wrap gap-2">
-            <Link href="/exams">
-              <Button variant="secondary" size="sm">
-                Mis exámenes
-              </Button>
+            <Link href="/exams" className={buttonClasses({ variant: "secondary", size: "sm" })}>
+              Mis exámenes
             </Link>
-            <Link href="/collaborate/exposiciones">
-              <Button variant="secondary" size="sm">
-                Crear / planificar exposición
-              </Button>
+            <Link
+              href="/collaborate/exposiciones"
+              className={buttonClasses({ variant: "secondary", size: "sm" })}
+            >
+              Crear / planificar exposición
             </Link>
-            <Link href="/collaborate/investigaciones">
-              <Button variant="secondary" size="sm">
-                Mis investigaciones
-              </Button>
+            <Link
+              href="/collaborate/investigaciones"
+              className={buttonClasses({ variant: "secondary", size: "sm" })}
+            >
+              Mis investigaciones
             </Link>
             <Button type="button" variant="ghost" size="sm" onClick={refresh} disabled={loading}>
               Actualizar
@@ -1403,7 +1403,7 @@ export function AcademicCalendarHub() {
           <div className="border-t border-white/10 px-6 py-4">
             <div className="text-sm font-semibold text-white">Clase suspendida</div>
             <p className="mt-1 text-xs text-slate-400">
-              Marca una clase específica (una fecha) como suspendida. Esa fecha aparecerá en el calendario como “(suspendida)” con su justificación.
+              Marca una clase específica (una fecha) como suspendida. Esa fecha aparecerá en el calendario marcada como suspendida, con su justificación.
             </p>
             <form className="mt-3 space-y-3" onSubmit={(e) => void submitCancellation(e)}>
               <div className="grid gap-3 sm:grid-cols-2">

@@ -7,7 +7,7 @@ import { useMemo } from "react";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { useTodayContext } from "@/components/today/use-today-context";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { daysUntilDate } from "@/lib/calendar/calendar-urgency";
 import { calendarCopy } from "@/lib/i18n/calendar";
@@ -67,10 +67,11 @@ export function CalendarTodayFocusPanel() {
                   {slot.startTime}–{slot.endTime}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <Link href={slot.hasNotesForToday ? slot.reviewHref : slot.uploadHref}>
-                    <Button size="sm" variant="secondary">
-                      {slot.hasNotesForToday ? todayT.reviewClassNotesCta : todayT.uploadAfterClassCta}
-                    </Button>
+                  <Link
+                    href={slot.hasNotesForToday ? slot.reviewHref : slot.uploadHref}
+                    className={buttonClasses({ size: "sm", variant: "secondary" })}
+                  >
+                    {slot.hasNotesForToday ? todayT.reviewClassNotesCta : todayT.uploadAfterClassCta}
                   </Link>
                 </div>
               </div>
@@ -89,18 +90,20 @@ export function CalendarTodayFocusPanel() {
             <div className="text-sm font-semibold text-amber-100">{t.nearestExamTitle}</div>
             <p className="mt-1 text-sm text-amber-50/90">{t.nearestExamHint(nearestExam.subject, nearestExam.days!)}</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <Link href={buildPassModeSubjectHref(nearestExam.subject)}>
-                <Button size="sm">{t.passModeCta}</Button>
+              <Link
+                href={buildPassModeSubjectHref(nearestExam.subject)}
+                className={buttonClasses({ size: "sm" })}
+              >
+                {t.passModeCta}
               </Link>
-              <Link href="/exams">
-                <Button size="sm" variant="secondary">
-                  {t.nearestExamCta}
-                </Button>
+              <Link href="/exams" className={buttonClasses({ size: "sm", variant: "secondary" })}>
+                {t.nearestExamCta}
               </Link>
-              <Link href={buildCommunityExamHref(nearestExam.subject, nearestExam.date)}>
-                <Button size="sm" variant="ghost">
-                  {t.communityExamCta}
-                </Button>
+              <Link
+                href={buildCommunityExamHref(nearestExam.subject, nearestExam.date)}
+                className={buttonClasses({ size: "sm", variant: "ghost" })}
+              >
+                {t.communityExamCta}
               </Link>
             </div>
           </div>

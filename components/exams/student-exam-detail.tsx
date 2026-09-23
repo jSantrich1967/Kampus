@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { ExamMaterialPanel } from "@/components/exams/exam-material-panel";
@@ -297,15 +297,18 @@ export function StudentExamDetail({ examId }: { examId: string }) {
           </CardHeader>
           <div className="space-y-3 px-5 pb-5">
             {submittedId ? (
-              <div className="rounded-2xl border border-emerald-400/25 bg-emerald-500/10 p-4">
-                <p className="text-sm text-emerald-50">
-                  Intento recibido. La corrección automática real está en{" "}
-                  <span className="font-semibold">Mi corrección</span>: sube tu examen resuelto y recibe
-                  análisis de errores con IA.
-                </p>
+              <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-5">
+                <div className="flex items-center gap-2 text-base font-semibold text-emerald-50">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-300" aria-hidden />
+                  {t.submitSuccessTitle}
+                </div>
+                <p className="mt-2 text-sm text-emerald-50/90">{t.submitSuccessBody}</p>
+                <p className="mt-2 text-sm text-slate-300">{t.submitSuccessCorrectionHint}</p>
                 <div className="mt-3">
                   <Link href="/exams/mi-correccion">
-                    <Button size="sm">Ir a Mi corrección</Button>
+                    <Button size="sm" variant="secondary">
+                      {t.submitSuccessCorrectionCta}
+                    </Button>
                   </Link>
                 </div>
               </div>

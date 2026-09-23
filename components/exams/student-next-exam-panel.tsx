@@ -4,7 +4,7 @@ import { CalendarClock, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { examsCopy } from "@/lib/i18n/exams";
 import { buildCommunityExamHref } from "@/lib/community/channels";
@@ -56,20 +56,24 @@ export function StudentNextExamPanel({ next }: StudentNextExamPanelProps) {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Link href={`/exams/student/${exam.id}`}>
-            <Button className="gap-2">
-              {t.nextExamCta}
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </Button>
+          <Link href={`/exams/student/${exam.id}`} className={buttonClasses({ className: "gap-2" })}>
+            {t.nextExamCta}
+            <ArrowRight className="h-4 w-4" aria-hidden />
           </Link>
           {exam.dueDate ? (
-            <Link href={buildCommunityExamHref(exam.subject, exam.dueDate)}>
-              <Button variant="secondary">{t.communityExamCta}</Button>
+            <Link
+              href={buildCommunityExamHref(exam.subject, exam.dueDate)}
+              className={buttonClasses({ variant: "secondary" })}
+            >
+              {t.communityExamCta}
             </Link>
           ) : null}
           {showStress ? (
-            <Link href={buildPsychologistHref({ subject: exam.subject, days: daysUntil! })}>
-              <Button variant="ghost">{wb.examStressCta}</Button>
+            <Link
+              href={buildPsychologistHref({ subject: exam.subject, days: daysUntil! })}
+              className={buttonClasses({ variant: "ghost" })}
+            >
+              {wb.examStressCta}
             </Link>
           ) : null}
         </div>

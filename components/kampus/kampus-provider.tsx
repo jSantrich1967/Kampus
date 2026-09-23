@@ -55,6 +55,12 @@ export function KampusProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // Demo mode is hermetic: a browser that entered through /demo must never
+    // merge a remote (logged-in) profile over the local demo profile.
+    if (typeof document !== "undefined" && document.cookie.split(";").some((c) => c.trim() === "kampus_demo=1")) {
+      setAuthUserId(null);
+      return;
+    }
     if (!isSupabaseConfigured()) return;
 
     const supabase = createSupabaseBrowserClient();

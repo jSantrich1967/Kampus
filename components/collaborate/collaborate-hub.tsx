@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ClipboardList, Microscope, Presentation, Timer, Video } from "lucide-react";
+import { Microscope, Presentation, Timer, Video } from "lucide-react";
 
 import { CollaborateDeadlineNotifyPanel } from "@/components/collaborate/collaborate-deadline-notify-panel";
 import { CollaborateNextFocusPanel } from "@/components/collaborate/collaborate-next-focus-panel";
@@ -10,8 +10,7 @@ import { useUpcomingVirtualSessions } from "@/hooks/use-upcoming-virtual-session
 import { PageHeader } from "@/components/layout/page-header";
 import { usePendingStudentWorksCount } from "@/hooks/use-pending-student-works-count";
 import { useUpcomingPresentationsCount } from "@/hooks/use-upcoming-presentations-count";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatBlock } from "@/components/ui/stat-block";
 import { collaborateCopy } from "@/lib/i18n/collaborate";
@@ -53,9 +52,7 @@ export function CollaborateHub() {
             <CardDescription>{t.presentationsHint}</CardDescription>
           </CardHeader>
           <div className="px-6 pb-6">
-            <Link href="/collaborate/exposiciones">
-              <Button className="w-full sm:w-auto">{t.presentationsCta}</Button>
-            </Link>
+            <Link href="/collaborate/exposiciones" className={buttonClasses({ variant: "primary", className: "w-full sm:w-auto" })}>{t.presentationsCta}</Link>
           </div>
         </Card>
 
@@ -68,11 +65,9 @@ export function CollaborateHub() {
             <CardDescription>{t.researchHint}</CardDescription>
           </CardHeader>
           <div className="px-6 pb-6">
-            <Link href="/collaborate/investigaciones">
-              <Button variant="secondary" className="w-full sm:w-auto">
+            <Link href="/collaborate/investigaciones" className={buttonClasses({ variant: "secondary", className: "w-full sm:w-auto" })}>
                 {t.researchCta}
-              </Button>
-            </Link>
+              </Link>
           </div>
         </Card>
 
@@ -85,11 +80,9 @@ export function CollaborateHub() {
             <CardDescription>{t.studyRoomHint}</CardDescription>
           </CardHeader>
           <div className="px-6 pb-6">
-            <Link href="/collaborate/sala-estudio">
-              <Button variant="secondary" className="w-full sm:w-auto">
+            <Link href="/collaborate/sala-estudio" className={buttonClasses({ variant: "secondary", className: "w-full sm:w-auto" })}>
                 {t.studyRoomCta}
-              </Button>
-            </Link>
+              </Link>
           </div>
         </Card>
 
@@ -102,11 +95,9 @@ export function CollaborateHub() {
             <CardDescription>{t.classroomHint}</CardDescription>
           </CardHeader>
           <div className="px-6 pb-6">
-            <Link href="/collaborate/aula-virtual">
-              <Button variant="secondary" className="w-full sm:w-auto">
+            <Link href="/collaborate/aula-virtual" className={buttonClasses({ variant: "secondary", className: "w-full sm:w-auto" })}>
                 {t.classroomCta}
-              </Button>
-            </Link>
+              </Link>
           </div>
         </Card>
       </div>
@@ -122,11 +113,9 @@ export function CollaborateHub() {
           </CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3 px-6 pb-6">
             <span className="font-medium text-white">{virtualSession.course}</span>
-            <Link href={virtualSession.href}>
-              <Button size="sm" variant="secondary">
+            <Link href={virtualSession.href} className={buttonClasses({ variant: "secondary", size: "sm" })}>
                 {t.todayVirtualSessionCta}
-              </Button>
-            </Link>
+              </Link>
           </div>
         </Card>
       ) : null}

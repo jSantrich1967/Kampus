@@ -9,7 +9,7 @@ import { StudentNextExamPanel } from "@/components/exams/student-next-exam-panel
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles } from "lucide-react";
 import { useUpcomingExamsSync } from "@/hooks/use-upcoming-exams-sync";
@@ -80,15 +80,9 @@ export function StudentExamsList() {
         description={useCloud ? t.listDescriptionCloud : t.listDescriptionLocal}
         actions={
           <div className="flex flex-wrap gap-2">
-            <Link href="/exams/calendar">
-              <Button variant="secondary">{t.calendarCta}</Button>
-            </Link>
-            <Link href="/pass-mode">
-              <Button variant="secondary">{t.passModeCta}</Button>
-            </Link>
-            <Link href="/today">
-              <Button variant="ghost">{t.backTodayCta}</Button>
-            </Link>
+            <Link href="/exams/calendar" className={buttonClasses({ variant: "secondary" })}>{t.calendarCta}</Link>
+            <Link href="/pass-mode" className={buttonClasses({ variant: "secondary" })}>{t.passModeCta}</Link>
+            <Link href="/today" className={buttonClasses({ variant: "ghost" })}>{t.backTodayCta}</Link>
           </div>
         }
       />
@@ -122,19 +116,19 @@ export function StudentExamsList() {
           </CardDescription>
         </CardHeader>
         <div className="flex flex-wrap gap-2 px-6 pb-6">
-          <Link href="/exams/mi-correccion">
-            <Button size="sm" className="gap-2">
+          <Link href="/exams/mi-correccion" className={buttonClasses({ variant: "primary", size: "sm", className: "gap-2" })}>
               <Sparkles className="h-4 w-4" />
               Analizar mis errores
-            </Button>
-          </Link>
+            </Link>
         </div>
       </Card>
 
       {!loading && exams.length === 0 ? <p className="text-sm text-slate-500">{t.empty}</p> : null}
 
       <div className="grid gap-4 md:grid-cols-2">
-        {insights.map(({ exam, daysUntil, estimatedTime }) => (
+        {insights
+          .filter(({ exam }) => exam.id !== nextExam?.exam.id)
+          .map(({ exam, daysUntil, estimatedTime }) => (
           <Card key={exam.id}>
             <CardHeader>
               <div className="flex items-center justify-between gap-2">
@@ -157,8 +151,11 @@ export function StudentExamsList() {
               </div>
               {exam.description ? <p className="mt-2 text-sm text-slate-300">{exam.description}</p> : null}
               <div className="mt-3 flex flex-wrap gap-2">
-                <Link href={`/exams/student/${exam.id}`}>
-                  <Button size="sm">{t.openCta}</Button>
+                <Link
+                  href={`/exams/student/${exam.id}`}
+                  className={buttonClasses({ size: "sm" })}
+                >
+                  {t.openCta}
                 </Link>
               </div>
             </CardHeader>
