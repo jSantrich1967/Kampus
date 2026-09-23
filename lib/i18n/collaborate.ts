@@ -336,7 +336,7 @@ export const collaborateCopy: Record<
   }
 > = {
   es: {
-    eyebrow: "Colaboración",
+    eyebrow: "Colaborar",
     hubTitle: "Trabajo en equipo y entregas",
     hubDescription:
       "Exposiciones con ensayo, investigaciones con fecha límite y aula virtual — conectado a tu calendario académico.",
@@ -347,7 +347,7 @@ export const collaborateCopy: Record<
     researchHint: "Trabajos y entregas ordenados por fecha — sync con calendario.",
     researchCta: "Abrir investigaciones",
     classroomTitle: "Aula virtual",
-    classroomHint: "Sesiones en vivo con tu cohorte (según tu institución).",
+    classroomHint: "Sesiones en vivo con tu grupo (según tu institución).",
     classroomCta: "Abrir aula virtual",
     subnavHub: "Inicio",
     subnavPresentations: "Exposiciones",
@@ -536,7 +536,7 @@ export const collaborateCopy: Record<
     breakoutEmpty: "Aún no hay salas breakout. El docente puede crearlas durante la clase.",
     breakoutLoading: "Cargando salas…",
     recordingTitle: "Grabación de la clase",
-    recordingHintCreator: "Pega el enlace a la grabación (Drive, YouTube, plataforma de tu universidad).",
+    recordingHintCreator: "Pega el enlace a la grabación (Drive, YouTube, plataforma de tu centro de estudios).",
     recordingHintStudent: "Disponible cuando el docente publique el enlace.",
     recordingUrlPlaceholder: "https://…",
     recordingSaveCta: "Guardar enlace",
@@ -602,7 +602,7 @@ export const collaborateCopy: Record<
     breakoutVideoInRoomTitle: "Vídeo en vivo del breakout",
     lmsTitle: "Enlace al LMS",
     lmsHintCreator: "Configura Moodle/Canvas y el id de curso para deep-link desde esta sesión.",
-    lmsHintStudent: "Abre el curso en la plataforma de tu universidad.",
+    lmsHintStudent: "Abre el curso en la plataforma de tu centro de estudios.",
     lmsProviderLabel: "Plataforma",
     lmsProviderGeneric: "Otro LMS",
     lmsBaseUrlLabel: "URL base del campus",

@@ -13,10 +13,10 @@ export function urgentCollaborationDeadlines(items: CollaborationFocusItem[]): C
 
 export function buildDeadlineNotifyBody(items: CollaborationFocusItem[]): string {
   const top = items[0];
-  if (!top) return "Revisa tus entregas en Colaboración.";
-  if (top.daysUntil < 0) return `«${top.title}» venció — actualiza tu trabajo en Colaboración.`;
-  if (top.daysUntil === 0) return `«${top.title}» vence hoy — abre Colaboración para terminar.`;
-  return `«${top.title}» vence mañana — planifica en Colaboración.`;
+  if (!top) return "Revisa tus entregas en Colaborar.";
+  if (top.daysUntil < 0) return `«${top.title}» venció — actualiza tu trabajo en Colaborar.`;
+  if (top.daysUntil === 0) return `«${top.title}» vence hoy — abre Colaborar para terminar.`;
+  return `«${top.title}» vence mañana — planifica en Colaborar.`;
 }
 
 export async function fireCollaborationDeadlineNotification(items: CollaborationFocusItem[]): Promise<void> {

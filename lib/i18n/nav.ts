@@ -3,11 +3,10 @@ export type Locale = "es";
 export const navCopy = {
   es: {
     groups: {
-      command: "Hoy",
+      command: "Principal",
       learn: "Estudio",
       evaluate: "Evaluación",
-      together: "Juntos",
-      work: "Colaboración",
+      work: "Colaborar",
       wellbeing: "Bienestar",
       teach: "Docencia",
       org: "Institución",
@@ -16,7 +15,7 @@ export const navCopy = {
     items: {
       today: "Hoy",
       passMode: "Modo aprobar",
-      rescue: "Kit de estudios del cuaderno",
+      rescue: "Kit de estudios",
       flashcards: "Tarjetas",
       library: "Mis cuadernos",
       exams: "Exámenes",

@@ -15,6 +15,6 @@ export const sectionProntoCopy: Record<
       "Puedes recorrer el flujo en vista previa. Estamos cerrando integración con datos reales (entregas, rúbricas y publicación).",
     institutionTitle: "Pronto: falta poco para activarse",
     institutionBody:
-      "El panel institucional se está endureciendo para producción. Falta poco para cohortes y métricas enlazadas a tus fuentes.",
+      "El panel institucional se está endureciendo para producción. Falta poco para grupos y métricas enlazadas a tus fuentes.",
   },
 };

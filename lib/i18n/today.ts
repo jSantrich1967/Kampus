@@ -99,7 +99,7 @@ export const todayCopy: Record<
     teacherExamsCta: "Flujo de exámenes",
     teacherCalendarCta: "Calendario",
     teacherPresentationsCta: "Exposiciones",
-    institutionTitle: "Salud académica del cohorte",
+    institutionTitle: "Salud académica del grupo",
     institutionBody: "Riesgo agregado y señales de engagement en un solo vistazo.",
     quickQuiz: "Quiz rápido",
     radar: "Ver radar",

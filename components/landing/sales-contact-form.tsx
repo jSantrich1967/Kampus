@@ -110,7 +110,7 @@ export function SalesContactForm({ className, compact = false, onSuccess }: Sale
             name="email"
             required
             autoComplete="email"
-            placeholder="nombre@universidad.edu"
+            placeholder="nombre@ejemplo.com"
             className={inputClassName}
             value={form.email}
             onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}

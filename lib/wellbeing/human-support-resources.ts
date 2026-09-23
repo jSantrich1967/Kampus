@@ -37,8 +37,8 @@ export const HUMAN_SUPPORT_RESOURCES: HumanSupportResource[] = [
   },
   {
     id: "campus",
-    title: "Servicios de tu universidad",
-    description: "En Ajustes indica tu universidad (UCV, USB, UCAB…) para ver enlaces de bienestar.",
+    title: "Servicios de tu centro de estudios",
+    description: "En Ajustes indica tu centro de estudios (UCV, USB, UCAB…) para ver enlaces de bienestar.",
     href: "/settings",
   },
   {

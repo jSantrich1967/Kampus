@@ -16,7 +16,7 @@ export function FeaturesSection() {
           <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/20 text-purple-400">
             <Shield className="h-6 w-6" />
           </div>
-          <h3 className="mb-4 text-2xl font-bold">Motor de CI Adaptativo</h3>
+          <h3 className="mb-4 text-2xl font-bold">Motor de IA Adaptativo</h3>
           <p className="mb-8 leading-relaxed text-gray-400">
             Nuestra IA analiza tu rendimiento en tiempo real, ajustando la dificultad y el estilo del
             contenido para maximizar la retención.
@@ -113,7 +113,7 @@ export function FeaturesSection() {
 
         <div className="group relative overflow-hidden rounded-3xl bg-purple-600 lg:col-span-2">
           <div className="relative z-10 p-8">
-            <h3 className="mb-4 text-3xl font-bold">Maestría Certificada</h3>
+            <h3 className="mb-4 text-3xl font-bold">Certificación Verificada</h3>
             <p className="max-w-md leading-relaxed text-white/80">
               Certificaciones respaldadas por blockchain reconocidas globalmente al completar rutas de
               aprendizaje críticas.

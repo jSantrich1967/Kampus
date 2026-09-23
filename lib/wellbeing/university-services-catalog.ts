@@ -31,7 +31,7 @@ const VENEZUELA_NATIONAL_SERVICES: UniversityServiceLink[] = [
   },
   {
     id: "settings-university",
-    label: "Configurar mi universidad",
+    label: "Configurar mi centro de estudios",
     description: "En Ajustes escribe el nombre exacto (ej. UCV, USB, UCAB) para ver más enlaces.",
     href: "/settings",
   },

@@ -13,7 +13,7 @@ export function buildDemoProfile(): UserProfile {
     plan: "free",
     role: "student",
     displayName: "Alex",
-    university: "Universidad Demo",
+    university: "Centro Demo",
     major: "Ingeniería Informática",
     semester: "4º",
     subjects: ["Cálculo", "Programación", "Bases de datos", "Estadística"],
@@ -27,7 +27,7 @@ export function buildDemoProfile(): UserProfile {
     weeklyAvailabilityHours: 15,
     preferredLanguage: "es",
     interestedInCommunity: true,
-    learningGoals: "Aprobar el semestre manteniendo un ritmo de estudio sostenible.",
+    learningGoals: "Aprobar el período manteniendo un ritmo de estudio sostenible.",
     streakDays: 3,
     lastActiveDate: new Date().toISOString().slice(0, 10),
   };

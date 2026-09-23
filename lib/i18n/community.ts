@@ -103,7 +103,7 @@ export const communityCopy: Record<
     channelsInContextHint: "Cada canal reduce ruido y concentra dudas útiles.",
     postCount: "Posts en este canal",
     postCountHint: "Contenido real en Supabase.",
-    universityLabel: "Universidad",
+    universityLabel: "Centro de estudios",
     recommendedTitle: "Tus canales",
     recommendedHint: "Pregunta concreta → explicación corta → practica en Modo aprobar.",
     studyGroupCta: "Formar grupo de estudio →",

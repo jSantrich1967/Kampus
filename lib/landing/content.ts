@@ -9,21 +9,21 @@ export const TESTIMONIALS = [
     quote:
       "Kampus entendió en una semana cómo estudio mejor. Mis notas subieron y dejé de estudiar a ciegas la noche antes del examen.",
     name: "Laura Méndez",
-    role: "Estudiante de Ingeniería · UNAM",
+    role: "Estudiante de bachillerato",
     rating: 5,
   },
   {
     quote:
       "El motor adaptativo ajusta el ritmo de cada alumno. Por fin tengo datos claros para intervenir antes de que alguien se quede atrás.",
     name: "Prof. Carlos Ruiz",
-    role: "Docente de Matemáticas · UPC",
+    role: "Docente de Matemáticas · Colegio",
     rating: 5,
   },
   {
     quote:
       "Integramos Kampus en nuestro campus virtual en pocas semanas. El equipo docente lo adoptó porque realmente ahorra tiempo.",
     name: "Ana Beltrán",
-    role: "Directora de Innovación · Instituto Cervantes Digital",
+    role: "Directora · Academia online",
     rating: 5,
   },
 ] as const;

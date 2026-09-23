@@ -237,7 +237,7 @@ export function AppSidebar({ onNavigate, luminaMode = false }: AppSidebarProps) 
             Cerrar sesión
           </Button>
         ) : (
-          <div className="text-[11px] text-slate-500">Hecho para el ritmo real del semestre.</div>
+          <div className="text-[11px] text-slate-500">Hecho para tu ritmo de estudio.</div>
         )}
       </div>
     </div>

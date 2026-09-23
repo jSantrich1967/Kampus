@@ -398,7 +398,7 @@ export const wellbeingCopy: Record<
     institutionOptInOk: "Pulse actualizado — gracias por contribuir de forma anónima.",
     institutionOptOutOk: "Dejaste de compartir pulse institucional.",
     institutionOptInError: "No se pudo sincronizar el pulse. Reintenta con sesión activa.",
-    institutionOptInNoUniversity: "Añade tu universidad en Ajustes para vincular el pulse institucional.",
+    institutionOptInNoUniversity: "Añade tu centro de estudios en Ajustes para vincular el pulse institucional.",
     institutionOptInLocalOnly: "Inicia sesión para que el pulse llegue al panel institucional.",
     institutionPulseTitle: "Pulse de bienestar (opt-in)",
     institutionPulseHint: "Agregado anónimo de estudiantes que activaron compartir pulse en Bienestar.",
@@ -454,7 +454,7 @@ export const wellbeingCopy: Record<
     institutionDashRiskMix: "Mezcla de señales (14d)",
     institutionDashEnergyTrend: "Energía media por semana",
     hubFeatureCounselorAlert: "Alertas orientación",
-    hubFeatureUniversityServices: "Servicios universidad",
+    hubFeatureUniversityServices: "Servicios de tu centro",
     hubFeatureFhirExport: "Export FHIR-lite",
     counselorAlertTitle: "Aviso proactivo a orientación",
     counselorAlertHint:
@@ -465,7 +465,7 @@ export const wellbeingCopy: Record<
     counselorAlertManualOk: "Aviso enviado — orientación verá la señal agregada en su panel.",
     counselorAlertDuplicate: "Ya registramos un aviso automático esta semana.",
     counselorAlertError: "No se pudo enviar el aviso. Revisa sesión e institución en Ajustes.",
-    counselorAlertLoginRequired: "Inicia sesión y configura tu universidad para enviar avisos.",
+    counselorAlertLoginRequired: "Inicia sesión y configura tu centro de estudios para enviar avisos.",
     counselorAlertPrivacy: "No incluye texto del diario — solo nivel de señal y motivos agregados.",
     counselorAlertActiveSignal: (level, score) =>
       level === "elevated"
@@ -482,12 +482,12 @@ export const wellbeingCopy: Record<
     counselorAlertInstitutionElevatedHint: "Nivel prioritario",
     counselorAlertInstitutionAuto: "Automáticas",
     counselorAlertInstitutionAutoHint: (manual) => `${manual} manuales en el mismo periodo`,
-    universityServicesTitle: "Servicios de tu universidad",
+    universityServicesTitle: "Servicios de tu centro de estudios",
     universityServicesHint:
-      "Configura tu universidad en Ajustes (ej. UCV, USB, UCAB, ULA) para ver enlaces de tu centro.",
+      "Configura tu centro de estudios en Ajustes (ej. UCV, USB, UCAB, ULA) para ver sus enlaces.",
     universityServicesHintMatched: (name) => `Enlaces para ${name} y recursos nacionales de apoyo.`,
     universityServicesDisclaimer:
-      "Enlaces orientativos — confirma horarios y URLs en la web oficial de tu universidad.",
+      "Enlaces orientativos — confirma horarios y URLs en la web oficial de tu centro de estudios.",
     fhirExportTitle: "Export FHIR-lite (JSON)",
     fhirExportIncludeNarrative: "Incluir nota breve de reflexión (opcional, máx. 500 caracteres)",
     fhirExportRangeLabel: (range) =>

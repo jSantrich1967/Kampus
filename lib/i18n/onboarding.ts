@@ -32,7 +32,7 @@ export const onboardingCopy: Record<
 > = {
   es: {
     brand: "Kampus",
-    heroTitle: "Tu semestre, con un plan que sí se puede cumplir.",
+    heroTitle: "Tu período, con un plan que sí se puede cumplir.",
     heroSubtitle: "En 3 minutos configuramos tu ritmo, tus riesgos y tus próximos pasos.",
     progress: (c, t) => `Paso ${c} de ${t}`,
     roles: {
@@ -45,7 +45,7 @@ export const onboardingCopy: Record<
       name: "Tu nombre (opcional)",
       university: "Institución (opcional)",
       major: "Carrera / programa",
-      semester: "Semestre",
+      semester: "Período",
       subjects: "Materias actuales",
       subjectsHint: "Agrega cada materia y presiona Enter.",
       exams: "Próximos exámenes (opcional)",

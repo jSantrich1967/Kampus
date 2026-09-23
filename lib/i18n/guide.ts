@@ -264,13 +264,13 @@ export const guideCopy: Record<
           "Sugerencias de autocuidado entre sesiones de estudio.",
           "Puente hacia ayuda profesional si la situación lo requiere.",
         ],
-        tip: "En crisis grave o pensamientos de hacerte daño, contacta servicios de emergencia o tu universidad; el chat no reemplaza eso.",
+        tip: "En crisis grave o pensamientos de hacerte daño, contacta servicios de emergencia o tu centro de estudios; el chat no reemplaza eso.",
       },
       teaching: {
         title: "Copiloto docente",
         href: "/teaching",
         roles: ["teacher"],
-        objective: "Apoyar al profesor con feedback, cohorte y materiales.",
+        objective: "Apoyar al profesor con feedback, grupos y materiales.",
         howItWorks:
           "Vista docente: seguimiento de alumnos, sugerencias de refuerzo y herramientas alineadas con lo que ven los estudiantes en Kampus.",
         benefits: [
@@ -286,7 +286,7 @@ export const guideCopy: Record<
         roles: ["institution"],
         objective: "Visión agregada de adopción y bienestar en la institución.",
         howItWorks:
-          "Métricas de uso, cohortes y señales agregadas (sin exponer datos personales de forma irresponsable). Pensado para coordinación académica.",
+          "Métricas de uso, grupos y señales agregadas (sin exponer datos personales de forma irresponsable). Pensado para coordinación académica.",
         benefits: [
           "Decisiones con datos sobre herramientas de estudio.",
           "Alineación entre campus digital y aula física.",
@@ -302,7 +302,7 @@ export const guideCopy: Record<
         howItWorks:
           "Cambias idioma, materias del perfil, plan Gratis/Premium (demo), rol de prueba y reinicio de onboarding. Con sesión, sincroniza perfil en la nube.",
         benefits: [
-          "Adaptas Kampus a tu semestre real.",
+          "Adaptas Kampus a tu período real.",
           "Modo prueba premium para explorar kits completos.",
           "Control de privacidad y cierre de sesión.",
         ],
