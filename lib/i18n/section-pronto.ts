@@ -10,11 +10,11 @@ export const sectionProntoCopy: Record<
   }
 > = {
   es: {
-    teacherTitle: "Pronto: falta poco para activarse",
+    teacherTitle: "Ya puedes usarlo",
     teacherBody:
-      "Puedes recorrer el flujo en vista previa. Estamos cerrando integración con datos reales (entregas, rúbricas y publicación).",
-    institutionTitle: "Pronto: falta poco para activarse",
+      "El flujo de rúbrica, revisión y publicación ya funciona. Pruébalo con tus datos y publica cuando estés listo.",
+    institutionTitle: "Vista previa",
     institutionBody:
-      "El panel institucional se está endureciendo para producción. Falta poco para grupos y métricas enlazadas a tus fuentes.",
+      "Estás viendo una vista previa del panel institucional con datos de ejemplo.",
   },
 };

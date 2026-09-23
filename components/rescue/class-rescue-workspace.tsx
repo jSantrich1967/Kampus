@@ -341,7 +341,7 @@ export function ClassRescueWorkspace() {
         list.forEach((f) => fd.append("files", f));
         const res = await fetch("/api/rescue/extract", { method: "POST", body: fd });
         const json = await readRescueExtractJson<{ combinedText?: string; error?: string }>(res);
-        if (!res.ok) throw new Error(json.error || "Extraction failed");
+        if (!res.ok) throw new Error(json.error || "No pudimos leer el archivo. Prueba con otro PDF o una foto más nítida.");
         if (!cancelled) setExtractedText((json.combinedText || "").trim());
       } catch (e) {
         const msg = e instanceof Error ? e.message : "No pudimos leer el archivo.";

@@ -294,7 +294,7 @@ export const wellbeingCopy: Record<
     hubFeatureInstitutionPulse: "Pulse institución",
     hubFeatureServerPush: "Push servidor 18:00",
     hubFeatureCounselorSigned: "Resumen firmado",
-    hubFeatureInstitutionDash: "Dashboard institución",
+    hubFeatureInstitutionDash: "Panel de la institución",
     subnavHub: "Inicio",
     subnavDiary: "Mi Diario",
     subnavPsychologist: "Apoyo emocional",
@@ -440,7 +440,7 @@ export const wellbeingCopy: Record<
     counselorVerifyPageTitle: "Verificación para orientadores",
     counselorVerifyPageHint:
       "Comprueba que un resumen de bienestar Kampus no fue modificado después de generarse (solo métricas, sin diario privado).",
-    institutionDashTitle: "Dashboard avanzado de bienestar",
+    institutionDashTitle: "Panel avanzado de bienestar",
     institutionDashHint: "Tendencias semanales y mezcla de señales de riesgo (datos opt-in agregados).",
     institutionDashLoading: "Cargando tendencias…",
     institutionDashError: "No se pudo cargar el dashboard de bienestar.",

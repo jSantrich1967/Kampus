@@ -54,7 +54,7 @@ export const radarCopy: Record<
     featureHeuristic: "Modelo explicable (no caja negra)",
     steps:
       "1) Carga señales demo o registra exámenes/entregas · 2) Revisa la materia en rojo/ámbar · 3) Sigue la acción sugerida · 4) Usa Modo aprobar o Mis investigaciones.",
-    localOnlyHint: "Sin Supabase usamos datos demo locales. Inicia sesión para sincronizar exámenes y entregas reales.",
+    localOnlyHint: "Estás viendo datos de ejemplo. Inicia sesión para ver tus exámenes y entregas de verdad.",
     demoCta: "Cargar señales demo",
     demoFootnote: "Añade exámenes demo (si no tienes) y entregas demo para ver el radar con datos.",
     demoOk: "Señales demo listas — el radar se actualizó.",

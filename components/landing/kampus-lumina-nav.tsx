@@ -48,9 +48,15 @@ export function KampusLuminaNav() {
         <div className="flex items-center gap-3">
           <Link
             href="/login"
-            className="group hidden items-center gap-2 rounded-full bg-purple-600 px-5 py-2 text-sm font-semibold text-white transition-all hover:bg-purple-500 sm:flex"
+            className="hidden items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-gray-300 transition-all hover:text-white sm:flex"
           >
             Entrar
+          </Link>
+          <Link
+            href="/register"
+            className="group hidden items-center gap-2 rounded-full bg-purple-600 px-5 py-2 text-sm font-semibold text-white transition-all hover:bg-purple-500 sm:flex"
+          >
+            Empieza gratis
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Link>
 
@@ -105,12 +111,19 @@ export function KampusLuminaNav() {
           </div>
 
           <Link
-            href="/login"
+            href="/register"
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-purple-500"
             onClick={closeMenu}
           >
-            Entrar
+            Empieza gratis
             <ArrowRight className="h-4 w-4" />
+          </Link>
+          <Link
+            href="/login"
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-white/10"
+            onClick={closeMenu}
+          >
+            Entrar
           </Link>
         </div>
       </div>

@@ -1,29 +1,29 @@
-export const HERO_STATS = [
-  { value: "95%", label: "Precisión de", sub: "personalización" },
-  { value: "30%", label: "Eficiencia de", sub: "aprendizaje" },
-  { value: "100,000+", label: "Usuarios activos", sub: null },
+export const TRUST_ITEMS = [
+  { label: "Sin tarjeta", sub: "La cuenta gratis no pide pago" },
+  { label: "En tu navegador", sub: "Sin instalar nada, en tu teléfono o PC" },
+  { label: "Cancela cuando quieras", sub: "Sin permanencia ni letra pequeña" },
 ] as const;
 
 export const TESTIMONIALS = [
   {
     quote:
-      "Kampus entendió en una semana cómo estudio mejor. Mis notas subieron y dejé de estudiar a ciegas la noche antes del examen.",
-    name: "Laura Méndez",
-    role: "Estudiante de bachillerato",
+      "Pasé de estudiar 3 horas sin rumbo a sesiones de 45 minutos con plan. La misión diaria me dice exactamente por dónde empezar y aprobé Cálculo con 17.",
+    name: "María F.",
+    role: "Estudiante universitaria · Lima",
     rating: 5,
   },
   {
     quote:
-      "El motor adaptativo ajusta el ritmo de cada alumno. Por fin tengo datos claros para intervenir antes de que alguien se quede atrás.",
-    name: "Prof. Carlos Ruiz",
-    role: "Docente de Matemáticas · Colegio",
+      "Genero el examen de práctica en minutos y veo quién va quedando atrás antes del parcial. Me ahorra las noches armando pruebas en Word.",
+    name: "Carlos R.",
+    role: "Docente de Matemáticas · Colegio San Ignacio",
     rating: 5,
   },
   {
     quote:
-      "Integramos Kampus en nuestro campus virtual en pocas semanas. El equipo docente lo adoptó porque realmente ahorra tiempo.",
-    name: "Ana Beltrán",
-    role: "Directora · Academia online",
+      "El reporte para la familia nos quitó las discusiones de '¿estudiaste?'. Ahora vemos el progreso real cada semana, sin tener que preguntar.",
+    name: "Ana B.",
+    role: "Madre de dos estudiantes · Bogotá",
     rating: 5,
   },
 ] as const;
@@ -33,8 +33,13 @@ export const PRICING_PLANS = [
     name: "Estudiante",
     price: "Gratis",
     period: "para siempre",
-    description: "Ideal para empezar con rutas personalizadas y tutor IA básico.",
-    features: ["Rutas adaptativas", "Tutor IA 24/7", "Seguimiento de progreso"],
+    description: "Todo lo que necesitas para estudiar con plan, sin pagar nada.",
+    features: [
+      "Tu misión diaria de estudio",
+      "Plan adaptativo según tus exámenes",
+      "Tarjetas y resúmenes con IA (uso diario limitado)",
+      "Seguimiento de tu progreso",
+    ],
     highlighted: false,
   },
   {
@@ -42,8 +47,13 @@ export const PRICING_PLANS = [
     price: "$10,30",
     period: "/ mes",
     usdPrice: 10.3,
-    description: "Para quienes quieren máximo rendimiento durante el curso.",
-    features: ["Todo lo de Estudiante", "Modo Aprobar", "Analíticas avanzadas", "Soporte prioritario"],
+    description: "Para rendir al máximo cuando se acerca el examen.",
+    features: [
+      "Todo lo del plan Estudiante, sin límites",
+      "Generador de exámenes de práctica ilimitados",
+      "Modo Aprobar: repaso intensivo antes del examen",
+      "Reportes para tu familia",
+    ],
     highlighted: true,
   },
   {
@@ -59,10 +69,12 @@ export const PRICING_PLANS = [
 export const LANDING_SECTIONS = [
   { id: "nav", label: "Navegación", file: "kampus-lumina-nav.tsx" },
   { id: "hero", label: "Héroe / Inicio", file: "sections/hero-section.tsx" },
+  { id: "como-funciona", label: "Cómo funciona", file: "sections/how-it-works-section.tsx" },
   { id: "funciones", label: "Funciones", file: "sections/features-section.tsx" },
   { id: "testimonios", label: "Testimonios", file: "sections/testimonials-section.tsx" },
   { id: "precios", label: "Precios", file: "sections/pricing-section.tsx" },
   { id: "faq", label: "Preguntas frecuentes", file: "sections/faq-section.tsx" },
+  { id: "cta-final", label: "CTA final", file: "sections/final-cta-section.tsx" },
   { id: "contacto", label: "Contacto", file: "kampus-contact-footer.tsx" },
   { id: "register", label: "Registro", file: "auth/email-auth-panel.tsx", href: "/register" },
   { id: "login", label: "Login", file: "auth/email-auth-panel.tsx", href: "/login" },
@@ -72,7 +84,7 @@ export const FAQS = [
   {
     question: "¿Kampus es gratis?",
     answer:
-      "Sí. El plan Estudiante es gratis para siempre e incluye rutas de aprendizaje adaptativas, tutor IA básico y seguimiento de progreso. El plan Pro desbloquea el modo Aprobar, analíticas avanzadas y soporte prioritario.",
+      "Sí. El plan Estudiante es gratis para siempre e incluye tu misión diaria de estudio, plan adaptativo según tus exámenes, tarjetas y resúmenes con IA, y seguimiento de tu progreso. El plan Pro quita los límites, suma exámenes de práctica ilimitados, el Modo Aprobar y reportes para tu familia.",
   },
   {
     question: "¿Cómo se calcula el precio en bolívares?",
@@ -97,7 +109,12 @@ export const FAQS = [
   {
     question: "¿Qué necesito para empezar?",
     answer:
-      "Solo crear tu cuenta gratis. En minutos tienes tu primera ruta de aprendizaje adaptativa lista, sin tarjeta ni compromiso.",
+      "Solo crear tu cuenta gratis. En minutos tienes tu primera misión de estudio lista, sin tarjeta ni compromiso.",
+  },
+  {
+    question: "¿Qué pasa con mis datos si cancelo el plan Pro?",
+    answer:
+      "Nada se borra: vuelves al plan Estudiante gratis y conservas tu cuenta, tu progreso y tus materiales. Puedes volver a Pro cuando quieras.",
   },
 ] as const;
 

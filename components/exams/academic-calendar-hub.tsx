@@ -279,7 +279,7 @@ export function AcademicCalendarHub() {
 
   async function deleteNotebookDocuments(docs: Array<{ id: string; storagePath: string }>) {
     if (!useCloud || !authUserId) {
-      setKitError("Para borrar apuntes desde la nube, inicia sesión (usa Supabase).");
+      setKitError("Para borrar apuntes de tu cuenta, inicia sesión primero.");
       return;
     }
     if (docs.length === 0) return;
@@ -948,8 +948,8 @@ export function AcademicCalendarHub() {
   if (!hydrated) return <div className="text-sm text-slate-400">Cargando…</div>;
 
   const workStorageHint = useCloud
-    ? "Se guardan en tu cuenta (Supabase) y se muestran en el calendario en cualquier dispositivo donde inicies sesión."
-    : "Quedan guardados en este dispositivo (local). Con sesión y Supabase configurado, pasan a la nube automáticamente.";
+    ? "Se guardan en tu cuenta y aparecen en el calendario de cualquier dispositivo donde inicies sesión."
+    : "Se guardan en este dispositivo. Si inicias sesión, también los verás en tus otros dispositivos.";
 
   const pageDescription = useCloud
     ? "Exámenes, fecha de exposición y trabajos se sincronizan con Supabase cuando inicias sesión."

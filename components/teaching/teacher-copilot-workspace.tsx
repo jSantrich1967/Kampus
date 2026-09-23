@@ -56,7 +56,7 @@ export function TeacherCopilotWorkspace() {
       <div className="space-y-6">
         <PageHeader
           eyebrow="Docencia"
-          title="Copiloto de evaluación"
+          title="Copiloto docente"
           description="Cambia tu rol a docente en onboarding o ajustes (demo)."
         />
         <Card>

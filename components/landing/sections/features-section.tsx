@@ -1,13 +1,13 @@
-import { BarChart3, Globe, Shield } from "lucide-react";
+import { BarChart3, FileCheck2, Shield } from "lucide-react";
 
 export function FeaturesSection() {
   return (
     <section id="funciones" className="py-32">
       <div className="mx-auto mb-20 max-w-7xl px-6 text-center">
-        <h2 className="mb-6 text-4xl font-bold md:text-5xl">Eleva tu viaje de aprendizaje</h2>
+        <h2 className="mb-6 text-4xl font-bold md:text-5xl">Todo lo que necesitas para aprobar, en un solo lugar</h2>
         <p className="mx-auto max-w-2xl text-gray-400">
-          Construido con redes neuronales de vanguardia para entender tu estilo de aprendizaje y objetivos
-          únicos.
+          Kampus organiza tu estudio día a día: qué repasar, cómo practicar y cómo vas avanzando
+          hacia tu examen.
         </p>
       </div>
 
@@ -16,15 +16,15 @@ export function FeaturesSection() {
           <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/20 text-purple-400">
             <Shield className="h-6 w-6" />
           </div>
-          <h3 className="mb-4 text-2xl font-bold">Motor de IA Adaptativo</h3>
+          <h3 className="mb-4 text-2xl font-bold">Tu misión diaria</h3>
           <p className="mb-8 leading-relaxed text-gray-400">
-            Nuestra IA analiza tu rendimiento en tiempo real, ajustando la dificultad y el estilo del
-            contenido para maximizar la retención.
+            Cada mañana recibes un plan claro con lo más importante del día, ordenado por
+            urgencia: qué repasar, qué practicar y cuánto te falta para estar listo.
           </p>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=800&auto=format&fit=crop"
-            alt="Tecnología de inteligencia artificial aplicada al aprendizaje"
+            src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=800&auto=format&fit=crop"
+            alt="Estudiante organizando su plan de estudio del día"
             className="h-64 w-full rounded-2xl border border-white/5 object-cover grayscale transition-all hover:grayscale-0"
           />
         </div>
@@ -33,10 +33,10 @@ export function FeaturesSection() {
           <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/20 text-purple-400">
             <BarChart3 className="h-6 w-6" />
           </div>
-          <h3 className="mb-4 text-2xl font-bold">Análisis de Progreso</h3>
+          <h3 className="mb-4 text-2xl font-bold">Tu progreso, a simple vista</h3>
           <p className="leading-relaxed text-gray-400">
-            Visualiza tu crecimiento con analíticas predictivas que muestran exactamente cuándo dominarás un
-            tema.
+            Mira cuánto avanzas por materia y qué tan cerca estás de dominar cada tema antes del
+            examen.
           </p>
           <div
             className="relative mt-8 h-44"
@@ -105,18 +105,21 @@ export function FeaturesSection() {
 
         <div className="rounded-3xl border border-white/10 bg-white/5 p-8 transition-all hover:bg-white/[0.08]">
           <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/20 text-purple-400">
-            <Globe className="h-6 w-6" />
+            <FileCheck2 className="h-6 w-6" />
           </div>
-          <div className="mb-2 text-4xl font-bold">120+</div>
-          <div className="text-sm font-bold uppercase tracking-widest text-gray-400">Idiomas</div>
+          <h3 className="mb-4 text-2xl font-bold">Generador de exámenes</h3>
+          <p className="leading-relaxed text-gray-400">
+            Crea exámenes de práctica de cualquier tema en segundos, con corrección automática y
+            explicación de cada respuesta.
+          </p>
         </div>
 
         <div className="group relative overflow-hidden rounded-3xl bg-purple-600 lg:col-span-2">
           <div className="relative z-10 p-8">
-            <h3 className="mb-4 text-3xl font-bold">Certificación Verificada</h3>
+            <h3 className="mb-4 text-3xl font-bold">Certificados verificables</h3>
             <p className="max-w-md leading-relaxed text-white/80">
-              Certificaciones respaldadas por blockchain reconocidas globalmente al completar rutas de
-              aprendizaje críticas.
+              Al completar tus metas recibes certificados con un código único de verificación,
+              listos para compartir con tu familia o tu institución.
             </p>
           </div>
           <Shield className="absolute -right-12 -bottom-12 h-64 w-64 rotate-12 text-white/10 transition-transform group-hover:scale-110" />

@@ -28,6 +28,20 @@ export const todayCopy: Record<
     teacherRiskDescription: string;
     teacherCopilotCta: string;
     teacherExamsCta: string;
+    teacherCreateExamCta: string;
+    teacherFirstSteps: {
+      title: string;
+      body: string;
+      step1Title: string;
+      step1Body: string;
+      step1Cta: string;
+      step2Title: string;
+      step2Body: string;
+      step2Cta: string;
+      step3Title: string;
+      step3Body: string;
+      step3Cta: string;
+    };
     teacherCalendarCta: string;
     teacherPresentationsCta: string;
     teacherGreeting: (args: { name?: string | null; institution?: string | null }) => string;
@@ -107,7 +121,21 @@ export const todayCopy: Record<
     teacherRiskTitle: "Seguimiento por materia",
     teacherRiskDescription: "Prioriza feedback, rúbricas y fechas donde hay más presión docente.",
     teacherCopilotCta: "Abrir Copiloto docente",
-    teacherExamsCta: "Flujo de exámenes",
+    teacherExamsCta: "Evaluaciones",
+    teacherCreateExamCta: "Crear examen",
+    teacherFirstSteps: {
+      title: "Tus primeros pasos",
+      body: "Tres acciones para poner tu curso en marcha. Empieza por la primera.",
+      step1Title: "Crea tu primer examen",
+      step1Body: "El generador lo arma por ti: materia, tema y dificultad.",
+      step1Cta: "Crear examen",
+      step2Title: "Programa tu primera clase",
+      step2Body: "Agenda tu aula virtual con fecha, hora y enlace.",
+      step2Cta: "Programar clase",
+      step3Title: "Abre el copiloto docente",
+      step3Body: "Rúbricas, corrección con IA y publicación de notas.",
+      step3Cta: "Abrir copiloto",
+    },
     teacherCalendarCta: "Calendario",
     teacherPresentationsCta: "Exposiciones",
     institutionTitle: "Salud académica del grupo",

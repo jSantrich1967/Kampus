@@ -184,7 +184,7 @@ async function ocrDataUrlWithOpenAI(dataUrl: string): Promise<string> {
       );
     }
 
-    return `OCR failed (HTTP ${res.status}): ${message || "Unknown error"}`;
+    return `No pudimos leer el texto de la imagen. Inténtalo de nuevo con una foto más nítida.`;
   }
 
   const json = (await res.json()) as unknown;

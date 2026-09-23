@@ -34,11 +34,11 @@ export const authCopy = {
     resendSent: "Hemos pedido otro correo. Espera unos minutos y revisa spam y «Promociones».",
     emailDeliveryHint:
       "Si no llega nada: los correos integrados de Supabase pueden tardar o ir a spam. En Supabase → Authentication → puedes configurar SMTP (Resend, SendGrid…). Para pruebas, en Providers → Email puedes desactivar «Confirm email» e iniciar sesión al instante.",
-    loggedInHint: "Sesión iniciada. Tu perfil se sincroniza con Supabase cuando corresponde.",
+    loggedInHint: "Sesión iniciada. Tus datos se guardan en tu cuenta.",
     account: "Cuenta",
     sessionActive: "Sesión activa",
     notLoggedIn: "Sin sesión en la nube",
-    notLoggedInHint: "Inicia sesión para guardar tu perfil en Supabase.",
+    notLoggedInHint: "Inicia sesión para guardar tu perfil en tu cuenta.",
     goLogin: "Ir a entrar",
     signOut: "Cerrar sesión",
     userId: "ID de usuario",

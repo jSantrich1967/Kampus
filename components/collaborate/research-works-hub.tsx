@@ -227,8 +227,8 @@ export function ResearchWorksHub() {
   }
 
   const workStorageHint = useCloud
-    ? "Se guardan en tu cuenta (Supabase) y aparecen también en Evaluación → Mi calendario."
-    : "Quedan en este dispositivo. Con sesión y Supabase, se sincronizan en la nube.";
+    ? "Se guardan en tu cuenta y aparecen también en Evaluación → Mi calendario."
+    : "Quedan en este dispositivo. Si inicias sesión, también los verás en tus otros dispositivos.";
 
   const subjectListId = "research-subject-suggestions";
 

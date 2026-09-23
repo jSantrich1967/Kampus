@@ -212,7 +212,7 @@ export function VirtualClassroomHub() {
       {!isSupabaseConfigured() ? (
         <p className="text-sm text-amber-200/90">
           {es
-            ? "Falta configurar Supabase para ver sesiones reales."
+            ? "Todavía no hay sesiones publicadas."
             : "Supabase is not configured, so real sessions are unavailable."}
         </p>
       ) : demoMode ? (

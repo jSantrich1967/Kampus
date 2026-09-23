@@ -8,7 +8,7 @@ import { ShareLinkButton } from "@/components/growth/share-link-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { todayCopy } from "@/lib/i18n/today";
@@ -17,6 +17,7 @@ import { buildSubjectRisks, buildTeacherFocusBlock } from "@/lib/pass-mode";
 import { usePassModePlan } from "@/lib/hooks/use-pass-mode-plan";
 import { buildPressureQuizPath, getPressureQuizBlock } from "@/lib/study/pressure-quiz";
 import { TodayAuthBypassNote } from "@/components/today/today-auth-bypass-note";
+import { TeacherFirstSteps } from "@/components/today/teacher-first-steps";
 import { TodayContextPanel } from "@/components/today/today-context-panel";
 import { TodayCollaboratePanel } from "@/components/today/today-collaborate-panel";
 import { TodayWellbeingPanel } from "@/components/today/today-wellbeing-panel";
@@ -195,18 +196,23 @@ export function TodayDashboard() {
             />
             {isTeacher ? (
               <>
-                <Link href="/teaching">
-                  <Button className="w-full sm:w-auto">{t.teacherCopilotCta}</Button>
+                <Link
+                  href="/teaching"
+                  className={buttonClasses({ className: "w-full sm:w-auto" })}
+                >
+                  {t.teacherCopilotCta}
                 </Link>
-                <Link href="/exams">
-                  <Button variant="secondary" className="w-full sm:w-auto">
-                    {t.teacherExamsCta}
-                  </Button>
+                <Link
+                  href="/teaching/examenes"
+                  className={buttonClasses({ variant: "secondary", className: "w-full sm:w-auto" })}
+                >
+                  {t.teacherCreateExamCta}
                 </Link>
-                <Link href="/exams/calendar">
-                  <Button variant="secondary" className="w-full sm:w-auto">
-                    {t.teacherCalendarCta}
-                  </Button>
+                <Link
+                  href="/exams/calendar"
+                  className={buttonClasses({ variant: "secondary", className: "w-full sm:w-auto" })}
+                >
+                  {t.teacherCalendarCta}
                 </Link>
               </>
             ) : (
@@ -228,6 +234,12 @@ export function TodayDashboard() {
       />
 
       <TodayAuthBypassNote />
+
+      {isTeacher ? (
+        <TodayStep step="Paso 1" label="Empieza aquí">
+          <TeacherFirstSteps />
+        </TodayStep>
+      ) : null}
 
       {profile.plan === "free" && profile.role === "student" ? (
         <div className="rounded-2xl border border-amber-300/20 bg-amber-400/5 px-4 py-3 text-sm text-amber-50">
@@ -282,15 +294,14 @@ export function TodayDashboard() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Badge tone="accent">{teacherFocus?.priority}</Badge>
-                  <Link href="/teaching">
-                    <Button size="sm" variant="secondary">
-                      {t.teacherCopilotCta}
-                    </Button>
+                  <Link href="/teaching" className={buttonClasses({ size: "sm", variant: "secondary" })}>
+                    {t.teacherCopilotCta}
                   </Link>
-                  <Link href="/collaborate/exposiciones">
-                    <Button size="sm" variant="ghost">
-                      {t.teacherPresentationsCta}
-                    </Button>
+                  <Link
+                    href="/collaborate/exposiciones"
+                    className={buttonClasses({ size: "sm", variant: "ghost" })}
+                  >
+                    {t.teacherPresentationsCta}
                   </Link>
                 </div>
               </div>

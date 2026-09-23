@@ -5,9 +5,9 @@ import Link from "next/link";
 import { ShareLinkButton } from "@/components/growth/share-link-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sparkles } from "lucide-react";
+import { FilePlus2, Sparkles } from "lucide-react";
 
 export function ExamsHub() {
   const { profile } = useKampus();
@@ -16,18 +16,37 @@ export function ExamsHub() {
     <div className="space-y-8">
       <PageHeader
         eyebrow="Evaluación"
-        title="Flujo de exámenes"
-        description="Intentos, retroalimentación y publicación — un solo hilo para alumnos y docentes."
+        title="Evaluaciones"
+        description="Crea, corrige y publica exámenes — un solo lugar para todo el flujo."
         actions={
           <ShareLinkButton
             pathname="/exams"
             campaign="exam_workflow"
             refHandle={profile.university || "kampus"}
-            label="Compartir flujo"
+            label="Compartir"
             copiedLabel="Copiado"
           />
         }
       />
+
+      <Card className="border-purple-400/20 bg-purple-500/[0.06]">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-purple-100">
+            <FilePlus2 className="h-4 w-4" />
+            Crear un examen
+          </CardTitle>
+          <CardDescription>
+            El generador arma el examen por ti: eliges materia, tema y dificultad, y lo tienes
+            listo para publicar en minutos.
+          </CardDescription>
+        </CardHeader>
+        <div className="flex flex-wrap gap-2 px-6 pb-6">
+          <Link href="/teaching/examenes" className={buttonClasses({ size: "sm", className: "gap-2" })}>
+            <FilePlus2 className="h-4 w-4" />
+            Crear examen
+          </Link>
+        </div>
+      </Card>
 
       <Card className="border-indigo-400/20 bg-indigo-500/[0.06]">
         <CardHeader>
@@ -41,11 +60,9 @@ export function ExamsHub() {
           </CardDescription>
         </CardHeader>
         <div className="flex flex-wrap gap-2 px-6 pb-6">
-          <Link href="/exams/corrector">
-            <Button size="sm" className="gap-2">
-              <Sparkles className="h-4 w-4" />
-              Corregir un examen
-            </Button>
+          <Link href="/exams/corrector" className={buttonClasses({ size: "sm", className: "gap-2" })}>
+            <Sparkles className="h-4 w-4" />
+            Corregir un examen
           </Link>
         </div>
       </Card>
@@ -59,15 +76,14 @@ export function ExamsHub() {
           </CardDescription>
         </CardHeader>
         <div className="flex flex-wrap gap-2 px-6 pb-6">
-          <Link href="/exams/calendar">
-            <Button size="sm" className="gap-2">
-              Abrir calendario
-            </Button>
+          <Link href="/exams/calendar" className={buttonClasses({ size: "sm", className: "gap-2" })}>
+            Abrir calendario
           </Link>
-          <Link href="/collaborate/exposiciones">
-            <Button size="sm" variant="secondary" className="gap-2">
-              Crear exposición
-            </Button>
+          <Link
+            href="/collaborate/exposiciones"
+            className={buttonClasses({ size: "sm", variant: "secondary", className: "gap-2" })}
+          >
+            Crear exposición
           </Link>
         </div>
       </Card>
@@ -78,22 +94,22 @@ export function ExamsHub() {
             <CardTitle>Lado estudiante</CardTitle>
             <CardDescription>Ver exámenes, enviar intentos y recibir feedback.</CardDescription>
           </CardHeader>
-          <Link href="/exams">
-            <Button size="sm" variant="secondary">
-              Abrir exámenes (estudiante)
-            </Button>
-          </Link>
+          <div className="px-6 pb-6">
+            <Link href="/exams/student" className={buttonClasses({ size: "sm", variant: "secondary" })}>
+              Ver como estudiante
+            </Link>
+          </div>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Lado docente</CardTitle>
-            <CardDescription>Copiloto + publicación controlada.</CardDescription>
+            <CardTitle>Copiloto docente</CardTitle>
+            <CardDescription>Rúbricas, feedback y publicación de notas.</CardDescription>
           </CardHeader>
-          <Link href="/teaching">
-            <Button size="sm" variant="secondary">
+          <div className="px-6 pb-6">
+            <Link href="/teaching" className={buttonClasses({ size: "sm", variant: "secondary" })}>
               Abrir copiloto
-            </Button>
-          </Link>
+            </Link>
+          </div>
         </Card>
       </div>
     </div>
