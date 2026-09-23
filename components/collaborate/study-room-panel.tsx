@@ -114,14 +114,17 @@ export function StudyRoomPanel() {
       <p className="text-sm text-slate-400">{t.studyRoomSharedHint}</p>
 
       {cloudActive ? (
-        <p className="text-xs text-teal-200/90">
-          {syncing
-            ? t.studyRoomCloudSyncing
-            : realtime
-              ? t.studyRoomCloudRealtime
-              : t.studyRoomCloudActive}
-          {cloudError ? ` — ${t.studyRoomCloudError}` : null}
-        </p>
+        cloudError ? (
+          <p className="text-xs text-amber-200/80">{t.studyRoomCloudOffline}</p>
+        ) : (
+          <p className="text-xs text-teal-200/90">
+            {syncing
+              ? t.studyRoomCloudSyncing
+              : realtime
+                ? t.studyRoomCloudRealtime
+                : t.studyRoomCloudActive}
+          </p>
+        )
       ) : authUserId ? null : (
         <p className="text-xs text-slate-500">{t.studyRoomCloudLogin}</p>
       )}

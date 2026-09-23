@@ -83,6 +83,7 @@ export const collaborateCopy: Record<
     studyRoomCloudSyncing: string;
     studyRoomCloudRealtime: string;
     studyRoomCloudError: string;
+    studyRoomCloudOffline: string;
     studyRoomCloudLogin: string;
     hubFeatureDeadlineNotify: string;
     hubFeatureStudyRoomCloud: string;
@@ -428,6 +429,8 @@ export const collaborateCopy: Record<
     studyRoomCloudSyncing: "Guardando en la nube…",
     studyRoomCloudRealtime: "Tiempo real activo — los cambios de tu equipo aparecen al instante.",
     studyRoomCloudError: "Error de sync",
+    studyRoomCloudOffline:
+      "Sin sincronización por ahora — tus cambios se guardan en este dispositivo.",
     studyRoomCloudLogin: "Inicia sesión para sincronizar la sala con tu equipo.",
     hubFeatureDeadlineNotify: "Aviso entregas",
     hubFeatureStudyRoomCloud: "Sala en nube",
@@ -520,7 +523,7 @@ export const collaborateCopy: Record<
     webcalCopy: "Copiar enlace webcal",
     webcalCopied: "Copiado",
     webcalRotate: "Regenerar enlace",
-    webcalFootnote: "Pega el enlace en Google Calendar → Añadir calendario → Desde URL. Requiere SUPABASE_SERVICE_ROLE_KEY en el servidor.",
+    webcalFootnote: "Pega el enlace en Google Calendar → Añadir calendario → Desde URL. Tu calendario se actualiza solo.",
     webcalLoginRequired: "Inicia sesión para obtener tu feed webcal.",
     webcalError: "No se pudo cargar el feed webcal.",
     webcalCopyError: "No se pudo copiar al portapapeles.",

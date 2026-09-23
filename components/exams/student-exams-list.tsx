@@ -138,7 +138,6 @@ export function StudentExamsList() {
                 <Link href={`/exams/student/${exam.id}`}>
                   <Button size="sm">{t.openCta}</Button>
                 </Link>
-                <ExamPracticePanel subject={exam.subject} compact />
               </div>
             </CardHeader>
           </Card>

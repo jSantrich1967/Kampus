@@ -19,6 +19,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { buildSessionPresentationHref } from "@/lib/collaborate/virtual-session-path";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { friendlySupabaseError } from "@/lib/supabase/friendly-errors";
 import { enrollVirtualClassSession } from "@/lib/supabase/virtual-class-db";
 import { collaborateCopy } from "@/lib/i18n/collaborate";
 
@@ -137,8 +138,9 @@ export function VirtualClassroomSession({ sessionId }: Props) {
           classDate: row.class_date ?? null,
         });
       } catch (e) {
-        const msg = e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : null;
-        setLoadError(msg || (es ? "No se pudo cargar la sesión." : "Could not load session."));
+        setLoadError(
+          friendlySupabaseError(es ? "No se pudo cargar la sesión." : "Could not load session.", e),
+        );
         setSession(null);
       } finally {
         if (!cancelled) setLoading(false);

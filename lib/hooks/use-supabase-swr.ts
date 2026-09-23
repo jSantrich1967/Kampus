@@ -4,6 +4,7 @@ import useSWR from "swr";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { friendlySupabaseError } from "@/lib/supabase/friendly-errors";
 
 export type SwrSupabaseResult<T> = {
   data: T | undefined;
@@ -26,7 +27,13 @@ export function useSupabaseSWR<T>(
 
   return {
     data: swr.data,
-    error: swr.error ? String((swr.error as { message?: unknown })?.message ?? swr.error) : null,
+    // Nunca mostrar errores crudos de infraestructura al usuario.
+    error: swr.error
+      ? friendlySupabaseError(
+          "No pudimos cargar esta información. Revisa tu conexión e inténtalo de nuevo.",
+          swr.error,
+        )
+      : null,
     isLoading: Boolean(swr.isLoading),
     mutate: async () => (await swr.mutate()) as T | undefined,
   };
