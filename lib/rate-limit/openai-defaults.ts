@@ -91,3 +91,10 @@ export function virtualClassTranscribeRateLimits(): { max: number; windowMs: num
     windowMs: parseInt(process.env.API_RL_VIRTUAL_CLASS_TRANSCRIBE_WINDOW_MS ?? String(60 * 60 * 1000), 10),
   };
 }
+
+export function examGeneratorRateLimits(): { max: number; windowMs: number } {
+  return {
+    max: parseInt(process.env.API_RL_MAX_EXAM_GENERATOR ?? "15", 10),
+    windowMs: parseInt(process.env.API_RL_EXAM_GENERATOR_WINDOW_MS ?? String(60 * 60 * 1000), 10),
+  };
+}

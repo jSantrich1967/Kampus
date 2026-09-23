@@ -26,6 +26,7 @@ import {
   Bell,
   ClipboardCheck,
   Megaphone,
+  Award,
 } from "lucide-react";
 
 import type { UserRole } from "@/lib/schemas/profile";
@@ -61,7 +62,9 @@ export const navigationGroups: NavGroup[] = [
       { href: "/study/convertir", key: "convertir", icon: FileUp, roles: ["student", "learner"] },
       { href: "/study/plan", key: "studyPlan", icon: CalendarCheck, roles: ["student", "learner"] },
       { href: "/study/trabajos", key: "myWorks", icon: Send, roles: ["student", "learner"] },
+      { href: "/study/certificados", key: "myCertificates", icon: Award, roles: ["student", "learner"] },
       { href: "/study/avisos", key: "studentNotices", icon: Bell, roles: ["student", "learner"] },
+      { href: "/study/familia", key: "familyReport", icon: Users, roles: ["student", "learner"] },
       { href: "/study/library/rescue", key: "rescue", icon: LifeBuoy, roles: ["student", "learner"] },
       { href: "/study/flashcards", key: "flashcards", icon: Layers3, roles: ["student", "institution", "learner"] },
     ],
@@ -98,8 +101,12 @@ export const navigationGroups: NavGroup[] = [
     id: "teach",
     items: [
       { href: "/teaching", key: "teaching", icon: School, roles: ["teacher"] },
+      { href: "/teaching/examenes", key: "examGenerator", icon: FileUp, roles: ["teacher"] },
       { href: "/teaching/trabajos", key: "reviewWorks", icon: ClipboardCheck, roles: ["teacher"] },
+      { href: "/teaching/certificados", key: "issueCertificates", icon: Award, roles: ["teacher"] },
       { href: "/teaching/avisos", key: "teacherNotices", icon: Megaphone, roles: ["teacher"] },
+      { href: "/teaching/reportes", key: "teacherReports", icon: Send, roles: ["teacher"] },
+      { href: "/teaching/alertas", key: "teacherAlerts", icon: Bell, roles: ["teacher"] },
     ],
   },
   {

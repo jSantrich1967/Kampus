@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { mailboxCopy } from "@/lib/i18n/mailbox";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { logStudyActivity } from "@/lib/supabase/study-streak-db";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   createStudentWork,
@@ -119,6 +120,7 @@ export function StudentWorks() {
         teacherDisplayName: teacher.displayName,
       });
       setOk(t.sendOk);
+      logStudyActivity("trabajo");
       setTeacherId("");
       setCourse("");
       setTitle("");

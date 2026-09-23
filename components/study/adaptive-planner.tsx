@@ -8,8 +8,10 @@ import { useKampus } from "@/components/kampus/kampus-provider";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StudyStreakCard } from "@/components/study/study-streak-card";
 import { localIsoDate } from "@/lib/calendar/local-iso-date";
 import { buildPlan, recalculatePlan } from "@/lib/study/adaptive-plan";
+import { logStudyActivity } from "@/lib/supabase/study-streak-db";
 import {
   clearStudyPlan,
   createStudyPlan,
@@ -136,11 +138,14 @@ export function AdaptivePlanner() {
 
   const toggleSession = (id: string) => {
     if (!plan) return;
+    const target = plan.sessions.find((s) => s.id === id);
     const next = touchStudyPlan({
       ...plan,
       sessions: plan.sessions.map((s) => (s.id === id ? { ...s, done: !s.done } : s)),
     });
     setPlan(next);
+    // Solo cuenta cuando se MARCA como hecha (no al desmarcar).
+    if (target && !target.done) logStudyActivity("plan");
   };
 
   const doRecalculate = () => {
@@ -168,6 +173,8 @@ export function AdaptivePlanner() {
         title="Mi plan de estudio"
         description="Te reparto las horas de estudio entre tus materias: las que tienen el examen más cerca reciben más tiempo."
       />
+
+      <StudyStreakCard />
 
       {!plan && (
         <Card>

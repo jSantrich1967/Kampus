@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { SelfCorrection } from "@/lib/schemas/self-exam-corrector";
+import { logStudyActivity } from "@/lib/supabase/study-streak-db";
 import { cn } from "@/lib/cn";
 
 const inputClass =
@@ -204,6 +205,7 @@ export function SelfExamCorrector() {
         return;
       }
       setResult(json.correction);
+      logStudyActivity("quiz");
     } catch {
       setError("No se pudo conectar con el servidor. Inténtalo de nuevo.");
     } finally {

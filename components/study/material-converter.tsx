@@ -30,6 +30,7 @@ import {
 import { readRescueExtractJson } from "@/lib/rescue/extract-upload-limits";
 import type { MaterialConversion } from "@/lib/schemas/material-converter";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { logStudyActivity } from "@/lib/supabase/study-streak-db";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cn } from "@/lib/cn";
 
@@ -247,6 +248,7 @@ export function MaterialConverter() {
         return;
       }
       setResult(json.conversion);
+      logStudyActivity("convertir");
       setTab("summary");
       setCardIndex(0);
       setCardFlipped(false);
