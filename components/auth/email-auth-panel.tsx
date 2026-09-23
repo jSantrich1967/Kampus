@@ -236,7 +236,7 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
 
             <div className="relative flex items-center">
               <div className="h-px flex-1 border-t border-white/5" aria-hidden />
-              <span className="px-4 text-xs uppercase tracking-widest text-gray-500">{t.orContinueWithEmail}</span>
+              <span className="px-4 text-xs uppercase tracking-widest text-gray-400">{t.orContinueWithEmail}</span>
               <div className="h-px flex-1 border-t border-white/5" aria-hidden />
             </div>
 
@@ -255,7 +255,17 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
                 />
               </label>
               <label className="block space-y-2">
-                <span className="text-sm font-medium text-gray-300">{t.password}</span>
+                <span className="flex items-center justify-between text-sm font-medium text-gray-300">
+                  {t.password}
+                  {mode === "login" ? (
+                    <Link
+                      href="/auth/recuperar"
+                      className="text-xs font-normal text-purple-400 hover:underline"
+                    >
+                      {t.forgotPassword}
+                    </Link>
+                  ) : null}
+                </span>
                 <input
                   type="password"
                   name="password"
@@ -267,6 +277,9 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+                {mode === "register" ? (
+                  <span className="block text-xs text-gray-400">{t.passwordHint}</span>
+                ) : null}
               </label>
 
               {pendingEmailVerification && mode === "register" ? (
@@ -315,13 +328,13 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
       </div>
 
       <footer className="mt-auto flex gap-6 py-8 text-xs text-gray-500">
-        <Link href="#" className="hover:text-white">
+        <Link href="/terminos" className="hover:text-white">
           Términos
         </Link>
-        <Link href="#" className="hover:text-white">
+        <Link href="/privacidad" className="hover:text-white">
           Privacidad
         </Link>
-        <Link href="#" className="hover:text-white">
+        <Link href="/ayuda" className="hover:text-white">
           Ayuda
         </Link>
       </footer>

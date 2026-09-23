@@ -12,6 +12,8 @@ export default function DemoEntryPage() {
   const { setProfile } = useKampus();
 
   useEffect(() => {
+    // Mark this browser as demo so the middleware lets it browse the app without a Supabase session.
+    document.cookie = "kampus_demo=1; path=/; max-age=86400; SameSite=Lax";
     const demo = activateDemoMode();
     setProfile(demo);
     router.replace("/today");

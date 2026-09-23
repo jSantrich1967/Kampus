@@ -47,5 +47,21 @@ export const authCopy = {
       "NEXT_PUBLIC_REQUIRE_AUTH está en false: la app es navegable sin iniciar sesión aunque Supabase esté configurado. No uses esto en producción con datos reales. En builds que no son desarrollo, el aviso solo aparece si defines NEXT_PUBLIC_SHOW_AUTH_BYPASS_WARNING=true.",
     authBypassBannerDismiss: "Entendido, ocultar",
     authBypassBannerShowAgain: "Volver a mostrar el aviso de seguridad",
+    forgotPassword: "¿Olvidaste tu contraseña?",
+    passwordHint: "Mínimo 6 caracteres.",
+    recoverTitle: "Recuperar contraseña",
+    recoverDescription:
+      "Escribe el correo de tu cuenta y te enviaremos un enlace para crear una nueva clave.",
+    recoverSubmit: "Enviar enlace",
+    recoverSent:
+      "Si ese correo tiene una cuenta, recibirás el enlace en unos minutos. Revisa spam y «Promociones».",
+    backToLogin: "Volver a entrar",
+    newPasswordTitle: "Nueva contraseña",
+    newPasswordDescription: "Elige una clave nueva para tu cuenta.",
+    newPasswordSubmit: "Guardar contraseña",
+    newPasswordSuccess: "Contraseña actualizada. Ya puedes entrar con tu nueva clave.",
+    newPasswordInvalid:
+      "Este enlace no es válido o ya caducó. Pide un enlace nuevo e inténtalo otra vez.",
+    requestNewLink: "Pedir un enlace nuevo",
   },
 } as const;

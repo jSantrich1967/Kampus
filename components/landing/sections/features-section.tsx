@@ -38,8 +38,68 @@ export function FeaturesSection() {
             Visualiza tu crecimiento con analíticas predictivas que muestran exactamente cuándo dominarás un
             tema.
           </p>
-          <div className="relative mt-12 h-40 border-l border-purple-500/30">
-            <div className="absolute bottom-0 left-0 h-1/2 w-full bg-purple-500/10 blur-xl" />
+          <div
+            className="relative mt-8 h-44"
+            role="img"
+            aria-label="Gráfico de ejemplo: horas de estudio por día con tendencia creciente"
+          >
+            <svg viewBox="0 0 320 176" className="h-full w-full" aria-hidden="true">
+              <defs>
+                <linearGradient id="kampus-bar-grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#a78bfa" />
+                  <stop offset="100%" stopColor="#7c3aed" stopOpacity="0.55" />
+                </linearGradient>
+              </defs>
+              {[36, 76, 116, 156].map((y) => (
+                <line
+                  key={y}
+                  x1="8"
+                  y1={y}
+                  x2="312"
+                  y2={y}
+                  stroke="rgba(255,255,255,0.07)"
+                  strokeWidth="1"
+                />
+              ))}
+              {[
+                { x: 22, h: 44, day: "L" },
+                { x: 64, h: 68, day: "M" },
+                { x: 106, h: 54, day: "X" },
+                { x: 148, h: 92, day: "J" },
+                { x: 190, h: 78, day: "V" },
+                { x: 232, h: 118, day: "S" },
+                { x: 274, h: 138, day: "D" },
+              ].map((bar) => (
+                <g key={bar.day}>
+                  <rect
+                    x={bar.x}
+                    y={156 - bar.h}
+                    width="24"
+                    height={bar.h}
+                    rx="6"
+                    fill="url(#kampus-bar-grad)"
+                  />
+                  <text
+                    x={bar.x + 12}
+                    y="170"
+                    textAnchor="middle"
+                    fontSize="10"
+                    fill="#9ca3af"
+                  >
+                    {bar.day}
+                  </text>
+                </g>
+              ))}
+              <polyline
+                points="34,112 76,88 118,102 160,64 202,78 244,38 286,18"
+                fill="none"
+                stroke="#e9d5ff"
+                strokeWidth="2"
+                strokeDasharray="5 4"
+                strokeLinecap="round"
+              />
+              <circle cx="286" cy="18" r="4" fill="#a78bfa" />
+            </svg>
           </div>
         </div>
 
@@ -48,7 +108,7 @@ export function FeaturesSection() {
             <Globe className="h-6 w-6" />
           </div>
           <div className="mb-2 text-4xl font-bold">120+</div>
-          <div className="text-sm font-bold uppercase tracking-widest text-gray-500">Idiomas</div>
+          <div className="text-sm font-bold uppercase tracking-widest text-gray-400">Idiomas</div>
         </div>
 
         <div className="group relative overflow-hidden rounded-3xl bg-purple-600 lg:col-span-2">

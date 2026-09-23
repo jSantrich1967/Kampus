@@ -28,7 +28,7 @@ export function TestimonialsSection() {
             </div>
             <div className="mt-4 border-t border-white/5 pt-4">
               <p className="font-semibold text-white">{item.name}</p>
-              <p className="text-sm text-gray-500">{item.role}</p>
+              <p className="text-sm text-gray-400">{item.role}</p>
             </div>
           </article>
         ))}

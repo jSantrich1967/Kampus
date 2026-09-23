@@ -21,7 +21,7 @@ const jetbrains = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Kampus",
+    default: "Kampus · Plataforma educativa con IA",
     template: "%s · Kampus",
   },
   description: "El sistema operativo académico para estudiantes, docentes e instituciones.",

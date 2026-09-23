@@ -8,7 +8,7 @@ import { KampusLockup } from "@/components/brand/kampus-mark-svg";
 import { cn } from "@/lib/cn";
 
 const NAV_LINKS = [
-  { href: "#inicio", label: "Nosotros" },
+  { href: "#inicio", label: "Inicio" },
   { href: "#funciones", label: "Funciones" },
   { href: "#testimonios", label: "Testimonios" },
   { href: "#precios", label: "Precios" },
@@ -49,7 +49,7 @@ export function KampusLuminaNav() {
             href="/login"
             className="group hidden items-center gap-2 rounded-full bg-purple-600 px-5 py-2 text-sm font-semibold text-white transition-all hover:bg-purple-500 sm:flex"
           >
-            Log In
+            Entrar
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Link>
 
@@ -108,7 +108,7 @@ export function KampusLuminaNav() {
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-purple-500"
             onClick={closeMenu}
           >
-            Log In
+            Entrar
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>

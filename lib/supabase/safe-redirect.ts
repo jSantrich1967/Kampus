@@ -80,5 +80,25 @@ export function isAuthPublicPath(pathname: string): boolean {
   if (pathname === "/demo") return true;
   if (pathname.startsWith("/preview/")) return true;
   if (pathname.startsWith("/auth/")) return true;
+  if (pathname === "/privacidad" || pathname === "/terminos" || pathname === "/ayuda") return true;
   return false;
+}
+
+/**
+ * First segments that map to real app routes or public files.
+ * Unknown paths fall through the middleware so Next.js renders the branded
+ * 404 page instead of bouncing anonymous visitors to /login.
+ */
+const KNOWN_FIRST_SEGMENTS = new Set([
+  ...ALLOWED_FIRST_SEGMENTS,
+  "demo",
+  "preview",
+  "privacidad",
+  "terminos",
+  "ayuda",
+  "manifest.webmanifest",
+]);
+
+export function isKnownAppPath(pathname: string): boolean {
+  return KNOWN_FIRST_SEGMENTS.has(firstSegment(pathname));
 }

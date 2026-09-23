@@ -14,7 +14,7 @@ export function HeroSection({ exploreHref = "#funciones" }: HeroSectionProps) {
         <div className="relative z-10 space-y-8">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-purple-400">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-purple-500" />
-            Estamos contratando | Ver vacantes
+            Plataforma educativa con IA
           </div>
 
           <h1 className="text-5xl leading-[1.1] font-bold tracking-tight md:text-7xl">
@@ -46,7 +46,7 @@ export function HeroSection({ exploreHref = "#funciones" }: HeroSectionProps) {
             </Link>
             <a
               href={exploreHref}
-              className="hidden items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 px-8 py-4 font-bold transition-all hover:bg-white/10 md:flex"
+              className="flex items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 px-8 py-4 font-bold transition-all hover:bg-white/10"
             >
               <Globe className="h-5 w-5 text-purple-400" />
               Explorar funciones
@@ -57,7 +57,7 @@ export function HeroSection({ exploreHref = "#funciones" }: HeroSectionProps) {
             {HERO_STATS.map((stat) => (
               <div key={stat.value}>
                 <div className="mb-1 text-3xl font-bold">{stat.value}</div>
-                <div className="text-xs uppercase tracking-wider text-gray-500">
+                <div className="text-xs uppercase tracking-wider text-gray-400">
                   {stat.label}
                   {stat.sub ? (
                     <>

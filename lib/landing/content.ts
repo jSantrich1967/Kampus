@@ -1,5 +1,3 @@
-export const INVESTORS = ["Calendly", "Descript", "Gumroad", "Notion", "Figma"] as const;
-
 export const HERO_STATS = [
   { value: "95%", label: "Precisión de", sub: "personalización" },
   { value: "30%", label: "Eficiencia de", sub: "aprendizaje" },
@@ -41,8 +39,10 @@ export const PRICING_PLANS = [
   },
   {
     name: "Pro",
-    price: "€9",
+    price: "$10,30",
     period: "/ mes",
+    altPrice: "Bs. 8.788,93 / mes",
+    priceNote: "Tasa oficial BCV · 23/09/2026",
     description: "Para quienes quieren máximo rendimiento durante el curso.",
     features: ["Todo lo de Estudiante", "Modo Aprobar", "Analíticas avanzadas", "Soporte prioritario"],
     highlighted: true,
@@ -60,7 +60,6 @@ export const PRICING_PLANS = [
 export const LANDING_SECTIONS = [
   { id: "nav", label: "Navegación", file: "kampus-lumina-nav.tsx" },
   { id: "hero", label: "Héroe / Inicio", file: "sections/hero-section.tsx" },
-  { id: "inversores", label: "Inversores", file: "sections/investors-section.tsx" },
   { id: "funciones", label: "Funciones", file: "sections/features-section.tsx" },
   { id: "testimonios", label: "Testimonios", file: "sections/testimonials-section.tsx" },
   { id: "precios", label: "Precios", file: "sections/pricing-section.tsx" },

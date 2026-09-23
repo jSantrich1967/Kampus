@@ -27,14 +27,14 @@ export function KampusContactFooter() {
               {KAMPUS_SALES_EMAIL}
             </a>
 
-            <div className="mt-10 flex flex-wrap gap-6 text-sm text-gray-500">
-              <Link href="#" className="transition-colors hover:text-white">
+            <div className="mt-10 flex flex-wrap gap-6 text-sm text-gray-400">
+              <Link href="/privacidad" className="transition-colors hover:text-white">
                 Política de Privacidad
               </Link>
-              <Link href="#" className="transition-colors hover:text-white">
+              <Link href="/terminos" className="transition-colors hover:text-white">
                 Términos de Servicio
               </Link>
-              <Link href="#" className="transition-colors hover:text-white">
+              <Link href="/ayuda" className="transition-colors hover:text-white">
                 Centro de Ayuda
               </Link>
             </div>

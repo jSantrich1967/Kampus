@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { isAuthRouteProtectionEnabled, isSupabaseConfigured } from "@/lib/supabase/env";
-import { getSafeInternalRedirect, isAuthPublicPath } from "@/lib/supabase/safe-redirect";
+import { getSafeInternalRedirect, isAuthPublicPath, isKnownAppPath } from "@/lib/supabase/safe-redirect";
 
 /** Avoid Supabase round-trips for anonymous visitors to public routes (reduces Edge timeouts). */
 function hasLikelySupabaseAuthCookie(request: NextRequest): boolean {
@@ -34,6 +34,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Unknown paths: let Next.js render the branded 404 instead of bouncing to /login.
+  if (!isKnownAppPath(pathname)) {
+    return NextResponse.next();
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
@@ -58,8 +63,10 @@ export async function middleware(request: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession();
   const user = session?.user ?? null;
+  /** Browsers that entered through /demo can browse the app without a Supabase session. */
+  const demoMode = request.cookies.get("kampus_demo")?.value === "1";
 
-  if (!user && !isAuthPublicPath(pathname)) {
+  if (!user && !demoMode && !isAuthPublicPath(pathname)) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
     return redirectWithSessionCookies(response, loginUrl);

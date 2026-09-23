@@ -32,8 +32,14 @@ export function PricingSection() {
             <h3 className="text-xl font-bold">{plan.name}</h3>
             <div className="mt-4 mb-2 flex items-baseline gap-1">
               <span className="text-4xl font-bold">{plan.price}</span>
-              {plan.period ? <span className="text-gray-500">{plan.period}</span> : null}
+              {plan.period ? <span className="text-gray-400">{plan.period}</span> : null}
             </div>
+            {"altPrice" in plan && plan.altPrice ? (
+              <p className="text-sm font-semibold text-purple-300">{plan.altPrice}</p>
+            ) : null}
+            {"priceNote" in plan && plan.priceNote ? (
+              <p className="mb-2 text-xs text-gray-400">{plan.priceNote}</p>
+            ) : null}
             <p className="mb-8 text-sm leading-relaxed text-gray-400">{plan.description}</p>
             <ul className="mb-8 flex-1 space-y-3">
               {plan.features.map((feature) => (
@@ -60,6 +66,11 @@ export function PricingSection() {
           </article>
         ))}
       </div>
+
+      <p className="mx-auto mt-10 max-w-7xl px-6 text-center text-xs text-gray-400">
+        Precio en bolívares calculado a la tasa oficial del BCV del 23/09/2026 (USD&nbsp;Bs.&nbsp;853,50).
+        La tasa se actualiza periódicamente.
+      </p>
     </section>
   );
 }

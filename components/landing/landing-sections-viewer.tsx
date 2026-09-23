@@ -9,7 +9,6 @@ import { KampusContactFooter } from "@/components/landing/kampus-contact-footer"
 import { KampusLuminaNav } from "@/components/landing/kampus-lumina-nav";
 import { FeaturesSection } from "@/components/landing/sections/features-section";
 import { HeroSection } from "@/components/landing/sections/hero-section";
-import { InvestorsSection } from "@/components/landing/sections/investors-section";
 import { PricingSection } from "@/components/landing/sections/pricing-section";
 import { TestimonialsSection } from "@/components/landing/sections/testimonials-section";
 import { cn } from "@/lib/cn";
@@ -27,8 +26,6 @@ function SectionCanvas({ sectionId }: { sectionId: LandingSectionId }) {
       return <KampusLuminaNav />;
     case "hero":
       return <HeroSection exploreHref="#" />;
-    case "inversores":
-      return <InvestorsSection />;
     case "funciones":
       return <FeaturesSection />;
     case "testimonios":
