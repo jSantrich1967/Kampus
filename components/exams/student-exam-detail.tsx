@@ -21,7 +21,6 @@ import type { Exam, ExamAttempt } from "@/lib/schemas/exams";
 import {
   createAttempt,
   getExamById,
-  gradeAttempt,
   listAttemptsForExam,
 } from "@/lib/storage/exams-storage";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -30,9 +29,7 @@ import {
   fetchAttemptsForExam,
   fetchExamById,
   insertAttemptRemote,
-  updateAttemptFeedbackRemote,
 } from "@/lib/supabase/agenda-db";
-import { buildDemoGradingFeedback } from "@/lib/exams/demo-feedback-from-answers";
 import { cn } from "@/lib/cn";
 
 type DetailTab = "respond" | "attempts";
@@ -150,7 +147,6 @@ export function StudentExamDetail({ examId }: { examId: string }) {
     setSubmitBusy(true);
     setSubmitError(null);
     try {
-      const feedback = buildDemoGradingFeedback(current, answers);
       if (useCloud) {
         const supabase = createSupabaseBrowserClient();
         const next = await insertAttemptRemote(supabase, authUserId!, {
@@ -159,11 +155,9 @@ export function StudentExamDetail({ examId }: { examId: string }) {
           answers,
         });
         setSubmittedId(next.id);
-        await updateAttemptFeedbackRemote(supabase, authUserId!, next.id, feedback);
       } else {
         const next = createAttempt({ examId: current.id, studentLabel, answers });
         setSubmittedId(next.id);
-        gradeAttempt(next.id, feedback);
       }
       setAnswers({});
       setActiveTab("attempts");
@@ -252,8 +246,19 @@ export function StudentExamDetail({ examId }: { examId: string }) {
           </CardHeader>
 
           <div className="space-y-4 px-5 pb-5">
-            <div className="rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-50">
-              {t.submitDemoWarning}
+            <div className="rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-50">
+              <p>
+                Tus respuestas se guardan como intento. Aquí no hay nota automática inventada: la corrección
+                real está en <span className="font-semibold">Mi corrección</span>, donde subes tu examen
+                resuelto y recibes análisis de errores con IA.
+              </p>
+              <div className="mt-2">
+                <Link href="/exams/mi-correccion">
+                  <Button size="sm" variant="secondary">
+                    Ir a Mi corrección
+                  </Button>
+                </Link>
+              </div>
             </div>
 
             {exam.questions.map((q, idx) => (
@@ -291,6 +296,20 @@ export function StudentExamDetail({ examId }: { examId: string }) {
             <CardDescription>{attemptsDescription}</CardDescription>
           </CardHeader>
           <div className="space-y-3 px-5 pb-5">
+            {submittedId ? (
+              <div className="rounded-2xl border border-emerald-400/25 bg-emerald-500/10 p-4">
+                <p className="text-sm text-emerald-50">
+                  Intento recibido. La corrección automática real está en{" "}
+                  <span className="font-semibold">Mi corrección</span>: sube tu examen resuelto y recibe
+                  análisis de errores con IA.
+                </p>
+                <div className="mt-3">
+                  <Link href="/exams/mi-correccion">
+                    <Button size="sm">Ir a Mi corrección</Button>
+                  </Link>
+                </div>
+              </div>
+            ) : null}
             {loadingAttempts ? (
               <div className="flex items-center gap-2 text-sm text-slate-400">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -305,41 +324,20 @@ export function StudentExamDetail({ examId }: { examId: string }) {
                     <div className="text-sm font-semibold text-white">
                       {t.attemptSubmitted(new Date(a.submittedAt).toLocaleString())}
                     </div>
-                    <Badge tone={a.status === "graded" ? "success" : "neutral"}>
-                      {a.status === "graded" ? t.attemptGraded : t.attemptSent}
-                    </Badge>
+                    <Badge tone="neutral">{t.attemptSent}</Badge>
                   </div>
-                  {a.feedback ? (
-                    <div className="mt-3 space-y-2">
-                      <div className="text-3xl font-semibold text-white">{a.feedback.score}%</div>
-                      <p className="text-sm text-slate-200">{a.feedback.summary}</p>
-                      {a.feedback.strengths.length ? (
-                        <div>
-                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t.strengths}</div>
-                          <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-slate-200">
-                            {a.feedback.strengths.map((s) => (
-                              <li key={s}>{s}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : null}
-                      {a.feedback.improvements.length ? (
-                        <div>
-                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                            {t.improvements}
-                          </div>
-                          <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-slate-200">
-                            {a.feedback.improvements.map((s) => (
-                              <li key={s}>{s}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : null}
-                      <ExamPracticePanel subject={exam.subject} compact />
-                    </div>
-                  ) : (
-                    <div className="mt-2 text-sm text-slate-400">{t.attemptNoFeedback}</div>
-                  )}
+                  <div className="mt-3 space-y-2">
+                    <p className="text-sm text-slate-400">
+                      Sin corrección automática aquí: sube tu examen resuelto en{" "}
+                      <span className="font-semibold text-slate-200">Mi corrección</span> para recibir el
+                      análisis de errores con IA.
+                    </p>
+                    <Link href="/exams/mi-correccion">
+                      <Button size="sm" variant="secondary">
+                        Ir a Mi corrección
+                      </Button>
+                    </Link>
+                  </div>
 
                   {submittedId === a.id ? <div className="mt-2 text-xs text-indigo-200">{t.attemptLast}</div> : null}
                 </div>

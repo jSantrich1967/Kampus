@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
-import { demoExamDueDatesSameMonth } from "@/lib/calendar/local-iso-date";
+import { demoExamDueDatesSameMonth, localIsoDate } from "@/lib/calendar/local-iso-date";
 import { examFeedbackSchema, examQuestionSchema, type Exam, type ExamAttempt, type ExamFeedback } from "@/lib/schemas/exams";
 import {
   classCancellationListSchema,
@@ -196,7 +196,11 @@ export async function ensureDemoExamsRemote(client: SupabaseClient, userId: stri
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId);
   if (cErr) throw new Error(formatAgendaCloudError(cErr.message));
-  if ((count ?? 0) > 0) return;
+  if ((count ?? 0) > 0) {
+    // Ya hay exámenes: renuévales la fecha a los demos vencidos sembrados en visitas viejas.
+    await refreshExpiredDemoExamsRemote(client, userId);
+    return;
+  }
 
   const subject = (subjectHint && subjectHint.trim()) || "Econometría";
   const { due1, due2 } = demoExamDueDatesSameMonth();
@@ -224,6 +228,40 @@ export async function ensureDemoExamsRemote(client: SupabaseClient, userId: stri
     },
   ]);
   if (iErr) throw new Error(formatAgendaCloudError(iErr.message));
+}
+
+/**
+ * Renueva en la nube la fecha de vencimiento de los demos ya vencidos:
+ * los datos sembrados en visitas viejas seguirían mostrando fecha pasada.
+ * Un UPDATE por fila vencida, solo para el usuario actual.
+ */
+export async function refreshExpiredDemoExamsRemote(client: SupabaseClient, userId: string): Promise<void> {
+  const today = localIsoDate();
+  const { data, error } = await client
+    .from("user_exams")
+    .select("id,due_date,title")
+    .eq("user_id", userId)
+    .ilike("title", "%(demo)%");
+  if (error) throw new Error(formatAgendaCloudError(error.message));
+  const rows = (data ?? []) as { id: string; due_date: string | null; title: string }[];
+  const expired = rows.filter((r) => {
+    const due = (r.due_date ?? "").trim();
+    return due !== "" && due < today;
+  });
+  if (expired.length === 0) return;
+
+  const { due1, due2 } = demoExamDueDatesSameMonth();
+  let slot = 0;
+  for (const row of expired) {
+    const fresh = slot % 2 === 0 ? due1 : due2;
+    slot += 1;
+    const { error: uErr } = await client
+      .from("user_exams")
+      .update({ due_date: fresh })
+      .eq("id", row.id)
+      .eq("user_id", userId);
+    if (uErr) throw new Error(formatAgendaCloudError(uErr.message));
+  }
 }
 
 export async function fetchAttemptsForExam(

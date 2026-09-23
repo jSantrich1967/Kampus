@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { demoExamDueDatesSameMonth } from "@/lib/calendar/local-iso-date";
+import { demoExamDueDatesSameMonth, localIsoDate } from "@/lib/calendar/local-iso-date";
 import { examAttemptSchema, examSchema, type Exam, type ExamAttempt, type ExamFeedback } from "@/lib/schemas/exams";
 
 const EXAMS_KEY = "kampus.exams.v1";
@@ -33,40 +33,70 @@ function writeJson(key: string, value: unknown) {
   window.localStorage.setItem(key, JSON.stringify(value));
 }
 
+/** Marca del título que identifica los exámenes demo sembrados automáticamente. */
+const DEMO_TITLE_MARK = "(demo)";
+
+/**
+ * Renueva la fecha de vencimiento de los demos ya vencidos: los datos
+ * sembrados hace semanas seguirían mostrando "hace N días" para siempre.
+ * Los deja en fechas futuras relativas para que ningún demo se vea vencido.
+ */
+export function refreshExpiredDemoExams() {
+  if (typeof window === "undefined") return;
+  const today = localIsoDate();
+  const exams = loadExams();
+  const { due1, due2 } = demoExamDueDatesSameMonth();
+  let changed = false;
+  let slot = 0;
+  const next = exams.map((exam) => {
+    const due = (exam.dueDate ?? "").trim();
+    if (!exam.title.includes(DEMO_TITLE_MARK) || !due || due >= today) return exam;
+    changed = true;
+    const fresh = slot % 2 === 0 ? due1 : due2;
+    slot += 1;
+    return { ...exam, dueDate: fresh };
+  });
+  if (changed) saveExams(next);
+}
+
 export function seedDemoExamsIfEmpty(subjectHint?: string) {
   if (typeof window === "undefined") return;
   const existing = loadExams();
-  if (existing.length > 0) return;
+  if (existing.length === 0) {
+    const subject = (subjectHint && subjectHint.trim()) || "Econometría";
+    const { due1, due2 } = demoExamDueDatesSameMonth();
+    const demo: Exam[] = [
+      {
+        id: uid("exam"),
+        subject,
+        title: "Parcial 1 (demo)",
+        description: "Responde con claridad y muestra pasos cuando aplique.",
+        status: "open",
+        dueDate: due1,
+        questions: [
+          { id: "q1", prompt: "Define heterocedasticidad y explica por qué importa." },
+          { id: "q2", prompt: "Describe un test para detectarla y cómo interpretar el resultado." },
+        ],
+        createdAt: nowIso(),
+      },
+      {
+        id: uid("exam"),
+        subject,
+        title: "Quiz corto de práctica (demo)",
+        description: "Pensado para 12–18 minutos.",
+        status: "open",
+        dueDate: due2,
+        questions: [{ id: "q1", prompt: "Explica la intuición detrás de MCO y menciona un supuesto clave." }],
+        createdAt: nowIso(),
+      },
+    ];
 
-  const subject = (subjectHint && subjectHint.trim()) || "Econometría";
-  const { due1, due2 } = demoExamDueDatesSameMonth();
-  const demo: Exam[] = [
-    {
-      id: uid("exam"),
-      subject,
-      title: "Parcial 1 (demo)",
-      description: "Responde con claridad y muestra pasos cuando aplique.",
-      status: "open",
-      dueDate: due1,
-      questions: [
-        { id: "q1", prompt: "Define heterocedasticidad y explica por qué importa." },
-        { id: "q2", prompt: "Describe un test para detectarla y cómo interpretar el resultado." },
-      ],
-      createdAt: nowIso(),
-    },
-    {
-      id: uid("exam"),
-      subject,
-      title: "Quiz corto de práctica (demo)",
-      description: "Pensado para 12–18 minutos.",
-      status: "open",
-      dueDate: due2,
-      questions: [{ id: "q1", prompt: "Explica la intuición detrás de MCO y menciona un supuesto clave." }],
-      createdAt: nowIso(),
-    },
-  ];
+    writeJson(EXAMS_KEY, demo);
+  }
 
-  writeJson(EXAMS_KEY, demo);
+  // Los demos sembrados en visitas viejas pueden haber vencido: renuévalos
+  // para que ningún demo muestre fecha pasada.
+  refreshExpiredDemoExams();
 }
 
 export function loadExams(): Exam[] {
