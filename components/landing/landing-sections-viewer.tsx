@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight, ExternalLink } from "lucide-react";
 
 import { KampusContactFooter } from "@/components/landing/kampus-contact-footer";
 import { KampusLuminaNav } from "@/components/landing/kampus-lumina-nav";
+import { FaqSection } from "@/components/landing/sections/faq-section";
 import { FeaturesSection } from "@/components/landing/sections/features-section";
 import { HeroSection } from "@/components/landing/sections/hero-section";
 import { PricingSection } from "@/components/landing/sections/pricing-section";
@@ -32,6 +33,8 @@ function SectionCanvas({ sectionId }: { sectionId: LandingSectionId }) {
       return <TestimonialsSection />;
     case "precios":
       return <PricingSection />;
+    case "faq":
+      return <FaqSection />;
     case "contacto":
       return <KampusContactFooter />;
     default:

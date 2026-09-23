@@ -3,6 +3,8 @@ import Link from "next/link";
 import { SalesContactButton } from "@/components/landing/sales-contact-form";
 import { PRICING_PLANS } from "@/lib/landing/content";
 
+import { BcvPrice, BcvRateNote } from "./bcv-price";
+
 export function PricingSection() {
   return (
     <section id="precios" className="py-32">
@@ -34,12 +36,18 @@ export function PricingSection() {
               <span className="text-4xl font-bold">{plan.price}</span>
               {plan.period ? <span className="text-gray-400">{plan.period}</span> : null}
             </div>
-            {"altPrice" in plan && plan.altPrice ? (
-              <p className="text-sm font-semibold text-purple-300">{plan.altPrice}</p>
-            ) : null}
-            {"priceNote" in plan && plan.priceNote ? (
-              <p className="mb-2 text-xs text-gray-400">{plan.priceNote}</p>
-            ) : null}
+            {"usdPrice" in plan && typeof plan.usdPrice === "number" ? (
+              <BcvPrice usdPrice={plan.usdPrice} />
+            ) : (
+              <>
+                {"altPrice" in plan && plan.altPrice ? (
+                  <p className="text-sm font-semibold text-purple-300">{plan.altPrice}</p>
+                ) : null}
+                {"priceNote" in plan && plan.priceNote ? (
+                  <p className="mb-2 text-xs text-gray-400">{plan.priceNote}</p>
+                ) : null}
+              </>
+            )}
             <p className="mb-8 text-sm leading-relaxed text-gray-400">{plan.description}</p>
             <ul className="mb-8 flex-1 space-y-3">
               {plan.features.map((feature) => (
@@ -67,10 +75,7 @@ export function PricingSection() {
         ))}
       </div>
 
-      <p className="mx-auto mt-10 max-w-7xl px-6 text-center text-xs text-gray-400">
-        Precio en bolívares calculado a la tasa oficial del BCV del 23/09/2026 (USD&nbsp;Bs.&nbsp;853,50).
-        La tasa se actualiza periódicamente.
-      </p>
+      <BcvRateNote />
     </section>
   );
 }

@@ -41,8 +41,7 @@ export const PRICING_PLANS = [
     name: "Pro",
     price: "$10,30",
     period: "/ mes",
-    altPrice: "Bs. 8.788,93 / mes",
-    priceNote: "Tasa oficial BCV · 23/09/2026",
+    usdPrice: 10.3,
     description: "Para quienes quieren máximo rendimiento durante el curso.",
     features: ["Todo lo de Estudiante", "Modo Aprobar", "Analíticas avanzadas", "Soporte prioritario"],
     highlighted: true,
@@ -63,9 +62,43 @@ export const LANDING_SECTIONS = [
   { id: "funciones", label: "Funciones", file: "sections/features-section.tsx" },
   { id: "testimonios", label: "Testimonios", file: "sections/testimonials-section.tsx" },
   { id: "precios", label: "Precios", file: "sections/pricing-section.tsx" },
+  { id: "faq", label: "Preguntas frecuentes", file: "sections/faq-section.tsx" },
   { id: "contacto", label: "Contacto", file: "kampus-contact-footer.tsx" },
   { id: "register", label: "Registro", file: "auth/email-auth-panel.tsx", href: "/register" },
   { id: "login", label: "Login", file: "auth/email-auth-panel.tsx", href: "/login" },
+] as const;
+
+export const FAQS = [
+  {
+    question: "¿Kampus es gratis?",
+    answer:
+      "Sí. El plan Estudiante es gratis para siempre e incluye rutas de aprendizaje adaptativas, tutor IA básico y seguimiento de progreso. El plan Pro desbloquea el modo Aprobar, analíticas avanzadas y soporte prioritario.",
+  },
+  {
+    question: "¿Cómo se calcula el precio en bolívares?",
+    answer:
+      "El precio en bolívares se calcula automáticamente con la tasa oficial del dólar publicada por el BCV y se actualiza todos los días, así que siempre pagas el equivalente justo en el momento de tu suscripción.",
+  },
+  {
+    question: "¿Puedo usar Kampus en mi colegio o universidad?",
+    answer:
+      "Sí. El plan Institución está pensado para facultades, academias y centros formativos: incluye panel docente, integración con tu LMS, inicio de sesión institucional (SSO) y formación para tu equipo. Escríbenos desde la sección de contacto y te armamos una propuesta a medida.",
+  },
+  {
+    question: "¿Necesito instalar algo?",
+    answer:
+      "No. Kampus funciona directamente en tu navegador, en computadora o teléfono. Si quieres, puedes instalarla como aplicación desde el navegador para acceder más rápido.",
+  },
+  {
+    question: "¿Kampus reemplaza a mis profesores?",
+    answer:
+      "No, los potencia. Kampus es una herramienta de apoyo: personaliza la práctica, organiza el estudio y le da al docente datos claros del progreso de cada estudiante para intervenir a tiempo.",
+  },
+  {
+    question: "¿Qué necesito para empezar?",
+    answer:
+      "Solo crear tu cuenta gratis. En minutos tienes tu primera ruta de aprendizaje adaptativa lista, sin tarjeta ni compromiso.",
+  },
 ] as const;
 
 export type LandingSectionId = (typeof LANDING_SECTIONS)[number]["id"];
