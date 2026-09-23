@@ -127,7 +127,7 @@ export async function createStudentWork(
   const uid = userData.user?.id;
   if (!uid) throw new Error("auth");
   const { data, error } = await client
-    .from("student_works")
+    .from("student_submissions")
     .insert({
       student_user_id: uid,
       teacher_user_id: input.teacherUserId,
@@ -147,7 +147,7 @@ export async function createStudentWork(
 /** Trabajos del estudiante autenticado (con devoluciones). */
 export async function listMyStudentWorks(client: SupabaseClient): Promise<StudentWork[]> {
   const { data, error } = await client
-    .from("student_works")
+    .from("student_submissions")
     .select(
       "id,student_user_id,teacher_user_id,session_id,course,title,body,student_display_name,teacher_display_name,status,feedback,grade,created_at,reviewed_at",
     )
@@ -159,7 +159,7 @@ export async function listMyStudentWorks(client: SupabaseClient): Promise<Studen
 /** Buzón del profesor: trabajos que le enviaron sus estudiantes. */
 export async function listWorksForReview(client: SupabaseClient): Promise<StudentWork[]> {
   const { data, error } = await client
-    .from("student_works")
+    .from("student_submissions")
     .select(
       "id,student_user_id,teacher_user_id,session_id,course,title,body,student_display_name,teacher_display_name,status,feedback,grade,created_at,reviewed_at",
     )
@@ -179,7 +179,7 @@ export async function reviewStudentWork(
       ? null
       : Math.min(20, Math.max(0, Math.round(input.grade * 10) / 10));
   const { error } = await client
-    .from("student_works")
+    .from("student_submissions")
     .update({
       feedback: input.feedback.trim(),
       grade,

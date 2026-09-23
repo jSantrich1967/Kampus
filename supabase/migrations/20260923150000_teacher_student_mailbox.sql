@@ -1,6 +1,6 @@
 -- Kampus: conexión profesor ↔ estudiante sin exponer perfiles.
 --
--- - student_works: el estudiante envía trabajos/informes a su profesor; el
+-- - student_submissions: el estudiante envía trabajos/informes a su profesor; el
 --   profesor los corrige (devolución + nota 0-20). Ninguna de las partes puede
 --   ver el perfil de la otra: los nombres se guardan como instantánea
 --   (student_display_name / teacher_display_name) y la app nunca consulta la
@@ -14,6 +14,15 @@
 --
 -- IDEMPOTENTE: puede ejecutarse varias veces sin daño.
 -- APLICAR: Supabase → SQL Editor → pegar → Run.
+--
+-- NOTA: la tabla student_works ya existe en producción (tareas propias del
+-- estudiante, creada en 2024). Esta funcionalidad usa student_submissions
+-- para no chocar con ella.
+
+-- La primera versión de este script pisó el comentario de student_works;
+-- lo restauramos a algo neutral.
+comment on table public.student_works is
+  'Tareas/trabajos propios del estudiante (funcionalidad existente).';
 
 -- ---------------------------------------------------------------------------
 -- Helpers SECURITY DEFINER (evitan recursión con las políticas del aula)
@@ -61,10 +70,10 @@ grant execute on function public.ts_is_my_teacher(uuid) to authenticated;
 grant execute on function public.list_my_teachers() to authenticated;
 
 -- ---------------------------------------------------------------------------
--- student_works: trabajos/informes del estudiante → corrección del profesor
+-- student_submissions: trabajos/informes del estudiante → corrección del profesor
 -- ---------------------------------------------------------------------------
 
-create table if not exists public.student_works (
+create table if not exists public.student_submissions (
   id uuid primary key default gen_random_uuid(),
   student_user_id uuid not null references auth.users (id) on delete cascade,
   teacher_user_id uuid not null references auth.users (id) on delete cascade,
@@ -81,20 +90,20 @@ create table if not exists public.student_works (
   reviewed_at timestamptz
 );
 
-comment on table public.student_works is
+comment on table public.student_submissions is
   'Trabajos/informes que el estudiante envía a su profesor y la corrección devuelta. Sin acceso cruzado a perfiles.';
 
-create index if not exists student_works_student_idx
-  on public.student_works (student_user_id, created_at desc);
-create index if not exists student_works_teacher_idx
-  on public.student_works (teacher_user_id, status, created_at desc);
+create index if not exists student_submissions_student_idx
+  on public.student_submissions (student_user_id, created_at desc);
+create index if not exists student_submissions_teacher_idx
+  on public.student_submissions (teacher_user_id, status, created_at desc);
 
-alter table public.student_works enable row level security;
+alter table public.student_submissions enable row level security;
 
 -- El estudiante envía a un profesor suyo (de una sesión donde está inscrito).
-drop policy if exists "student_works_insert_student" on public.student_works;
-create policy "student_works_insert_student"
-  on public.student_works
+drop policy if exists "student_submissions_insert_student" on public.student_submissions;
+create policy "student_submissions_insert_student"
+  on public.student_submissions
   for insert
   to authenticated
   with check (
@@ -103,33 +112,33 @@ create policy "student_works_insert_student"
   );
 
 -- El estudiante ve sus propios envíos (con la devolución del profesor).
-drop policy if exists "student_works_select_student" on public.student_works;
-create policy "student_works_select_student"
-  on public.student_works
+drop policy if exists "student_submissions_select_student" on public.student_submissions;
+create policy "student_submissions_select_student"
+  on public.student_submissions
   for select
   to authenticated
   using (student_user_id = auth.uid());
 
 -- El profesor ve los trabajos que le enviaron.
-drop policy if exists "student_works_select_teacher" on public.student_works;
-create policy "student_works_select_teacher"
-  on public.student_works
+drop policy if exists "student_submissions_select_teacher" on public.student_submissions;
+create policy "student_submissions_select_teacher"
+  on public.student_submissions
   for select
   to authenticated
   using (teacher_user_id = auth.uid());
 
 -- El profesor corrige: devolución, nota y estado.
-drop policy if exists "student_works_update_teacher" on public.student_works;
-create policy "student_works_update_teacher"
-  on public.student_works
+drop policy if exists "student_submissions_update_teacher" on public.student_submissions;
+create policy "student_submissions_update_teacher"
+  on public.student_submissions
   for update
   to authenticated
   using (teacher_user_id = auth.uid())
   with check (teacher_user_id = auth.uid());
 
-revoke all on table public.student_works from public;
-grant select, insert, update on table public.student_works to authenticated;
-grant all on table public.student_works to service_role;
+revoke all on table public.student_submissions from public;
+grant select, insert, update on table public.student_submissions to authenticated;
+grant all on table public.student_submissions to service_role;
 
 -- ---------------------------------------------------------------------------
 -- teacher_announcements: avisos/material del profesor → sus estudiantes
