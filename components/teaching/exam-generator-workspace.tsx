@@ -196,7 +196,7 @@ export function ExamGeneratorWorkspace() {
                 className={inputClass}
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                placeholder="Biología"
+                placeholder="Ej.: Biología"
               />
             </div>
             <div>
@@ -205,7 +205,7 @@ export function ExamGeneratorWorkspace() {
                 className={inputClass}
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
-                placeholder="Fotosíntesis: fase luminosa y ciclo de Calvin"
+                placeholder="Ej.: Fotosíntesis: fase luminosa y ciclo de Calvin"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
