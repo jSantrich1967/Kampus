@@ -52,11 +52,12 @@ type UiSession = {
 };
 
 export function VirtualClassroomHub() {
-  const { locale, authUserId } = useKampus();
+  const { locale, authUserId, profile } = useKampus();
   const searchParams = useSearchParams();
   const scheduleIdParam = searchParams.get("scheduleId");
   const classDateParam = searchParams.get("classDate");
   const es = locale === "es";
+  const isTeacher = profile.role === "teacher";
   const t = navCopy.es;
   const c = collaborateCopy.es;
   const [schedulePrefill, setSchedulePrefill] = useState<VirtualClassSchedulePrefill | null>(null);
@@ -150,9 +151,15 @@ export function VirtualClassroomHub() {
       <CollaborateSubnav />
 
       <PageHeader
-        eyebrow={c.eyebrow}
+        eyebrow={isTeacher ? (es ? "Enseñanza" : "Teaching") : c.eyebrow}
         title={c.classroomPageTitle}
-        description={c.classroomPageDescription}
+        description={
+          isTeacher
+            ? es
+              ? "Crea sesiones en vivo para tus materias: comparte el enlace con tu alumnado, gestiona el roster y revisa grabaciones y asistencia."
+              : "Create live sessions for your courses: share the link with your students, manage the roster, and review recordings and attendance."
+            : c.classroomPageDescription
+        }
       />
 
       {!isSupabaseConfigured() ? (
@@ -163,7 +170,11 @@ export function VirtualClassroomHub() {
         </p>
       ) : !authUserId ? (
         <p className="text-sm text-slate-400">
-          {es ? "Inicia sesión para ver tus sesiones de aula virtual." : "Sign in to see your virtual classroom sessions."}
+          {es
+            ? isTeacher
+              ? "Inicia sesión para crear y gestionar tus clases en el aula virtual."
+              : "Inicia sesión para ver tus sesiones de aula virtual."
+            : "Sign in to see your virtual classroom sessions."}
         </p>
       ) : loadError ? (
         <p className="text-sm text-rose-200/90">{loadError}</p>
@@ -189,7 +200,13 @@ export function VirtualClassroomHub() {
           <Card className="border-white/10 bg-slate-950/40">
             <CardHeader>
               <CardTitle>{es ? "Sin sesiones" : "No sessions"}</CardTitle>
-              <CardDescription>{c.virtualClassEmptyHint}</CardDescription>
+              <CardDescription>
+              {isTeacher
+                ? es
+                  ? "Aún no hay sesiones. Crea tu primera clase en vivo con el formulario de abajo."
+                  : "No sessions yet. Create your first live class with the form below."
+                : c.virtualClassEmptyHint}
+            </CardDescription>
             </CardHeader>
           </Card>
         ) : null}
@@ -222,7 +239,15 @@ export function VirtualClassroomHub() {
                   {s.enrolled}/{s.capacity} {es ? "inscritos" : "enrolled"}
                 </div>
                 <div className="flex flex-wrap gap-2 pt-1">
-                  {full ? (
+                  {isTeacher ? (
+                    <Link
+                      href={`/collaborate/aula-virtual/${encodeURIComponent(s.id)}`}
+                      className={buttonClasses({ size: "sm", className: "gap-2" })}
+                    >
+                      <Video className="h-4 w-4" />
+                      {c.virtualClassEnter}
+                    </Link>
+                  ) : full ? (
                     <Button type="button" size="sm" disabled>
                       {c.virtualClassNoSeats}
                     </Button>
