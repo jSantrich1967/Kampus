@@ -51,10 +51,12 @@ export type NavItemKey = keyof typeof navCopy.es.items;
  */
 export const teacherNavItemOverrides: Partial<Record<NavItemKey, string>> = {
   library: "Cuadernos",
+  exams: "Evaluaciones",
   agendaCalendar: "Calendario",
+  risk: "Seguimiento",
+  rooms: "Aula virtual",
   myPresentations: "Exposiciones",
   myResearch: "Investigaciones",
-  diary: "Diario",
 };
 
 export function navLabelForRole(role: UserRole, key: NavItemKey): string {
@@ -62,9 +64,10 @@ export function navLabelForRole(role: UserRole, key: NavItemKey): string {
   return navCopy.es.items[key];
 }
 
-/** Para docentes, el grupo "Estudio" (material de clase) se llama "Material". */
+/** Grupos del menú docente: Enseñanza y Comunidad en vez de Estudio/Colaborar. */
 export const teacherNavGroupOverrides: Partial<Record<string, string>> = {
-  learn: "Material",
+  teach: "Enseñanza",
+  work: "Comunidad",
 };
 
 export function navGroupLabelForRole(role: UserRole, groupId: string): string {

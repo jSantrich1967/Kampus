@@ -98,7 +98,30 @@ export const navigationGroups: NavGroup[] = [
   },
 ];
 
+/**
+ * Menú docente con estructura propia: no es el menú de estudiante maquillado.
+ * Principal → Enseñanza → Evaluación → Comunidad → Sistema.
+ */
+const teacherNavStructure: Array<{ id: NavGroup["id"]; keys: NavItemKey[] }> = [
+  { id: "command", keys: ["today", "teaching"] },
+  { id: "teach", keys: ["library", "rooms", "myPresentations", "myResearch"] },
+  { id: "evaluate", keys: ["exams", "agendaCalendar", "risk"] },
+  { id: "work", keys: ["community"] },
+  { id: "system", keys: ["guide", "settings"] },
+];
+
 export function filterNavForRole(role: UserRole): NavGroup[] {
+  if (role === "teacher") {
+    const byKey = new Map(navigationGroups.flatMap((g) => g.items).map((item) => [item.key, item]));
+    return teacherNavStructure
+      .map((group) => ({
+        id: group.id,
+        items: group.keys
+          .map((key) => byKey.get(key))
+          .filter((item): item is NavItem => Boolean(item)),
+      }))
+      .filter((g) => g.items.length > 0);
+  }
   return navigationGroups
     .map((group) => ({
       ...group,
