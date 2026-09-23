@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Sparkles } from "lucide-react";
 
 export function ExamsHub() {
   const { profile } = useKampus();
@@ -27,6 +28,27 @@ export function ExamsHub() {
           />
         }
       />
+
+      <Card className="border-indigo-400/20 bg-indigo-500/[0.06]">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-indigo-100">
+            <Sparkles className="h-4 w-4" />
+            Corregir exámenes con IA
+          </CardTitle>
+          <CardDescription>
+            Pega tu clave de respuestas y las respuestas del alumno (texto o foto del examen). La IA corrige
+            pregunta por pregunta y te da la nota con retroalimentación.
+          </CardDescription>
+        </CardHeader>
+        <div className="flex flex-wrap gap-2 px-6 pb-6">
+          <Link href="/exams/corrector">
+            <Button size="sm" className="gap-2">
+              <Sparkles className="h-4 w-4" />
+              Corregir un examen
+            </Button>
+          </Link>
+        </div>
+      </Card>
 
       <Card className="border-indigo-400/20 bg-indigo-500/[0.06]">
         <CardHeader>

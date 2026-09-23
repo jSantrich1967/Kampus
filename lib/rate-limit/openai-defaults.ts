@@ -57,6 +57,13 @@ export function presentationTranscribeRateLimits(): { max: number; windowMs: num
   };
 }
 
+export function examCorrectorRateLimits(): { max: number; windowMs: number } {
+  return {
+    max: parseInt(process.env.API_RL_MAX_EXAM_CORRECTOR ?? "20", 10),
+    windowMs: parseInt(process.env.API_RL_WINDOW_MS ?? String(15 * 60 * 1000), 10),
+  };
+}
+
 export function studyRoomAssistantRateLimits(): { max: number; windowMs: number } {
   return {
     max: parseInt(process.env.API_RL_MAX_STUDY_ROOM_ASSISTANT ?? "35", 10),
