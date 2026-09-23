@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   BookOpen,
   Calendar,
@@ -91,7 +91,7 @@ export function AppGuideHub() {
   const navT = navCopy.es;
   const [groupFilter, setGroupFilter] = useState<NavGroup["id"] | "all">("all");
 
-  const sections = useMemo(() => {
+  const sections = (() => {
     const entries = Object.entries(t.sections) as [GuideSectionId, (typeof t.sections)[GuideSectionId]][];
     return entries
       .filter(([, section]) => section.roles.includes(profile.role))
@@ -100,15 +100,15 @@ export function AppGuideHub() {
         const gb = GROUP_ORDER.indexOf(SECTION_GROUP[b[0]]);
         return ga - gb;
       });
-  }, [profile.role, t.sections]);
+  })();
 
   const filtered =
     groupFilter === "all" ? sections : sections.filter(([id]) => SECTION_GROUP[id] === groupFilter);
 
-  const visibleGroups = useMemo(() => {
+  const visibleGroups = (() => {
     const set = new Set(sections.map(([id]) => SECTION_GROUP[id]));
     return GROUP_ORDER.filter((g) => set.has(g));
-  }, [sections]);
+  })();
 
   return (
     <div className="space-y-8">

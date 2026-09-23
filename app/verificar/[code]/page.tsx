@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Award, BadgeCheck, XCircle } from "lucide-react";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -59,12 +60,12 @@ export default async function VerifyCertificatePage({
             </p>
           </>
         )}
-        <a
+        <Link
           href="/"
           className="mt-8 inline-block rounded-xl bg-indigo-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-400"
         >
           Ir a Kampus
-        </a>
+        </Link>
       </div>
     </main>
   );
