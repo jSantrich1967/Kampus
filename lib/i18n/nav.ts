@@ -1,3 +1,5 @@
+import type { UserRole } from "@/lib/schemas/profile";
+
 export type Locale = "es";
 
 export const navCopy = {
@@ -42,3 +44,20 @@ export const navCopy = {
 } as const;
 
 export type NavItemKey = keyof typeof navCopy.es.items;
+
+/**
+ * Etiquetas sin posesivo para el rol docente: un profesor no tiene
+ * "mis exposiciones", las revisa; no lleva "mi diario" de estudiante, etc.
+ */
+export const teacherNavItemOverrides: Partial<Record<NavItemKey, string>> = {
+  library: "Cuadernos",
+  agendaCalendar: "Calendario",
+  myPresentations: "Exposiciones",
+  myResearch: "Investigaciones",
+  diary: "Diario",
+};
+
+export function navLabelForRole(role: UserRole, key: NavItemKey): string {
+  if (role === "teacher") return teacherNavItemOverrides[key] ?? navCopy.es.items[key];
+  return navCopy.es.items[key];
+};

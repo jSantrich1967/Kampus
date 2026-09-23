@@ -7,7 +7,7 @@ import { KampusLogo } from "@/components/brand/kampus-logo";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { navCopy } from "@/lib/i18n/nav";
+import { navCopy, navLabelForRole } from "@/lib/i18n/nav";
 import { shellThemeFromRole } from "@/lib/layout/shell-theme";
 import { filterNavForRole, type NavItem } from "@/lib/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -131,7 +131,7 @@ export function AppSidebar({ onNavigate, luminaMode = false }: AppSidebarProps) 
                     )}
                   >
                     <Icon className="h-4 w-4 shrink-0 opacity-80" />
-                    <span className="flex-1">{t.items[item.key]}</span>
+                    <span className="flex-1">{navLabelForRole(profile.role, item.key)}</span>
                     {item.href === "/teaching" || item.href === "/institution" ? (
                       <span
                         className="shrink-0 rounded-md border border-white/15 bg-white/5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-200"

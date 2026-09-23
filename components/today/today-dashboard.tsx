@@ -178,7 +178,11 @@ export function TodayDashboard() {
     <div className="space-y-8">
       <PageHeader
         eyebrow="Hoy"
-        title={t.greeting({ name: profile.displayName, institution: institutionName })}
+        title={
+          isTeacher
+            ? t.teacherGreeting({ name: profile.displayName, institution: institutionName })
+            : t.greeting({ name: profile.displayName, institution: institutionName })
+        }
         description={isTeacher ? t.teacherTagline : t.tagline}
         actions={
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -340,12 +344,18 @@ export function TodayDashboard() {
             <div className="space-y-3 px-6 pb-6">
               <div className="flex items-end justify-between">
                 <div className="text-4xl font-semibold text-white">{plan.preparednessScore}%</div>
-                <div className="text-xs text-slate-400">modelo heurístico</div>
+                <div className="text-xs text-slate-400">{isTeacher ? "carga semanal" : "modelo heurístico"}</div>
               </div>
               <Progress value={plan.preparednessScore} />
-              <div className="text-sm text-slate-300">
-                <span className="font-medium text-white">{t.streak}</span>: {profile.streakDays} días
-              </div>
+              {isTeacher ? (
+                <div className="text-sm text-slate-300">
+                  <span className="font-medium text-white">{t.teacherSubjectsLabel}</span>: {profile.subjects.length}
+                </div>
+              ) : (
+                <div className="text-sm text-slate-300">
+                  <span className="font-medium text-white">{t.streak}</span>: {profile.streakDays} días
+                </div>
+              )}
             </div>
           </Card>
         </div>
@@ -374,8 +384,10 @@ export function TodayDashboard() {
           <div className="grid gap-5 lg:grid-cols-3">
             <Card className="lg:col-span-2">
               <CardHeader>
-                <CardTitle>{t.deadlines}</CardTitle>
-                <CardDescription>{deadlines.length ? "" : t.noDeadlines}</CardDescription>
+                <CardTitle>{isTeacher ? t.teacherDeadlinesTitle : t.deadlines}</CardTitle>
+                <CardDescription>
+                  {isTeacher ? t.teacherDeadlinesHint : deadlines.length ? "" : t.noDeadlines}
+                </CardDescription>
               </CardHeader>
               <div className="space-y-3 px-6 pb-6">
                 {deadlines.map((d) => (

@@ -30,6 +30,10 @@ export const todayCopy: Record<
     teacherExamsCta: string;
     teacherCalendarCta: string;
     teacherPresentationsCta: string;
+    teacherGreeting: (args: { name?: string | null; institution?: string | null }) => string;
+    teacherDeadlinesTitle: string;
+    teacherDeadlinesHint: string;
+    teacherSubjectsLabel: string;
     institutionTitle: string;
     institutionBody: string;
     quickQuiz: string;
@@ -86,8 +90,15 @@ export const todayCopy: Record<
     continueTitle: "Continúa donde quedaste",
     continueBody: "Abre tus cuadernos para retomar material y lanzar kit de estudios o práctica desde ahí.",
     teacherTagline: "Prioriza enseñanza, evaluación y claridad para tu alumnado.",
+    teacherGreeting: ({ name, institution }) => {
+      const who = name?.trim() ? `, ${name.trim()}` : "";
+      return institution ? `Hola${who} — tu aula en ${institution}.` : `Hola${who} — tu semana docente.`;
+    },
+    teacherDeadlinesTitle: "Próximas evaluaciones",
+    teacherDeadlinesHint: "Exámenes y entregas que debes aplicar o calificar.",
+    teacherSubjectsLabel: "Materias a tu cargo",
     teacherSequenceTitle: "Tu enfoque docente hoy",
-    teacherPreparednessHint: "Balance heurístico entre fechas de evaluación y carga declarada (ajusta en Ajustes).",
+    teacherPreparednessHint: "Balance entre tus fechas de evaluación y tu carga declarada (ajústala en Ajustes).",
     teacherOverloadNote:
       "Tu disponibilidad semanal declarada es ajustada frente al número de materias: prioriza bloques cortos y revisa fechas en el Copiloto.",
     teacherContinueTitle: "Presentaciones y aula",
