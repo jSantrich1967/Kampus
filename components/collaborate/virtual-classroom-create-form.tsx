@@ -9,6 +9,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { collaborateCopy } from "@/lib/i18n/collaborate";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { createVirtualClassSession } from "@/lib/supabase/virtual-class-db";
+import { isDemoModeClient, saveDemoVcSession } from "@/lib/storage/virtual-class-demo-storage";
 
 export type VirtualClassSchedulePrefill = {
   scheduleRowId: string;
@@ -65,6 +66,12 @@ export function VirtualClassroomCreateForm({ onCreated, schedulePrefill }: Props
   const [embedVideoUrl, setEmbedVideoUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  /** En modo demo (sin sesión) el docente sí puede crear: se guarda en este dispositivo. */
+  const [demoMode, setDemoMode] = useState(false);
+
+  useEffect(() => {
+    setDemoMode(isDemoModeClient() && !authUserId);
+  }, [authUserId]);
 
   const subjectOptions = useMemo(() => profile.subjects.filter(Boolean), [profile.subjects]);
 
@@ -80,7 +87,7 @@ export function VirtualClassroomCreateForm({ onCreated, schedulePrefill }: Props
     setTopic(t.createSessionFromScheduleTopic(schedulePrefill.classDate));
   }, [schedulePrefill, profile.displayName, t]);
 
-  if (!canCreate || !authUserId) return null;
+  if (!canCreate || (!authUserId && !demoMode)) return null;
 
   async function handleSubmit() {
     if (!course.trim() || !professorName.trim() || !startsLocal) {
@@ -90,6 +97,24 @@ export function VirtualClassroomCreateForm({ onCreated, schedulePrefill }: Props
     setBusy(true);
     setMessage(null);
     try {
+      if (demoMode) {
+        saveDemoVcSession({
+          id: `demo_${Date.now().toString(36)}`,
+          course: course.trim(),
+          professor: professorName.trim(),
+          topic: topic.trim(),
+          roomLabel: roomLabel.trim(),
+          capacity: Math.min(500, Math.max(1, Number(capacity) || 30)),
+          enrolled: 0,
+          startsAt: new Date(startsLocal).toISOString(),
+          joinUrl: joinUrl.trim() || null,
+          embedVideoUrl: embedVideoUrl.trim() || null,
+        });
+        setMessage(t.createSessionOk);
+        setTopic("");
+        onCreated?.();
+        return;
+      }
       const supabase = createSupabaseBrowserClient();
       const startsAt = new Date(startsLocal).toISOString();
       const endsAt = endsLocal ? new Date(endsLocal).toISOString() : null;
@@ -126,6 +151,11 @@ export function VirtualClassroomCreateForm({ onCreated, schedulePrefill }: Props
         </CardTitle>
         <CardDescription>
           {schedulePrefill ? t.createSessionFromScheduleHint(schedulePrefill.classDate) : t.createSessionHint}
+          {demoMode ? (
+            <span className="mt-1 block text-amber-100/90">
+              Sesiones de demostración: se guardan en este dispositivo y no se comparten.
+            </span>
+          ) : null}
         </CardDescription>
       </CardHeader>
       <div className="grid gap-3 px-6 pb-6 sm:grid-cols-2">

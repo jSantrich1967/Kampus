@@ -22,6 +22,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { friendlySupabaseError } from "@/lib/supabase/friendly-errors";
 import { enrollVirtualClassSession } from "@/lib/supabase/virtual-class-db";
 import { collaborateCopy } from "@/lib/i18n/collaborate";
+import { isDemoModeClient, loadDemoVcSessions } from "@/lib/storage/virtual-class-demo-storage";
 
 type Props = { sessionId: string };
 
@@ -83,8 +84,42 @@ export function VirtualClassroomSession({ sessionId }: Props) {
 
   const [focusSeconds, setFocusSeconds] = useState(0);
   const [running, setRunning] = useState(false);
+  /** En modo demo la sesión se lee del localStorage de este dispositivo. */
+  const [demoMode] = useState(() => isDemoModeClient());
 
   useEffect(() => {
+    if (!demoMode || authUserId) return;
+    const found = loadDemoVcSessions().find((s) => s.id === sessionId) ?? null;
+    setSession(
+      found
+        ? {
+            id: found.id,
+            createdBy: "",
+            course: found.course,
+            professor: found.professor,
+            topic: found.topic,
+            capacity: found.capacity,
+            enrolled: found.enrolled,
+            startsAt: found.startsAt,
+            roomLabel: found.roomLabel,
+            joinUrl: found.joinUrl,
+            embedVideoUrl: found.embedVideoUrl,
+            presentationUrl: null,
+            recordingUrl: null,
+            transcriptText: null,
+            transcriptUpdatedAt: null,
+            lmsCourseId: null,
+            scheduleRowId: null,
+            classDate: null,
+          }
+        : null,
+    );
+    setLoadError(null);
+    setLoading(false);
+  }, [demoMode, authUserId, sessionId]);
+
+  useEffect(() => {
+    if (demoMode) return;
     if (!authUserId || !isSupabaseConfigured()) {
       setSession(null);
       setLoadError(null);
@@ -149,7 +184,7 @@ export function VirtualClassroomSession({ sessionId }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [authUserId, es, sessionId]);
+  }, [demoMode, authUserId, es, sessionId]);
 
   useEffect(() => {
     if (!running) return;
@@ -163,7 +198,7 @@ export function VirtualClassroomSession({ sessionId }: Props) {
     return <p className="text-sm text-amber-200/90">{es ? "Falta configurar Supabase." : "Supabase is not configured."}</p>;
   }
 
-  if (!authUserId) {
+  if (!authUserId && !demoMode) {
     return <p className="text-sm text-slate-400">{es ? "Inicia sesión para ver la sesión." : "Sign in to view this session."}</p>;
   }
 
@@ -182,6 +217,59 @@ export function VirtualClassroomSession({ sessionId }: Props) {
         <Link href="/collaborate/aula-virtual" className={buttonClasses({ variant: "secondary", size: "sm" })}>
           {es ? "Volver al listado" : "Back to list"}
         </Link>
+      </div>
+    );
+  }
+
+  if (demoMode) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/collaborate/aula-virtual"
+            className={buttonClasses({ variant: "ghost", size: "sm", className: "gap-2" })}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            {es ? "Aula virtual" : "Virtual classroom"}
+          </Link>
+        </div>
+        <p className="rounded-xl border border-amber-300/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+          {es
+            ? "Sesiones de demostración: se guardan en este dispositivo y no se comparten."
+            : "Demo sessions: they are saved on this device and are not shared."}
+        </p>
+        <Card className="border-white/10 bg-slate-950/40">
+          <CardHeader className="space-y-2">
+            <CardTitle className="text-2xl text-white">{session.course}</CardTitle>
+            <CardDescription>
+              {session.professor}
+              {session.roomLabel ? ` · ${session.roomLabel}` : ""}
+            </CardDescription>
+            {session.topic ? <p className="text-sm text-slate-200">{session.topic}</p> : null}
+            <p className="text-xs text-slate-500">
+              <span suppressHydrationWarning>
+                {new Date(session.startsAt).toLocaleString(es ? "es" : "en", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
+              </span>
+              {" · "}
+              {session.enrolled}/{session.capacity} {es ? "inscritos" : "enrolled"}
+            </p>
+            {session.joinUrl ? (
+              <div className="pt-2">
+                <a
+                  href={session.joinUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={buttonClasses({ size: "sm", className: "gap-2" })}
+                >
+                  {es ? "Abrir enlace de la clase" : "Open class link"}
+                </a>
+              </div>
+            ) : null}
+          </CardHeader>
+        </Card>
       </div>
     );
   }

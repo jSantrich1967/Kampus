@@ -20,6 +20,12 @@ import { navCopy } from "@/lib/i18n/nav";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { enrollVirtualClassSession, fetchMyVirtualClassSessionIds } from "@/lib/supabase/virtual-class-db";
+import {
+  isDemoModeClient,
+  loadDemoVcSessions,
+  toggleDemoVcEnrollment,
+  type DemoVcSession,
+} from "@/lib/storage/virtual-class-demo-storage";
 import { fetchClassScheduleRemote } from "@/lib/supabase/agenda-db";
 import { endsAtFromScheduleSlot, startsAtFromScheduleSlot } from "@/lib/collaborate/virtual-class-schedule-link";
 import { useSupabaseSWR } from "@/lib/hooks/use-supabase-swr";
@@ -49,7 +55,26 @@ type UiSession = {
   roomLabel: string;
   joinUrl: string | null;
   embedVideoUrl: string | null;
+  /** Sesión de demostración guardada en este dispositivo. */
+  demo?: boolean;
 };
+
+function demoSessionToUi(s: DemoVcSession): UiSession {
+  return {
+    id: s.id,
+    course: s.course,
+    professor: s.professor,
+    topic: s.topic,
+    capacity: s.capacity,
+    enrolled: s.enrolled,
+    isEnrolled: s.isEnrolled,
+    startsAt: s.startsAt,
+    roomLabel: s.roomLabel,
+    joinUrl: s.joinUrl,
+    embedVideoUrl: s.embedVideoUrl,
+    demo: true,
+  };
+}
 
 export function VirtualClassroomHub() {
   const { locale, authUserId, profile } = useKampus();
@@ -61,6 +86,19 @@ export function VirtualClassroomHub() {
   const t = navCopy.es;
   const c = collaborateCopy.es;
   const [schedulePrefill, setSchedulePrefill] = useState<VirtualClassSchedulePrefill | null>(null);
+  /** Modo demo: cookie kampus_demo=1 sin sesión de Supabase. Las sesiones viven en este dispositivo. */
+  const [demoMode, setDemoMode] = useState(false);
+  const [demoSessions, setDemoSessions] = useState<UiSession[]>([]);
+
+  useEffect(() => {
+    const demo = isDemoModeClient() && !authUserId;
+    setDemoMode(demo);
+    if (demo) setDemoSessions(loadDemoVcSessions().map(demoSessionToUi));
+  }, [authUserId]);
+
+  function reloadDemoSessions() {
+    setDemoSessions(loadDemoVcSessions().map(demoSessionToUi));
+  }
   const { data, error: loadError, isLoading, mutate } = useSupabaseSWR<UiSession[]>(
     authUserId ? `vc_sessions:${authUserId}` : null,
     async (supabase) => {
@@ -129,9 +167,17 @@ export function VirtualClassroomHub() {
     };
   }, [authUserId, scheduleIdParam, classDateParam]);
 
-  const sessions = useMemo(() => data ?? [], [data]);
+  const sessions = useMemo(
+    () => (demoMode ? demoSessions : (data ?? [])),
+    [demoMode, demoSessions, data],
+  );
 
   async function handleEnroll(sessionId: string) {
+    if (demoMode) {
+      toggleDemoVcEnrollment(sessionId);
+      reloadDemoSessions();
+      return;
+    }
     if (!authUserId) return;
     setEnrollBusy(sessionId);
     try {
@@ -168,6 +214,12 @@ export function VirtualClassroomHub() {
             ? "Falta configurar Supabase para ver sesiones reales."
             : "Supabase is not configured, so real sessions are unavailable."}
         </p>
+      ) : demoMode ? (
+        <p className="rounded-xl border border-amber-300/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+          {es
+            ? "Sesiones de demostración: se guardan en este dispositivo y no se comparten."
+            : "Demo sessions: they are saved on this device and are not shared."}
+        </p>
       ) : !authUserId ? (
         <p className="text-sm text-slate-400">
           {es
@@ -193,10 +245,16 @@ export function VirtualClassroomHub() {
         </div>
       ) : null}
 
-      <VirtualClassroomCreateForm onCreated={() => void mutate()} schedulePrefill={schedulePrefill} />
+      <VirtualClassroomCreateForm
+        onCreated={() => {
+          if (demoMode) reloadDemoSessions();
+          else void mutate();
+        }}
+        schedulePrefill={schedulePrefill}
+      />
 
       <div className="grid gap-4 md:grid-cols-2">
-        {!isLoading && sessions.length === 0 && authUserId ? (
+        {!isLoading && sessions.length === 0 && (authUserId || demoMode) ? (
           <Card className="border-white/10 bg-slate-950/40">
             <CardHeader>
               <CardTitle>{es ? "Sin sesiones" : "No sessions"}</CardTitle>
@@ -223,9 +281,12 @@ export function VirtualClassroomHub() {
                       {s.professor} · {s.roomLabel}
                     </CardDescription>
                   </div>
-                  <Badge tone={full ? "danger" : seatsLeft <= 3 ? "warning" : "success"}>
-                    {full ? (es ? "Lleno" : "Full") : `${seatsLeft} ${es ? "cupos" : "seats"}`}
-                  </Badge>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {s.demo ? <Badge tone="accent">{es ? "Demo" : "Demo"}</Badge> : null}
+                    <Badge tone={full ? "danger" : seatsLeft <= 3 ? "warning" : "success"}>
+                      {full ? (es ? "Lleno" : "Full") : `${seatsLeft} ${es ? "cupos" : "seats"}`}
+                    </Badge>
+                  </div>
                 </div>
                 <div className="text-sm text-slate-200">
                   <span className="text-slate-500">{es ? "Tema:" : "Topic:"}</span> {s.topic}
