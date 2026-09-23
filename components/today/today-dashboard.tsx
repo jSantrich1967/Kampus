@@ -26,15 +26,7 @@ import { PassModeOverloadBanner } from "@/components/pass-mode/pass-mode-overloa
 import { CommunityReplyBannerFromNotifications } from "@/components/community/community-reply-banner";
 import { useCommunityReplyNotifications } from "@/hooks/use-community-reply-notifications";
 import { useUpcomingExamsSync } from "@/hooks/use-upcoming-exams-sync";
-
-function daysUntil(isoDate: string): number | null {
-  const target = new Date(isoDate);
-  if (Number.isNaN(target.getTime())) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  target.setHours(0, 0, 0, 0);
-  return Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-}
+import { daysUntilExam } from "@/lib/exams/exam-insights";
 
 function riskTone(risk: "low" | "medium" | "high") {
   if (risk === "high") return "danger" as const;
@@ -69,11 +61,15 @@ export function TodayDashboard() {
 
   const deadlines = useMemo(() => {
     return profile.upcomingExams
-      .map((e) => ({ ...e, days: daysUntil(e.date) }))
-      .filter((e) => e.days !== null)
+      .map((e) => ({ ...e, days: daysUntilExam(e.date) }))
+      .filter((e) => e.days !== null && e.days >= 0)
       .sort((a, b) => (a.days ?? 0) - (b.days ?? 0))
       .slice(0, 4);
   }, [profile.upcomingExams]);
+
+  // Normaliza el nombre del espacio demo en perfiles guardados antes del cambio de marca.
+  const institutionName =
+    profile.university === "Universidad Demo" ? "Centro Demo" : profile.university;
 
   const firstBlock = plan.sequence[0];
   const pressureQuizBlock = useMemo(() => getPressureQuizBlock(plan), [plan]);
@@ -92,7 +88,7 @@ export function TodayDashboard() {
     <div className="space-y-8">
       <PageHeader
         eyebrow="Hoy"
-        title={t.greeting({ name: profile.displayName, institution: profile.university })}
+        title={t.greeting({ name: profile.displayName, institution: institutionName })}
         description={isTeacher ? t.teacherTagline : t.tagline}
         actions={
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -166,19 +162,11 @@ export function TodayDashboard() {
       ) : null}
 
       {profile.role === "student" ? (
-        <TodayWellbeingPanel />
-      ) : null}
-
-      {profile.role === "student" ? (
         <TodayMissionPanel plan={plan} onProgressChange={() => setMissionTick((n) => n + 1)} />
       ) : null}
 
       {profile.role === "student" ? (
         <TodayMomentumPanel plan={plan} missionTick={missionTick} />
-      ) : null}
-
-      {profile.role === "student" ? (
-        <TodayContextPanel prioritySubjects={missionPrioritySubjects} />
       ) : null}
 
       <div className="grid gap-5 lg:grid-cols-3">
@@ -288,57 +276,7 @@ export function TodayDashboard() {
           </Card>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t.preparedness}</CardTitle>
-            <CardDescription>
-              {isTeacher
-                ? planningTight
-                  ? t.teacherOverloadNote
-                  : t.teacherPreparednessHint
-                : plan.overloadNote ?? "Ritmo sostenible."}
-            </CardDescription>
-          </CardHeader>
-          <div className="space-y-3 px-6 pb-6">
-            <div className="flex items-end justify-between">
-              <div className="text-4xl font-semibold text-white">{plan.preparednessScore}%</div>
-              <div className="text-xs text-slate-400">modelo heurístico</div>
-            </div>
-            <Progress value={plan.preparednessScore} />
-            {profile.role !== "student" ? (
-              <div className="text-sm text-slate-300">
-                <span className="font-medium text-white">{t.streak}</span>: {profile.streakDays} días
-              </div>
-            ) : null}
-          </div>
-        </Card>
-      </div>
-
-      {profile.role === "student" ? (
-        <div className="grid gap-5 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>{t.continueTitle}</CardTitle>
-              <CardDescription>{t.continueBody}</CardDescription>
-            </CardHeader>
-            <div className="flex flex-wrap gap-2 px-6 pb-6">
-              <Link href="/study/library">
-                <Button variant="secondary">Mis cuadernos</Button>
-              </Link>
-              <Link href="/risk">
-                <Button variant="ghost">{t.radar}</Button>
-              </Link>
-              <Link
-                href={buildPressureQuizPath(
-                  pressureQuizBlock?.subject ?? profile.subjects[0] ?? "General",
-                  pressureQuizBlock?.minutes,
-                )}
-              >
-                <Button variant="ghost">{t.quickQuiz}</Button>
-              </Link>
-            </div>
-          </Card>
-
+        {profile.role === "student" ? (
           <Card>
             <CardHeader>
               <CardTitle>{t.riskTitle}</CardTitle>
@@ -360,8 +298,41 @@ export function TodayDashboard() {
               </Link>
             </div>
           </Card>
-        </div>
-      ) : (
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>{t.preparedness}</CardTitle>
+              <CardDescription>
+                {isTeacher
+                  ? planningTight
+                    ? t.teacherOverloadNote
+                    : t.teacherPreparednessHint
+                  : plan.overloadNote ?? "Ritmo sostenible."}
+              </CardDescription>
+            </CardHeader>
+            <div className="space-y-3 px-6 pb-6">
+              <div className="flex items-end justify-between">
+                <div className="text-4xl font-semibold text-white">{plan.preparednessScore}%</div>
+                <div className="text-xs text-slate-400">modelo heurístico</div>
+              </div>
+              <Progress value={plan.preparednessScore} />
+              <div className="text-sm text-slate-300">
+                <span className="font-medium text-white">{t.streak}</span>: {profile.streakDays} días
+              </div>
+            </div>
+          </Card>
+        )}
+      </div>
+
+      {profile.role === "student" ? (
+        <TodayWellbeingPanel />
+      ) : null}
+
+      {profile.role === "student" ? (
+        <TodayContextPanel prioritySubjects={missionPrioritySubjects} />
+      ) : null}
+
+      {profile.role !== "student" ? (
         <>
           <div className="grid gap-5 lg:grid-cols-3">
             <Card className="lg:col-span-2">
@@ -422,7 +393,7 @@ export function TodayDashboard() {
             </div>
           </Card>
         </>
-      )}
+      ) : null}
 
       {profile.role === "institution" ? (
         <Card>

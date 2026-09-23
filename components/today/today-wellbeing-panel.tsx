@@ -12,22 +12,13 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { buildDiaryTodayHref } from "@/lib/wellbeing/diary-path";
 import { WellbeingCheckInReminder } from "@/components/wellbeing/wellbeing-check-in-reminder";
 import { buildPsychologistHref } from "@/lib/wellbeing/psychologist-path";
+import { daysUntilExam } from "@/lib/exams/exam-insights";
 import { wellbeingCopy } from "@/lib/i18n/wellbeing";
 
 function daysTone(days: number) {
   if (days <= 3) return "danger" as const;
   if (days <= 7) return "warning" as const;
   return "success" as const;
-}
-
-function daysUntil(isoDate: string): number | null {
-  const [y, m, d] = isoDate.split("-").map(Number);
-  if (!y || !m || !d) return null;
-  const target = new Date(y, m - 1, d);
-  target.setHours(12, 0, 0, 0);
-  const today = new Date();
-  today.setHours(12, 0, 0, 0);
-  return Math.round((target.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
 }
 
 export function TodayWellbeingPanel() {
@@ -38,7 +29,7 @@ export function TodayWellbeingPanel() {
 
   const nearestExam = useMemo(() => {
     return profile.upcomingExams
-      .map((e) => ({ ...e, days: daysUntil(e.date) }))
+      .map((e) => ({ ...e, days: daysUntilExam(e.date) }))
       .filter((e) => e.days !== null && e.days >= 0)
       .sort((a, b) => (a.days ?? 99) - (b.days ?? 99))[0];
   }, [profile.upcomingExams]);

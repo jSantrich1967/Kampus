@@ -1,5 +1,6 @@
 import type { PassModePlan } from "@/lib/pass-mode";
 import type { UserProfile } from "@/lib/schemas/profile";
+import { daysUntilExam } from "@/lib/exams/exam-insights";
 
 export type MotivationTone = "celebrate" | "encourage" | "nudge" | "calm";
 
@@ -22,16 +23,11 @@ export type MotivationInput = {
 };
 
 function nearestExam(profile: UserProfile): { subject: string; days: number } | null {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
   let best: { subject: string; days: number } | null = null;
 
   for (const exam of profile.upcomingExams) {
-    const target = new Date(exam.date);
-    if (Number.isNaN(target.getTime())) continue;
-    target.setHours(0, 0, 0, 0);
-    const days = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    if (days < 0) continue;
+    const days = daysUntilExam(exam.date);
+    if (days === null || days < 0) continue;
     if (!best || days < best.days) best = { subject: exam.subject, days };
   }
   return best;
