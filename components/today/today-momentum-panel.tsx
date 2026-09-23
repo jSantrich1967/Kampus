@@ -126,16 +126,6 @@ export function TodayMomentumPanel({ plan, missionTick = 0 }: TodayMomentumPanel
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-          <span>
-            {t.momentumMissionProgress}: {missionDone}/{missionTotal}
-          </span>
-          <span>·</span>
-          <span>
-            {t.preparedness}: {plan.preparednessScore}%
-          </span>
-        </div>
-
         {message.ctaLabel && message.ctaHref ? (
           message.ctaHref.startsWith("#") ? (
             <a href={message.ctaHref}>

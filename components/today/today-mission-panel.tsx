@@ -76,47 +76,12 @@ export function TodayMissionPanel({ plan, onProgressChange }: TodayMissionPanelP
         </CardTitle>
         <CardDescription>
           {allDone
-            ? "Completaste el plan de hoy. Repasa o descansa — mañana Kampus recalibra."
-            : "Un solo paso claro: empieza por el bloque que más te acerca a aprobar."}
+            ? "Misión completada. Repasa o descansa — mañana Kampus recalibra."
+            : "Un solo paso claro: empieza por el primero y táchalos en orden."}
         </CardDescription>
       </CardHeader>
 
-      <div className="space-y-6 px-6 pb-6">
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <Badge tone="accent">Paso {blocks.findIndex((b) => b.id === firstOpen.id) + 1} de {blocks.length}</Badge>
-            <Badge tone="neutral">{firstOpen.minutes} min</Badge>
-            {!completedSet.has(firstOpen.id) ? (
-              <Badge tone="warning">Siguiente</Badge>
-            ) : (
-              <Badge tone="success">En curso</Badge>
-            )}
-          </div>
-          <h3 className="text-lg font-semibold text-white">{firstOpen.title}</h3>
-          <p className="mt-1 text-sm text-slate-300">
-            {firstOpen.subject} · Enfoque: {firstOpen.focus}
-          </p>
-          <p className="mt-2 text-xs text-slate-400">{firstOpen.rationale}</p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Link href={getStudyBlockActionHref(firstOpen)}>
-              <Button className="gap-2">
-                <Play className="h-4 w-4" aria-hidden />
-                {allDone ? "Repasar con quiz" : getStudyBlockActionLabel(firstOpen)}
-              </Button>
-            </Link>
-            {!completedSet.has(firstOpen.id) ? (
-              <Button type="button" variant="secondary" onClick={() => toggleBlock(firstOpen.id)}>
-                Marcar como hecho
-              </Button>
-            ) : null}
-            <Link href="/pass-mode">
-              <Button type="button" variant="ghost">
-                Ver plan completo
-              </Button>
-            </Link>
-          </div>
-        </div>
-
+      <div className="space-y-5 px-6 pb-6">
         <div>
           <div className="mb-2 flex items-center justify-between text-sm">
             <span className="text-slate-300">Progreso del día</span>
@@ -127,19 +92,89 @@ export function TodayMissionPanel({ plan, onProgressChange }: TodayMissionPanelP
           <Progress value={dayProgress} />
         </div>
 
-        <ul className="space-y-2">
-          {blocks.map((block, idx) => (
-            <MissionChecklistRow
-              key={block.id}
-              block={block}
-              index={idx}
-              done={completedSet.has(block.id)}
-              onToggle={() => toggleBlock(block.id)}
-            />
-          ))}
-        </ul>
+        {allDone ? (
+          <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/5 px-5 py-4">
+            <p className="text-sm font-medium text-emerald-100">Completaste el plan de hoy 🎉</p>
+            <p className="mt-1 text-sm text-slate-300">
+              Bien hecho. Mañana Kampus recalibra tu misión.
+            </p>
+          </div>
+        ) : null}
+
+        <ol className="space-y-2">
+          {blocks.map((block, idx) =>
+            !allDone && block.id === firstOpen.id ? (
+              <MissionNextStep
+                key={block.id}
+                block={block}
+                index={idx}
+                total={blocks.length}
+                onToggle={() => toggleBlock(block.id)}
+              />
+            ) : (
+              <MissionChecklistRow
+                key={block.id}
+                block={block}
+                index={idx}
+                done={completedSet.has(block.id)}
+                onToggle={() => toggleBlock(block.id)}
+              />
+            ),
+          )}
+        </ol>
+
+        <div className="flex justify-end">
+          <Link href="/pass-mode">
+            <Button type="button" variant="ghost" size="sm">
+              Ver plan completo
+            </Button>
+          </Link>
+        </div>
       </div>
     </Card>
+  );
+}
+
+function MissionNextStep({
+  block,
+  index,
+  total,
+  onToggle,
+}: {
+  block: StudyBlock;
+  index: number;
+  total: number;
+  onToggle: () => void;
+}) {
+  return (
+    <li
+      aria-current="step"
+      className="rounded-2xl border border-purple-400/30 bg-purple-500/10 p-5"
+    >
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <Badge tone="accent">
+          Paso {index + 1} de {total}
+        </Badge>
+        <Badge tone="neutral">{block.minutes} min</Badge>
+        <Badge tone="warning">Siguiente</Badge>
+      </div>
+      <h3 className="text-lg font-semibold text-white">{block.title}</h3>
+      <p className="mt-1 text-sm text-slate-300">
+        {block.subject} · Enfoque: {block.focus}
+      </p>
+      <p className="mt-2 text-xs text-slate-400">{block.rationale}</p>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Link href={getStudyBlockActionHref(block)}>
+          <Button className="gap-2">
+            <Play className="h-4 w-4" aria-hidden />
+            {getStudyBlockActionLabel(block)}
+          </Button>
+        </Link>
+        <Button type="button" variant="secondary" onClick={onToggle}>
+          Marcar como hecho
+        </Button>
+      </div>
+    </li>
   );
 }
 

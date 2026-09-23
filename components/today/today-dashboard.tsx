@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { ShareLinkButton } from "@/components/growth/share-link-button";
 import { PageHeader } from "@/components/layout/page-header";
@@ -38,6 +38,96 @@ function riskLabel(risk: "low" | "medium" | "high") {
   if (risk === "high") return "ALTO";
   if (risk === "medium") return "MEDIO";
   return "BAJO";
+}
+
+/** Un paso del hilo didáctico de "Hoy": cada sección dice qué hacer y en qué orden. */
+function TodayStep({ step, label, children }: { step: string; label: string; children: ReactNode }) {
+  return (
+    <section aria-label={`${step}: ${label}`} className="space-y-3">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+        {step} · {label}
+      </p>
+      {children}
+    </section>
+  );
+}
+
+type DeadlineItem = { subject: string; date: string; days: number | null };
+
+function StudentDeadlinesCard({ deadlines }: { deadlines: DeadlineItem[] }) {
+  const t = todayCopy.es;
+  const { profile } = useKampus();
+  return (
+    <Card className="lg:col-span-2">
+      <CardHeader>
+        <CardTitle>{t.deadlines}</CardTitle>
+        <CardDescription>{deadlines.length ? t.deadlinesHint : t.noDeadlines}</CardDescription>
+      </CardHeader>
+      <div className="space-y-3 px-6 pb-6">
+        {deadlines.length ? (
+          <>
+            {deadlines.map((d) => (
+              <div
+                key={`${d.subject}-${d.date}`}
+                className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
+              >
+                <div>
+                  <div className="font-medium text-white">{d.subject}</div>
+                  <div className="text-xs text-slate-400">{d.date}</div>
+                </div>
+                <Badge tone={(d.days ?? 99) <= 7 ? "danger" : (d.days ?? 99) <= 14 ? "warning" : "neutral"}>
+                  {d.days} días
+                </Badge>
+              </div>
+            ))}
+            {profile.interestedInCommunity !== false && deadlines[0] && (deadlines[0].days ?? 99) <= 7 ? (
+              <div className="rounded-2xl border border-indigo-400/25 bg-indigo-500/10 px-4 py-3">
+                <p className="text-sm text-slate-200">{t.communityDeadlineHint}</p>
+                <Link href={buildCommunityExamHref(deadlines[0].subject, deadlines[0].date)} className="mt-2 inline-block">
+                  <Button size="sm" variant="secondary">
+                    {t.communityDeadlineCta(deadlines[0].subject)}
+                  </Button>
+                </Link>
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <Link href="/exams/calendar">
+            <Button variant="secondary" size="sm">
+              {t.addDeadlinesCta}
+            </Button>
+          </Link>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function StudentRiskCard({ risks }: { risks: { subject: string; risk: "low" | "medium" | "high" }[] }) {
+  const t = todayCopy.es;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t.riskTitle}</CardTitle>
+        <CardDescription>Prioriza lo que más pesa en tu semana.</CardDescription>
+      </CardHeader>
+      <div className="space-y-2 px-6 pb-6">
+        {risks.slice(0, 3).map((r) => (
+          <div key={r.subject} className="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-medium text-white">{r.subject}</span>
+              <Badge tone={riskTone(r.risk)}>{riskLabel(r.risk)}</Badge>
+            </div>
+          </div>
+        ))}
+        <Link href="/risk">
+          <Button variant="ghost" size="sm" className="w-full">
+            Ver radar completo
+          </Button>
+        </Link>
+      </div>
+    </Card>
+  );
 }
 
 export function TodayDashboard() {
@@ -158,147 +248,84 @@ export function TodayDashboard() {
       ) : null}
 
       {profile.role === "student" ? (
-        <TodayCollaboratePanel />
+        <TodayStep step="Paso 1" label="Empieza aquí">
+          <TodayMissionPanel plan={plan} onProgressChange={() => setMissionTick((n) => n + 1)} />
+        </TodayStep>
       ) : null}
 
       {profile.role === "student" ? (
-        <TodayMissionPanel plan={plan} onProgressChange={() => setMissionTick((n) => n + 1)} />
-      ) : null}
-
-      {profile.role === "student" ? (
-        <TodayMomentumPanel plan={plan} missionTick={missionTick} />
-      ) : null}
-
-      <div className="grid gap-5 lg:grid-cols-3">
-        {isTeacher ? (
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>{t.teacherSequenceTitle}</CardTitle>
-              <CardDescription>{teacherFocus?.rationale}</CardDescription>
-            </CardHeader>
-            <div className="flex flex-col gap-4 px-6 pb-6 md:flex-row md:items-center md:justify-between">
-              <div>
-                <div className="text-lg font-semibold text-white">{teacherFocus?.title}</div>
-                <div className="mt-1 text-sm text-slate-300">
-                  {teacherFocus?.subject} · Enfoque: {teacherFocus?.focus}
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Badge tone="accent">{teacherFocus?.priority}</Badge>
-                <Link href="/teaching">
-                  <Button size="sm" variant="secondary">
-                    {t.teacherCopilotCta}
-                  </Button>
-                </Link>
-                <Link href="/collaborate/exposiciones">
-                  <Button size="sm" variant="ghost">
-                    {t.teacherPresentationsCta}
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </Card>
-        ) : profile.role === "student" ? (
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>{t.deadlines}</CardTitle>
-              <CardDescription>{deadlines.length ? t.deadlinesHint : t.noDeadlines}</CardDescription>
-            </CardHeader>
-            <div className="space-y-3 px-6 pb-6">
-              {deadlines.length ? (
-                <>
-                  {deadlines.map((d) => (
-                    <div
-                      key={`${d.subject}-${d.date}`}
-                      className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
-                    >
-                      <div>
-                        <div className="font-medium text-white">{d.subject}</div>
-                        <div className="text-xs text-slate-400">{d.date}</div>
-                      </div>
-                      <Badge tone={(d.days ?? 99) <= 7 ? "danger" : (d.days ?? 99) <= 14 ? "warning" : "neutral"}>
-                        {d.days} días
-                      </Badge>
-                    </div>
-                  ))}
-                  {profile.interestedInCommunity !== false && deadlines[0] && (deadlines[0].days ?? 99) <= 7 ? (
-                    <div className="rounded-2xl border border-indigo-400/25 bg-indigo-500/10 px-4 py-3">
-                      <p className="text-sm text-slate-200">{t.communityDeadlineHint}</p>
-                      <Link href={buildCommunityExamHref(deadlines[0].subject, deadlines[0].date)} className="mt-2 inline-block">
-                        <Button size="sm" variant="secondary">
-                          {t.communityDeadlineCta(deadlines[0].subject)}
-                        </Button>
-                      </Link>
-                    </div>
-                  ) : null}
-                </>
-              ) : (
-                <Link href="/exams/calendar">
-                  <Button variant="secondary" size="sm">
-                    {t.addDeadlinesCta}
-                  </Button>
-                </Link>
-              )}
-            </div>
-          </Card>
-        ) : (
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>{t.sequenceTitle}</CardTitle>
-              <CardDescription>{firstBlock?.rationale}</CardDescription>
-            </CardHeader>
-            <div className="flex flex-col gap-4 px-6 pb-6 md:flex-row md:items-center md:justify-between">
-              <div>
-                <div className="text-lg font-semibold text-white">{firstBlock?.title}</div>
-                <div className="mt-1 text-sm text-slate-300">
-                  {firstBlock?.subject} · {firstBlock?.minutes} min · Enfoque: {firstBlock?.focus}
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Badge tone="accent">{firstBlock?.priority}</Badge>
-                <Link
-                  href={buildPressureQuizPath(
-                    pressureQuizBlock?.subject ?? profile.subjects[0] ?? "General",
-                    pressureQuizBlock?.minutes,
-                  )}
-                >
-                  <Button size="sm" variant="secondary">
-                    {t.quickQuiz}
-                  </Button>
-                </Link>
-                <Link href="/risk">
-                  <Button size="sm" variant="ghost">
-                    {t.radar}
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {profile.role === "student" ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>{t.riskTitle}</CardTitle>
-              <CardDescription>Prioriza lo que más pesa en tu semana.</CardDescription>
-            </CardHeader>
-            <div className="space-y-2 px-6 pb-6">
-              {risks.slice(0, 3).map((r) => (
-                <div key={r.subject} className="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium text-white">{r.subject}</span>
-                    <Badge tone={riskTone(r.risk)}>{riskLabel(r.risk)}</Badge>
+        <TodayStep step="Paso 2" label="Lo que viene">
+          <div className="grid gap-5 lg:grid-cols-3">
+            <StudentDeadlinesCard deadlines={deadlines} />
+            <StudentRiskCard risks={risks} />
+          </div>
+          <TodayCollaboratePanel />
+        </TodayStep>
+      ) : (
+        <div className="grid gap-5 lg:grid-cols-3">
+          {isTeacher ? (
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>{t.teacherSequenceTitle}</CardTitle>
+                <CardDescription>{teacherFocus?.rationale}</CardDescription>
+              </CardHeader>
+              <div className="flex flex-col gap-4 px-6 pb-6 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <div className="text-lg font-semibold text-white">{teacherFocus?.title}</div>
+                  <div className="mt-1 text-sm text-slate-300">
+                    {teacherFocus?.subject} · Enfoque: {teacherFocus?.focus}
                   </div>
                 </div>
-              ))}
-              <Link href="/risk">
-                <Button variant="ghost" size="sm" className="w-full">
-                  Ver radar completo
-                </Button>
-              </Link>
-            </div>
-          </Card>
-        ) : (
+                <div className="flex flex-wrap gap-2">
+                  <Badge tone="accent">{teacherFocus?.priority}</Badge>
+                  <Link href="/teaching">
+                    <Button size="sm" variant="secondary">
+                      {t.teacherCopilotCta}
+                    </Button>
+                  </Link>
+                  <Link href="/collaborate/exposiciones">
+                    <Button size="sm" variant="ghost">
+                      {t.teacherPresentationsCta}
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </Card>
+          ) : (
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>{t.sequenceTitle}</CardTitle>
+                <CardDescription>{firstBlock?.rationale}</CardDescription>
+              </CardHeader>
+              <div className="flex flex-col gap-4 px-6 pb-6 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <div className="text-lg font-semibold text-white">{firstBlock?.title}</div>
+                  <div className="mt-1 text-sm text-slate-300">
+                    {firstBlock?.subject} · {firstBlock?.minutes} min · Enfoque: {firstBlock?.focus}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Badge tone="accent">{firstBlock?.priority}</Badge>
+                  <Link
+                    href={buildPressureQuizPath(
+                      pressureQuizBlock?.subject ?? profile.subjects[0] ?? "General",
+                      pressureQuizBlock?.minutes,
+                    )}
+                  >
+                    <Button size="sm" variant="secondary">
+                      {t.quickQuiz}
+                    </Button>
+                  </Link>
+                  <Link href="/risk">
+                    <Button size="sm" variant="ghost">
+                      {t.radar}
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle>{t.preparedness}</CardTitle>
@@ -321,15 +348,25 @@ export function TodayDashboard() {
               </div>
             </div>
           </Card>
-        )}
-      </div>
+        </div>
+      )}
 
       {profile.role === "student" ? (
-        <TodayWellbeingPanel />
+        <TodayStep step="Paso 3" label="Tu día">
+          <TodayContextPanel prioritySubjects={missionPrioritySubjects} />
+        </TodayStep>
       ) : null}
 
       {profile.role === "student" ? (
-        <TodayContextPanel prioritySubjects={missionPrioritySubjects} />
+        <TodayStep step="Paso 4" label="Cómo vas">
+          <TodayMomentumPanel plan={plan} missionTick={missionTick} />
+        </TodayStep>
+      ) : null}
+
+      {profile.role === "student" ? (
+        <TodayStep step="Paso 5" label="Bienestar">
+          <TodayWellbeingPanel />
+        </TodayStep>
       ) : null}
 
       {profile.role !== "student" ? (
