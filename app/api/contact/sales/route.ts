@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 
+import { salesContactOutcome } from "@/lib/contact/sales-contact-outcome";
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
 import {
   KAMPUS_SALES_EMAIL,
   salesContactSchema,
   type SalesContactPayload,
 } from "@/lib/schemas/sales-contact";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
@@ -15,10 +17,32 @@ const RATE_WINDOW_MS = 60 * 60 * 1000;
 const RESEND_API_KEY = process.env.RESEND_API_KEY?.trim();
 const RESEND_FROM = process.env.RESEND_FROM_EMAIL?.trim() || "Kampus <onboarding@resend.dev>";
 
-/**
- * Envía el lead por correo con Resend. Devuelve false si no hay API key
- * configurada o si el envío falla (el formulario sigue respondiendo OK).
- */
+/** Saves the request before sending mail. False when Supabase is not configured or the insert fails. */
+async function saveLead(data: SalesContactPayload): Promise<string | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data: row, error } = await admin
+    .from("sales_leads")
+    .insert({
+      name: data.name,
+      email: data.email,
+      institution: data.institution,
+      students: data.students ?? null,
+      message: data.message,
+    })
+    .select("id")
+    .single();
+  if (error || !row?.id) return null;
+  return row.id as string;
+}
+
+async function markLeadEmailed(id: string): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return;
+  await admin.from("sales_leads").update({ emailed: true }).eq("id", id);
+}
+
+/** Sends the lead with Resend. False when the key is missing or the provider rejects it. */
 async function sendLeadEmail(data: SalesContactPayload): Promise<boolean> {
   if (!RESEND_API_KEY) return false;
   try {
@@ -84,19 +108,18 @@ export async function POST(req: Request) {
   }
 
   const data = parsed.data;
+  const leadId = await saveLead(data);
   const emailed = await sendLeadEmail(data);
+  if (emailed && leadId) await markLeadEmailed(leadId);
 
   if (process.env.NODE_ENV === "development") {
     console.info("[contact/sales]", {
       to: KAMPUS_SALES_EMAIL,
+      saved: Boolean(leadId),
       emailed,
-      ...data,
     });
   }
 
-  return NextResponse.json({
-    ok: true,
-    message: `Gracias, ${data.name.split(" ")[0]}. Te escribiremos pronto a ${data.email}.`,
-    salesEmail: KAMPUS_SALES_EMAIL,
-  });
+  const outcome = salesContactOutcome(emailed, data.name, data.email);
+  return NextResponse.json(outcome.body, { status: outcome.status });
 }
