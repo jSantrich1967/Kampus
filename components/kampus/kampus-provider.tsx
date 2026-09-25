@@ -27,7 +27,13 @@ import {
   setDiaryStorageOwner,
 } from "@/lib/storage/diary-storage";
 import { clearDiaryPendingOps, discardLegacyDiaryPendingQueue } from "@/lib/storage/diary-pending-queue";
-import { loadProfile, saveProfile } from "@/lib/storage/kampus-storage";
+import {
+  clearProfileStorage,
+  discardLegacyProfileStorage,
+  loadProfile,
+  saveProfile,
+  setProfileStorageOwner,
+} from "@/lib/storage/kampus-storage";
 import {
   clearPsychologistChatStorage,
   discardLegacyPsychologistChat,
@@ -54,12 +60,15 @@ export function KampusProvider({ children }: { children: ReactNode }) {
   const [locale] = useState<Locale>("es");
   const lastPushedJson = useRef<string>("");
   const authUserIdRef = useRef<string | null>(null);
+  const profileOwnerRef = useRef<string | null>(authUserId);
   setDiaryStorageOwner(authUserId);
+  setProfileStorageOwner(authUserId);
 
   useEffect(() => {
     discardLegacyPsychologistChat();
     discardLegacyDiaryStorage();
     discardLegacyDiaryPendingQueue();
+    discardLegacyProfileStorage();
     const stored = loadProfile();
     setProfileState(stored);
     // Render immediately from local storage; Supabase sync runs in the background.
@@ -89,7 +98,8 @@ export function KampusProvider({ children }: { children: ReactNode }) {
       }
 
       setAuthUserId(userId);
-      const local = loadProfile();
+      setProfileStorageOwner(userId);
+      const local = loadProfile(userId);
 
       try {
         const remoteRaw = await fetchProfileForUser(supabase, userId);
@@ -99,7 +109,7 @@ export function KampusProvider({ children }: { children: ReactNode }) {
         lastPushedJson.current = JSON.stringify(merged);
         if (cancelled) return;
         setProfileState(merged);
-        saveProfile(merged);
+        saveProfile(merged, userId);
         if (!remoteMeaningful && isMeaningfulProfile(local)) {
           await upsertProfileForUser(supabase, userId, merged);
         }
@@ -107,7 +117,7 @@ export function KampusProvider({ children }: { children: ReactNode }) {
         console.error(e);
         if (!cancelled) {
           setProfileState(local);
-          saveProfile(local);
+          saveProfile(local, userId);
         }
       }
     };
@@ -132,6 +142,11 @@ export function KampusProvider({ children }: { children: ReactNode }) {
         clearDiaryPendingOps(null);
         discardLegacyDiaryStorage();
         discardLegacyDiaryPendingQueue();
+        clearProfileStorage(authUserIdRef.current);
+        clearProfileStorage(null);
+        discardLegacyProfileStorage();
+        setProfileStorageOwner(null);
+        setProfileState(defaultProfile);
       }
       authUserIdRef.current = nextId;
       schedule(nextId);
@@ -151,8 +166,12 @@ export function KampusProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return;
-    saveProfile(profile);
-  }, [hydrated, profile]);
+    if (profileOwnerRef.current !== authUserId) {
+      profileOwnerRef.current = authUserId;
+      return;
+    }
+    saveProfile(profile, authUserId);
+  }, [hydrated, profile, authUserId]);
 
   useEffect(() => {
     if (!hydrated || !authUserId || !isSupabaseConfigured()) return;

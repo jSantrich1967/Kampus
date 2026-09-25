@@ -1,12 +1,26 @@
 import { defaultProfile, profileSchema, type UserProfile } from "@/lib/schemas/profile";
 
-const STORAGE_KEY = "kampus.profile.v1";
+/** Old builds used one box for every account. Never read it into a user. */
+const LEGACY_KEY = "kampus.profile.v1";
 
-export function loadProfile(): UserProfile {
-  if (typeof window === "undefined") return defaultProfile;
+let ownerId: string | null = null;
+
+export function setProfileStorageOwner(userId: string | null) {
+  ownerId = userId;
+}
+
+export function profileStorageKey(userId: string | null = ownerId): string {
+  if (!userId) return "kampus.profile.v1.anonymous";
+  return `kampus.profile.v1.${userId}`;
+}
+
+function resolveOwner(userId?: string | null): string | null {
+  return userId === undefined ? ownerId : userId;
+}
+
+function readProfile(raw: string | null): UserProfile {
+  if (!raw) return defaultProfile;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultProfile;
     const json: unknown = JSON.parse(raw);
     if (!json || typeof json !== "object") return defaultProfile;
     const parsed = profileSchema.safeParse({ ...defaultProfile, ...(json as object) });
@@ -16,7 +30,23 @@ export function loadProfile(): UserProfile {
   }
 }
 
-export function saveProfile(profile: UserProfile) {
+export function loadProfile(userId?: string | null): UserProfile {
+  if (typeof window === "undefined") return defaultProfile;
+  const raw = window.localStorage.getItem(profileStorageKey(resolveOwner(userId)));
+  return readProfile(raw);
+}
+
+export function saveProfile(profile: UserProfile, userId?: string | null) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+  window.localStorage.setItem(profileStorageKey(resolveOwner(userId)), JSON.stringify(profile));
+}
+
+export function clearProfileStorage(userId: string | null = ownerId) {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(profileStorageKey(userId));
+}
+
+export function discardLegacyProfileStorage() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(LEGACY_KEY);
 }
