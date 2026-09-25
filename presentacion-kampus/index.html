@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Kampus — Presentación HyperFrames</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #07050f;
+        font-family: Inter, "Segoe UI", system-ui, sans-serif;
+        color: #f8fafc;
+      }
+
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+      }
+
+      .clip {
+        position: absolute;
+        inset: 0;
+      }
+
+      .slide-bg {
+        position: absolute;
+        inset: 0;
+      }
+
+      .slide-inner {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        height: 100%;
+        padding: 96px 120px;
+      }
+
+      /* ── Slide backgrounds ── */
+      .bg-1 {
+        background:
+          radial-gradient(circle at 15% 20%, rgba(139, 92, 246, 0.45), transparent 45%),
+          radial-gradient(circle at 85% 75%, rgba(34, 211, 238, 0.25), transparent 40%),
+          linear-gradient(135deg, #0f0720 0%, #1a0f35 50%, #0a1628 100%);
+      }
+
+      .bg-2 {
+        background:
+          radial-gradient(circle at 80% 25%, rgba(244, 114, 182, 0.3), transparent 42%),
+          linear-gradient(160deg, #120a24 0%, #1e1038 100%);
+      }
+
+      .bg-3 {
+        background:
+          radial-gradient(circle at 20% 80%, rgba(52, 211, 153, 0.28), transparent 45%),
+          linear-gradient(145deg, #081018 0%, #0f2030 100%);
+      }
+
+      .bg-4 {
+        background:
+          radial-gradient(circle at 70% 30%, rgba(251, 191, 36, 0.22), transparent 40%),
+          linear-gradient(155deg, #140f08 0%, #1a1428 100%);
+      }
+
+      .bg-5 {
+        background:
+          radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.35), transparent 50%),
+          linear-gradient(160deg, #0a0f2e 0%, #151035 100%);
+      }
+
+      .bg-6 {
+        background:
+          radial-gradient(circle at 50% 40%, rgba(168, 85, 247, 0.4), transparent 48%),
+          linear-gradient(135deg, #0f0820 0%, #1a1040 100%);
+      }
+
+      /* ── Typography ── */
+      .eyebrow {
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.62);
+        margin-bottom: 20px;
+      }
+
+      .hero-title {
+        font-size: 108px;
+        font-weight: 800;
+        line-height: 1.02;
+        letter-spacing: -0.03em;
+        max-width: 14ch;
+      }
+
+      .hero-title .accent {
+        background: linear-gradient(90deg, #c4b5fd, #67e8f9, #f0abfc);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .hero-sub {
+        margin-top: 28px;
+        font-size: 34px;
+        line-height: 1.45;
+        color: rgba(226, 232, 240, 0.78);
+        max-width: 28ch;
+      }
+
+      .slide-title {
+        font-size: 72px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        margin-bottom: 36px;
+        max-width: 16ch;
+        line-height: 1.08;
+      }
+
+      .slide-body {
+        font-size: 30px;
+        line-height: 1.55;
+        color: rgba(226, 232, 240, 0.82);
+        max-width: 36ch;
+      }
+
+      /* ── Cards & bullets ── */
+      .card-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 24px;
+        margin-top: 48px;
+        max-width: 920px;
+      }
+
+      .card {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 24px;
+        padding: 28px 32px;
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(12px);
+      }
+
+      .card h3 {
+        font-size: 26px;
+        font-weight: 700;
+        margin-bottom: 10px;
+      }
+
+      .card p {
+        font-size: 20px;
+        line-height: 1.5;
+        color: rgba(226, 232, 240, 0.72);
+      }
+
+      .bullet-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        margin-top: 12px;
+      }
+
+      .bullet-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        font-size: 28px;
+        line-height: 1.4;
+        color: rgba(241, 245, 249, 0.9);
+      }
+
+      .bullet-list li::before {
+        content: "";
+        flex-shrink: 0;
+        width: 12px;
+        height: 12px;
+        margin-top: 12px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #a78bfa, #22d3ee);
+        box-shadow: 0 0 16px rgba(167, 139, 250, 0.6);
+      }
+
+      /* ── Split layout ── */
+      .split {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 64px;
+        align-items: center;
+        width: 100%;
+      }
+
+      .icon-stage {
+        position: relative;
+        width: 420px;
+        height: 420px;
+        margin: 0 auto;
+        perspective: 900px;
+      }
+
+      .icon-card {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        border-radius: 32px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(15, 23, 42, 0.55);
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+        transform-style: preserve-3d;
+      }
+
+      .icon-card svg {
+        width: 160px;
+        height: 160px;
+        color: #c4b5fd;
+      }
+
+      .icon-glow {
+        position: absolute;
+        inset: -40px;
+        border-radius: 999px;
+        background: radial-gradient(circle, rgba(139, 92, 246, 0.35), transparent 70%);
+        z-index: -1;
+      }
+
+      /* ── Diagram mock ── */
+      .diagram {
+        position: relative;
+        width: 520px;
+        height: 360px;
+        border-radius: 28px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.96);
+        overflow: hidden;
+      }
+
+      .diagram-cell {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 200px;
+        height: 200px;
+        margin: -100px 0 0 -100px;
+        border-radius: 999px;
+        border: 4px solid #34d399;
+        background: rgba(14, 116, 144, 0.25);
+      }
+
+      .diagram-nucleus {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 72px;
+        height: 72px;
+        margin: -36px 0 0 -36px;
+        border-radius: 999px;
+        background: #7c3aed;
+      }
+
+      .label-tag {
+        position: absolute;
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-size: 16px;
+        font-weight: 700;
+        color: #0f172a;
+        background: #e2e8f0;
+        white-space: nowrap;
+      }
+
+      .label-tag.tag-1 { left: 24px; top: 48px; }
+      .label-tag.tag-2 { right: 20px; top: 80px; }
+      .label-tag.tag-3 { left: 40px; bottom: 48px; }
+      .label-tag.tag-4 { right: 32px; bottom: 56px; }
+
+      /* ── 3D orbs ── */
+      .orb-scene {
+        position: relative;
+        width: 480px;
+        height: 480px;
+        margin: 0 auto;
+        perspective: 1000px;
+      }
+
+      .orb-world {
+        position: absolute;
+        inset: 0;
+        transform-style: preserve-3d;
+      }
+
+      .orb-shell {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 280px;
+        height: 280px;
+        margin: -140px 0 0 -140px;
+        border-radius: 999px;
+        border: 3px solid rgba(110, 231, 183, 0.45);
+        background: rgba(14, 116, 144, 0.18);
+      }
+
+      .orb-core {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 96px;
+        height: 96px;
+        margin: -48px 0 0 -48px;
+        border-radius: 999px;
+        background: radial-gradient(circle at 30% 30%, #c4b5fd, #7c3aed);
+        box-shadow: 0 0 40px rgba(124, 58, 237, 0.6);
+      }
+
+      .orb-mito {
+        position: absolute;
+        width: 36px;
+        height: 72px;
+        border-radius: 999px;
+        background: #ea580c;
+      }
+
+      .orb-mito.m1 { left: 62%; top: 38%; transform: rotate(25deg); }
+      .orb-mito.m2 { left: 28%; top: 58%; transform: rotate(-30deg); }
+
+      /* ── CTA ── */
+      .cta-btn {
+        display: inline-block;
+        margin-top: 40px;
+        padding: 22px 48px;
+        border-radius: 999px;
+        font-size: 28px;
+        font-weight: 700;
+        color: #0f0820;
+        background: linear-gradient(90deg, #c4b5fd, #67e8f9);
+        box-shadow: 0 20px 60px rgba(103, 232, 249, 0.25);
+      }
+
+      .progress-bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 4px;
+        width: 100%;
+        background: rgba(255, 255, 255, 0.08);
+        z-index: 50;
+      }
+
+      .progress-fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #a78bfa, #22d3ee);
+        transform-origin: left center;
+      }
+
+      .slide-num {
+        position: absolute;
+        top: 48px;
+        right: 64px;
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: 0.2em;
+        color: rgba(255, 255, 255, 0.55);
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="33"
+      data-width="1920"
+      data-height="1080"
+    >
+      <!-- Slide 1 · Portada -->
+      <section id="slide-1" class="clip" data-start="0" data-duration="5.5" data-track-index="1">
+        <div class="slide-bg bg-1"></div>
+        <div class="slide-inner">
+          <p id="s1-eyebrow" class="eyebrow">Kampus Lumina Studio</p>
+          <h1 id="s1-title" class="hero-title">Aprende con <span class="accent">clase visual</span></h1>
+          <p id="s1-sub" class="hero-sub">Tus apuntes se convierten en una presentación animada con voz, diagramas e ilustraciones.</p>
+        </div>
+        <span class="slide-num">01 / 06</span>
+      </section>
+
+      <!-- Slide 2 · Problema -->
+      <section id="slide-2" class="clip" data-start="5.5" data-duration="5.5" data-track-index="1">
+        <div class="slide-bg bg-2"></div>
+        <div class="slide-inner">
+          <p class="eyebrow">El reto</p>
+          <h2 id="s2-title" class="slide-title">Estudiar solo con PDFs es difícil</h2>
+          <ul class="bullet-list">
+            <li id="s2-b1">Apuntes densos sin explicación guiada</li>
+            <li id="s2-b2">Difícil ver cómo encajan las partes</li>
+            <li id="s2-b3">Repaso pasivo, poca interacción</li>
+          </ul>
+        </div>
+        <span class="slide-num">02 / 06</span>
+      </section>
+
+      <!-- Slide 3 · Clase visual -->
+      <section id="slide-3" class="clip" data-start="11" data-duration="5.5" data-track-index="1">
+        <div class="slide-bg bg-3"></div>
+        <div class="slide-inner split">
+          <div>
+            <p class="eyebrow">Solución</p>
+            <h2 id="s3-title" class="slide-title">Clase visual con voz HD</h2>
+            <p id="s3-body" class="slide-body">La IA genera diapositivas pedagógicas a partir de tus hojas y las narra como un profesor cercano.</p>
+          </div>
+          <div class="icon-stage">
+            <div id="s3-glow" class="icon-glow"></div>
+            <div id="s3-icon" class="icon-card">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                <path d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+          </div>
+        </div>
+        <span class="slide-num">03 / 06</span>
+      </section>
+
+      <!-- Slide 4 · Ilustraciones -->
+      <section id="slide-4" class="clip" data-start="16.5" data-duration="5.5" data-track-index="1">
+        <div class="slide-bg bg-4"></div>
+        <div class="slide-inner split">
+          <div>
+            <p class="eyebrow">Visual</p>
+            <h2 id="s4-title" class="slide-title">Diagramas con etiquetas</h2>
+            <p id="s4-body" class="slide-body">Ilustraciones educativas con nombres de partes, flechas y explicaciones claras en español.</p>
+          </div>
+          <div id="s4-diagram" class="diagram">
+            <div class="diagram-cell"></div>
+            <div class="diagram-nucleus"></div>
+            <span id="s4-t1" class="label-tag tag-1">Membrana</span>
+            <span id="s4-t2" class="label-tag tag-2">Núcleo</span>
+            <span id="s4-t3" class="label-tag tag-3">Citoplasma</span>
+            <span id="s4-t4" class="label-tag tag-4">Mitocondria</span>
+          </div>
+        </div>
+        <span class="slide-num">04 / 06</span>
+      </section>
+
+      <!-- Slide 5 · 3D -->
+      <section id="slide-5" class="clip" data-start="22" data-duration="5.5" data-track-index="1">
+        <div class="slide-bg bg-5"></div>
+        <div class="slide-inner split">
+          <div class="orb-scene">
+            <div id="s5-world" class="orb-world">
+              <div class="orb-shell"></div>
+              <div class="orb-core"></div>
+              <div class="orb-mito m1"></div>
+              <div class="orb-mito m2"></div>
+            </div>
+          </div>
+          <div>
+            <p class="eyebrow">Inmersivo</p>
+            <h2 id="s5-title" class="slide-title">Modelo 3D interactivo</h2>
+            <p id="s5-body" class="slide-body">Gira, haz zoom y explora cada parte de la célula con el ratón o el dedo.</p>
+          </div>
+        </div>
+        <span class="slide-num">05 / 06</span>
+      </section>
+
+      <!-- Slide 6 · Cierre -->
+      <section id="slide-6" class="clip" data-start="27.5" data-duration="5.5" data-track-index="1">
+        <div class="slide-bg bg-6"></div>
+        <div class="slide-inner" style="align-items: center; text-align: center">
+          <p id="s6-eyebrow" class="eyebrow">Empieza hoy</p>
+          <h2 id="s6-title" class="hero-title" style="max-width: none; font-size: 88px">Tu cuaderno,<br /><span class="accent">tu clase</span></h2>
+          <p id="s6-sub" class="hero-sub" style="max-width: none">Abre un cuaderno → Clase visual → Aprende jugando.</p>
+          <span id="s6-cta" class="cta-btn">kampus.app</span>
+        </div>
+        <span class="slide-num">06 / 06</span>
+      </section>
+
+      <!-- Progress (always visible) -->
+      <div class="progress-bar" data-layout-allow-overflow="true">
+        <div id="progress-fill" class="progress-fill"></div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // ── Slide 1 · Portada (0–5.5s) ──
+      tl.fromTo("#s1-eyebrow", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, 0.2);
+      tl.fromTo("#s1-title", { y: 80, opacity: 0, scale: 0.92 }, { y: 0, opacity: 1, scale: 1, duration: 0.9, ease: "power4.out" }, 0.35);
+      tl.fromTo("#s1-sub", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power2.out" }, 0.85);
+
+      // ── Slide 2 · Problema (5.5–11s) ──
+      tl.fromTo("#s2-title", { x: -60, opacity: 0 }, { x: 0, opacity: 1, duration: 0.7, ease: "power3.out" }, 5.7);
+      tl.fromTo("#s2-b1", { x: -40, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, 6.1);
+      tl.fromTo("#s2-b2", { x: -40, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, 6.35);
+      tl.fromTo("#s2-b3", { x: -40, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, 6.6);
+
+      // ── Slide 3 · Voz (11–16.5s) ──
+      tl.fromTo("#s3-title", { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power3.out" }, 11.2);
+      tl.fromTo("#s3-body", { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" }, 11.55);
+      tl.fromTo("#s3-glow", { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 1, ease: "power2.out" }, 11.3);
+      tl.fromTo("#s3-icon", { rotateY: -55, rotateX: 20, opacity: 0, scale: 0.7 }, { rotateY: 0, rotateX: 0, opacity: 1, scale: 1, duration: 1, ease: "back.out(1.4)" }, 11.4);
+
+      // ── Slide 4 · Diagrama (16.5–22s) ──
+      tl.fromTo("#s4-title", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.65, ease: "power3.out" }, 16.7);
+      tl.fromTo("#s4-body", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, ease: "power2.out" }, 17.05);
+      tl.fromTo("#s4-diagram", { scale: 0.85, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.8, ease: "power3.out" }, 16.9);
+      tl.fromTo("#s4-t1", { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: "power2.out" }, 17.4);
+      tl.fromTo("#s4-t2", { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: "power2.out" }, 17.55);
+      tl.fromTo("#s4-t3", { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: "power2.out" }, 17.7);
+      tl.fromTo("#s4-t4", { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: "power2.out" }, 17.85);
+
+      // ── Slide 5 · 3D (22–27.5s) ──
+      tl.fromTo("#s5-world", { rotateY: -40, rotateX: 18, opacity: 0, scale: 0.75 }, { rotateY: 15, rotateX: -8, opacity: 1, scale: 1, duration: 1.2, ease: "power3.out" }, 22.2);
+      tl.to("#s5-world", { rotateY: 375, duration: 4, ease: "none", overwrite: "auto" }, 23.45);
+      tl.fromTo("#s5-title", { x: 40, opacity: 0 }, { x: 0, opacity: 1, duration: 0.7, ease: "power3.out" }, 22.4);
+      tl.fromTo("#s5-body", { x: 30, opacity: 0 }, { x: 0, opacity: 1, duration: 0.6, ease: "power2.out" }, 22.75);
+
+      // ── Slide 6 · Cierre (27.5–33s) ──
+      tl.fromTo("#s6-eyebrow", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: "power2.out" }, 27.7);
+      tl.fromTo("#s6-title", { scale: 0.88, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.85, ease: "back.out(1.3)" }, 27.85);
+      tl.fromTo("#s6-sub", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, ease: "power2.out" }, 28.3);
+      tl.fromTo("#s6-cta", { scale: 0.8, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.6, ease: "back.out(2)" }, 28.6);
+      tl.to("#s6-cta", { scale: 1.04, duration: 0.4, yoyo: true, repeat: 3, ease: "sine.inOut" }, 29.4);
+
+      // ── Progress bar (0–33s) ──
+      tl.fromTo("#progress-fill", { scaleX: 0 }, { scaleX: 1, duration: 33, ease: "none" }, 0);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
