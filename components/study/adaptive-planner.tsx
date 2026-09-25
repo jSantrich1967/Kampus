@@ -67,7 +67,7 @@ function StudentOnly() {
 }
 
 export function AdaptivePlanner() {
-  const { profile, hydrated } = useKampus();
+  const { profile, hydrated, authUserId } = useKampus();
   const [plan, setPlan] = useState<StudyPlan | null>(null);
   const [loaded, setLoaded] = useState(false);
 
@@ -78,9 +78,9 @@ export function AdaptivePlanner() {
   const [confirming, setConfirming] = useState<"recalc" | "reset" | null>(null);
 
   useEffect(() => {
-    setPlan(loadStudyPlan());
+    setPlan(loadStudyPlan(authUserId));
     setLoaded(true);
-  }, []);
+  }, [authUserId]);
 
   const today = useMemo(() => localIsoDate(), []);
 
@@ -133,16 +133,19 @@ export function AdaptivePlanner() {
       setFormError("Las fechas de examen ya pasaron. Revisa que sean fechas futuras.");
       return;
     }
-    setPlan(createStudyPlan({ subjects, dailyHours: hours, sessions }));
+    setPlan(createStudyPlan({ subjects, dailyHours: hours, sessions }, authUserId));
   };
 
   const toggleSession = (id: string) => {
     if (!plan) return;
     const target = plan.sessions.find((s) => s.id === id);
-    const next = touchStudyPlan({
-      ...plan,
-      sessions: plan.sessions.map((s) => (s.id === id ? { ...s, done: !s.done } : s)),
-    });
+    const next = touchStudyPlan(
+      {
+        ...plan,
+        sessions: plan.sessions.map((s) => (s.id === id ? { ...s, done: !s.done } : s)),
+      },
+      authUserId,
+    );
     setPlan(next);
     // Solo cuenta cuando se MARCA como hecha (no al desmarcar).
     if (target && !target.done) logStudyActivity("plan");
@@ -151,12 +154,12 @@ export function AdaptivePlanner() {
   const doRecalculate = () => {
     if (!plan) return;
     const sessions = recalculatePlan(plan, today);
-    setPlan(touchStudyPlan({ ...plan, sessions }));
+    setPlan(touchStudyPlan({ ...plan, sessions }, authUserId));
     setConfirming(null);
   };
 
   const doReset = () => {
-    clearStudyPlan();
+    clearStudyPlan(authUserId);
     setPlan(null);
     setRows([newRow()]);
     setDailyHours("2");

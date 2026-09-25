@@ -37,6 +37,7 @@ import {
   discardLegacyPresentationStorage,
   setPresentationStorageOwner,
 } from "@/lib/storage/presentation-storage";
+import { clearStudyPlan, discardLegacyStudyPlan, setStudyPlanOwner } from "@/lib/storage/study-plan-storage";
 import {
   clearExamStorage,
   discardLegacyExamStorage,
@@ -87,6 +88,7 @@ export function KampusProvider({ children }: { children: ReactNode }) {
   setExamStorageOwner(authUserId);
   setClassCancellationOwner(authUserId);
   setPresentationStorageOwner(authUserId);
+  setStudyPlanOwner(authUserId);
 
   useEffect(() => {
     discardLegacyPsychologistChat();
@@ -97,6 +99,7 @@ export function KampusProvider({ children }: { children: ReactNode }) {
     discardLegacyExamStorage();
     discardLegacyClassCancellations();
     discardLegacyPresentationStorage();
+    discardLegacyStudyPlan();
     const stored = loadProfile();
     setProfileState(stored);
     // Render immediately from local storage; Supabase sync runs in the background.
@@ -131,6 +134,7 @@ export function KampusProvider({ children }: { children: ReactNode }) {
       setExamStorageOwner(userId);
       setClassCancellationOwner(userId);
       setPresentationStorageOwner(userId);
+      setStudyPlanOwner(userId);
       const local = loadProfile(userId);
 
       try {
@@ -195,6 +199,10 @@ export function KampusProvider({ children }: { children: ReactNode }) {
         clearPresentationStorage(null);
         discardLegacyPresentationStorage();
         setPresentationStorageOwner(null);
+        clearStudyPlan(authUserIdRef.current);
+        clearStudyPlan(null);
+        discardLegacyStudyPlan();
+        setStudyPlanOwner(null);
       }
       authUserIdRef.current = nextId;
       schedule(nextId);

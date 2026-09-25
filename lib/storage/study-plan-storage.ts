@@ -1,6 +1,22 @@
 import { z } from "zod";
 
-const PLAN_KEY = "kampus.studyPlan.v1";
+/** Old builds used one box for every account. Never read it into a user. */
+const LEGACY_KEY = "kampus.studyPlan.v1";
+
+let ownerId: string | null = null;
+
+export function setStudyPlanOwner(userId: string | null) {
+  ownerId = userId;
+}
+
+export function studyPlanStorageKey(userId: string | null = ownerId): string {
+  if (!userId) return "kampus.studyPlan.v1.anonymous";
+  return `kampus.studyPlan.v1.${userId}`;
+}
+
+function resolveOwner(userId?: string | null): string | null {
+  return userId === undefined ? ownerId : userId;
+}
 
 const planSubjectSchema = z.object({
   id: z.string(),
@@ -51,21 +67,24 @@ function writeJson(key: string, value: unknown) {
   window.localStorage.setItem(key, JSON.stringify(value));
 }
 
-export function loadStudyPlan(): StudyPlan | null {
-  const json = readJson(PLAN_KEY);
+export function loadStudyPlan(userId?: string | null): StudyPlan | null {
+  const json = readJson(studyPlanStorageKey(resolveOwner(userId)));
   const parsed = studyPlanSchema.safeParse(json);
   return parsed.success ? parsed.data : null;
 }
 
-export function saveStudyPlan(plan: StudyPlan) {
-  writeJson(PLAN_KEY, plan);
+export function saveStudyPlan(plan: StudyPlan, userId?: string | null) {
+  writeJson(studyPlanStorageKey(resolveOwner(userId)), plan);
 }
 
-export function createStudyPlan(params: {
-  subjects: PlanSubject[];
-  dailyHours: number;
-  sessions: PlanSession[];
-}): StudyPlan {
+export function createStudyPlan(
+  params: {
+    subjects: PlanSubject[];
+    dailyHours: number;
+    sessions: PlanSession[];
+  },
+  userId?: string | null,
+): StudyPlan {
   const now = nowIso();
   const plan: StudyPlan = {
     subjects: params.subjects,
@@ -74,17 +93,22 @@ export function createStudyPlan(params: {
     createdAt: now,
     updatedAt: now,
   };
-  saveStudyPlan(plan);
+  saveStudyPlan(plan, userId);
   return plan;
 }
 
-export function touchStudyPlan(plan: StudyPlan): StudyPlan {
+export function touchStudyPlan(plan: StudyPlan, userId?: string | null): StudyPlan {
   const next: StudyPlan = { ...plan, updatedAt: nowIso() };
-  saveStudyPlan(next);
+  saveStudyPlan(next, userId);
   return next;
 }
 
-export function clearStudyPlan() {
+export function clearStudyPlan(userId?: string | null) {
   if (typeof window === "undefined") return;
-  window.localStorage.removeItem(PLAN_KEY);
+  window.localStorage.removeItem(studyPlanStorageKey(resolveOwner(userId)));
+}
+
+export function discardLegacyStudyPlan() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(LEGACY_KEY);
 }
