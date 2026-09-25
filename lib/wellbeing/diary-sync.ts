@@ -38,7 +38,7 @@ export function markDiarySyncedForUser(userId: string) {
 
 /** True when local rows need uploading or user changed since last sync. */
 export function diaryNeedsCloudSync(userId: string): boolean {
-  const local = loadDiaryEntries();
+  const local = loadDiaryEntries(userId);
   if (local.some((e) => isLocalOnlyDiaryId(e.id))) return true;
   const meta = readSyncMeta();
   return meta?.userId !== userId;
@@ -51,7 +51,7 @@ export async function syncDiaryWithCloud(
 ): Promise<DiarySyncResult> {
   const flushedPending = await flushDiaryPendingQueue(client, userId);
 
-  const local = loadDiaryEntries();
+  const local = loadDiaryEntries(userId);
   let remote = await fetchDiaryEntriesRemote(client, userId);
   const remoteByDate = new Map(remote.map((e) => [diaryEntryDateKey(e), e]));
   let pushedCount = 0;
@@ -84,7 +84,7 @@ export async function syncDiaryWithCloud(
     (e) => isLocalOnlyDiaryId(e.id) && !remoteDates.has(diaryEntryDateKey(e)),
   );
   const merged = mergeDiaryEntries(stillLocalOnly, remote);
-  saveDiaryEntries(merged);
+  saveDiaryEntries(merged, userId);
   markDiarySyncedForUser(userId);
   notifyDiaryChanged();
   notifyDiarySyncCompleted({ pushedCount, flushedPending });

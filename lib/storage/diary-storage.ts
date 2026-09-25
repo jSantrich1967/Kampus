@@ -3,13 +3,34 @@ import { z } from "zod";
 import { diaryEntrySchema, type DiaryEntry } from "@/lib/schemas/diary-entry";
 import { localIsoDate } from "@/lib/calendar/local-iso-date";
 
-const KEY = "kampus.diary.v1";
+/** Old builds used one box for every account. Never read it into a user. */
+const LEGACY_KEY = "kampus.diary.v1";
+
+let ownerId: string | null = null;
 
 const listSchema = z.array(diaryEntrySchema);
 
-function readJson(): unknown {
+/** The signed-in account, or null when nobody is logged in. */
+export function setDiaryStorageOwner(userId: string | null) {
+  ownerId = userId;
+}
+
+export function diaryStorageOwner(): string | null {
+  return ownerId;
+}
+
+export function diaryStorageKey(userId: string | null = ownerId): string {
+  if (!userId) return "kampus.diary.v1.anonymous";
+  return `kampus.diary.v1.${userId}`;
+}
+
+function resolveOwner(userId?: string | null): string | null {
+  return userId === undefined ? ownerId : userId;
+}
+
+function readJson(userId?: string | null): unknown {
   if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(KEY);
+  const raw = window.localStorage.getItem(diaryStorageKey(resolveOwner(userId)));
   if (!raw) return null;
   try {
     return JSON.parse(raw) as unknown;
@@ -18,40 +39,53 @@ function readJson(): unknown {
   }
 }
 
-function writeJson(rows: DiaryEntry[]) {
+function writeJson(rows: DiaryEntry[], userId?: string | null) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(KEY, JSON.stringify(rows));
+  window.localStorage.setItem(diaryStorageKey(resolveOwner(userId)), JSON.stringify(rows));
+}
+
+export function clearDiaryStorage(userId: string | null = ownerId) {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(diaryStorageKey(userId));
+}
+
+export function discardLegacyDiaryStorage() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(LEGACY_KEY);
 }
 
 function uid() {
   return `diary_${Math.random().toString(36).slice(2, 10)}_${Date.now().toString(36)}`;
 }
 
-export function loadDiaryEntries(): DiaryEntry[] {
-  const parsed = listSchema.safeParse(readJson());
+export function loadDiaryEntries(userId?: string | null): DiaryEntry[] {
+  const parsed = listSchema.safeParse(readJson(userId));
   return parsed.success ? parsed.data : [];
 }
 
-export function saveDiaryEntries(rows: DiaryEntry[]) {
-  writeJson(rows);
+export function saveDiaryEntries(rows: DiaryEntry[], userId?: string | null) {
+  writeJson(rows, userId);
 }
 
-export function upsertDiaryEntry(entry: DiaryEntry) {
-  const rest = loadDiaryEntries().filter((e) => e.id !== entry.id);
+export function upsertDiaryEntry(entry: DiaryEntry, userId?: string | null) {
+  const rest = loadDiaryEntries(userId).filter((e) => e.id !== entry.id);
   const stamped: DiaryEntry = {
     ...entry,
     updatedAt: new Date().toISOString(),
   };
   const next = [stamped, ...rest].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  saveDiaryEntries(next);
+  saveDiaryEntries(next, userId);
 }
 
-export function deleteDiaryEntry(id: string) {
-  saveDiaryEntries(loadDiaryEntries().filter((e) => e.id !== id));
+export function deleteDiaryEntry(id: string, userId?: string | null) {
+  saveDiaryEntries(
+    loadDiaryEntries(userId).filter((e) => e.id !== id),
+    userId,
+  );
 }
 
-export function getDiaryEntryById(id: string): DiaryEntry | null {
-  return loadDiaryEntries().find((e) => e.id === id) ?? null;
+export function getDiaryEntryById(id: string, userId?: string | null): DiaryEntry | null {
+  return loadDiaryEntries(userId).find((e) => e.id === id) ?? null;
 }
 
 export type NewDiaryEntryInput = Omit<DiaryEntry, "id" | "createdAt">;

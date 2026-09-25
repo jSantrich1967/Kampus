@@ -1,7 +1,13 @@
-import type { NewDiaryEntryInput } from "@/lib/storage/diary-storage";
 import type { DiaryEntry } from "@/lib/schemas/diary-entry";
+import { diaryStorageOwner } from "@/lib/storage/diary-storage";
+import type { NewDiaryEntryInput } from "@/lib/storage/diary-storage";
 
-const QUEUE_KEY = "kampus.diary.pendingOps.v1";
+const LEGACY_QUEUE_KEY = "kampus.diary.pendingOps.v1";
+
+function queueKey(userId: string | null = diaryStorageOwner()): string {
+  if (!userId) return "kampus.diary.pendingOps.v1.anonymous";
+  return `kampus.diary.pendingOps.v1.${userId}`;
+}
 
 export type DiaryPendingCreate = {
   kind: "create";
@@ -31,10 +37,10 @@ export function notifyDiaryPendingChanged(): void {
   window.dispatchEvent(new Event(DIARY_PENDING_CHANGED_EVENT));
 }
 
-export function loadDiaryPendingOps(): DiaryPendingOp[] {
+export function loadDiaryPendingOps(userId?: string | null): DiaryPendingOp[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(QUEUE_KEY);
+    const raw = window.localStorage.getItem(queueKey(userId === undefined ? diaryStorageOwner() : userId));
     if (!raw) return [];
     const parsed = JSON.parse(raw) as DiaryPendingOp[];
     return Array.isArray(parsed) ? parsed : [];
@@ -43,9 +49,10 @@ export function loadDiaryPendingOps(): DiaryPendingOp[] {
   }
 }
 
-function saveDiaryPendingOps(ops: DiaryPendingOp[]) {
+function saveDiaryPendingOps(ops: DiaryPendingOp[], userId?: string | null) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(QUEUE_KEY, JSON.stringify(ops));
+  const owner = userId === undefined ? diaryStorageOwner() : userId;
+  window.localStorage.setItem(queueKey(owner), JSON.stringify(ops));
   notifyDiaryPendingChanged();
 }
 
@@ -76,13 +83,19 @@ export function enqueueDiaryPendingOp(op: DiaryPendingOp) {
   saveDiaryPendingOps([...filtered, op]);
 }
 
-export function clearDiaryPendingOps() {
+export function clearDiaryPendingOps(userId?: string | null) {
   if (typeof window === "undefined") return;
-  window.localStorage.removeItem(QUEUE_KEY);
+  const owner = userId === undefined ? diaryStorageOwner() : userId;
+  window.localStorage.removeItem(queueKey(owner));
   notifyDiaryPendingChanged();
 }
 
-export function removeDiaryPendingOpsMatching(predicate: (op: DiaryPendingOp) => boolean) {
-  const next = loadDiaryPendingOps().filter((op) => !predicate(op));
-  saveDiaryPendingOps(next);
+export function discardLegacyDiaryPendingQueue() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(LEGACY_QUEUE_KEY);
+}
+
+export function removeDiaryPendingOpsMatching(predicate: (op: DiaryPendingOp) => boolean, userId?: string | null) {
+  const next = loadDiaryPendingOps(userId).filter((op) => !predicate(op));
+  saveDiaryPendingOps(next, userId);
 }

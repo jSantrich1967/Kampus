@@ -21,6 +21,12 @@ import {
   resolveProfileMerge,
   upsertProfileForUser,
 } from "@/lib/supabase/profile-sync";
+import {
+  clearDiaryStorage,
+  discardLegacyDiaryStorage,
+  setDiaryStorageOwner,
+} from "@/lib/storage/diary-storage";
+import { clearDiaryPendingOps, discardLegacyDiaryPendingQueue } from "@/lib/storage/diary-pending-queue";
 import { loadProfile, saveProfile } from "@/lib/storage/kampus-storage";
 import {
   clearPsychologistChatStorage,
@@ -48,9 +54,12 @@ export function KampusProvider({ children }: { children: ReactNode }) {
   const [locale] = useState<Locale>("es");
   const lastPushedJson = useRef<string>("");
   const authUserIdRef = useRef<string | null>(null);
+  setDiaryStorageOwner(authUserId);
 
   useEffect(() => {
     discardLegacyPsychologistChat();
+    discardLegacyDiaryStorage();
+    discardLegacyDiaryPendingQueue();
     const stored = loadProfile();
     setProfileState(stored);
     // Render immediately from local storage; Supabase sync runs in the background.
@@ -117,6 +126,12 @@ export function KampusProvider({ children }: { children: ReactNode }) {
         clearPsychologistChatStorage(authUserIdRef.current);
         clearPsychologistChatStorage(null);
         discardLegacyPsychologistChat();
+        clearDiaryStorage(authUserIdRef.current);
+        clearDiaryStorage(null);
+        clearDiaryPendingOps(authUserIdRef.current);
+        clearDiaryPendingOps(null);
+        discardLegacyDiaryStorage();
+        discardLegacyDiaryPendingQueue();
       }
       authUserIdRef.current = nextId;
       schedule(nextId);
