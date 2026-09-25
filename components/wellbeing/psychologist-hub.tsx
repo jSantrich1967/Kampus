@@ -145,6 +145,7 @@ export function PsychologistHub() {
   const [quotaLimit, setQuotaLimit] = useState<number | null>(null);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const chatOwnerRef = useRef<string | null>(authUserId);
   const recRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
 
@@ -162,8 +163,13 @@ export function PsychologistHub() {
 
   useEffect(() => {
     if (!hydrated) return;
-    if (messages.length > 0) savePsychologistChat(messages);
-  }, [messages, hydrated]);
+    if (chatOwnerRef.current !== authUserId) {
+      chatOwnerRef.current = authUserId;
+      setMessages([]);
+      return;
+    }
+    if (messages.length > 0) savePsychologistChat(authUserId, messages);
+  }, [messages, hydrated, authUserId]);
 
   useEffect(() => {
     if (!suggestedPrompt || input.trim()) return;
@@ -326,7 +332,7 @@ export function PsychologistHub() {
       const supabase = createSupabaseBrowserClient();
       void clearPsychologistChatEverywhere(supabase, authUserId);
     } else {
-      clearPsychologistChatStorage();
+      clearPsychologistChatStorage(authUserId);
     }
     if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
   }, [useCloud, authUserId]);

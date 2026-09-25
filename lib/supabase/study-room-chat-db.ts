@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { ensureStudyRoomMember } from "@/lib/supabase/study-room-db";
+
 export type StudyRoomChatMessage = {
   id: string;
   userId: string;
@@ -13,6 +15,7 @@ export async function fetchStudyRoomMessages(
   roomCode: string,
   limit = 50,
 ): Promise<StudyRoomChatMessage[]> {
+  await ensureStudyRoomMember(client, roomCode);
   const { data, error } = await client
     .from("collaborate_study_room_messages")
     .select("id,user_id,display_name,body,created_at")
@@ -38,6 +41,7 @@ export async function insertStudyRoomMessage(
 ): Promise<void> {
   const trimmed = body.trim();
   if (!trimmed || trimmed.length > 500) throw new Error("Invalid message");
+  await ensureStudyRoomMember(client, roomCode);
   const { error } = await client.from("collaborate_study_room_messages").insert({
     room_code: roomCode,
     user_id: userId,

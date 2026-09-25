@@ -39,6 +39,7 @@ with
       ('collaborate_lms_integrations'),
       ('virtual_class_participation'),
       ('api_usage_quotas'),
+      ('collaborate_study_room_members'),
       ('institution_kpis'),
       ('institution_course_signals')
   ),
@@ -107,6 +108,8 @@ with
   expected_functions (fn_name) as (
     values
       ('consume_api_quota'),
+      ('join_collaborate_study_room'),
+      ('caller_may_read_institution'),
       ('handle_new_user'),
       ('set_profiles_updated_at'),
       ('enroll_virtual_class_session'),

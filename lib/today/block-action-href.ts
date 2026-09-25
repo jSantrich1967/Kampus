@@ -35,11 +35,9 @@ export function getStudyBlockActionLabel(block: StudyBlock): string {
     case "flashcards":
       return "Abrir tarjetas del plan";
     case "warmup":
-      return "Calentar con kit";
     case "deep":
-      return "Estudiar en profundidad";
     case "secondary":
-      return "Repasar materia secundaria";
+      return "Abrir cuaderno";
     case "close":
       return "Cerrar el ciclo";
     default:

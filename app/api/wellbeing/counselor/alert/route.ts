@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { insertCounselorAlert } from "@/lib/supabase/wellbeing-counselor-alerts-db";
 import { isProactiveAlertLevel } from "@/lib/wellbeing/counselor-alert-eligibility";
+import { loadCloudCounselorMetrics } from "@/lib/wellbeing/counselor-from-cloud";
 import { postInstitutionWellbeingWebhook } from "@/lib/wellbeing/institution-webhook";
 
 export const runtime = "nodejs";
@@ -11,9 +12,6 @@ export const runtime = "nodejs";
 const bodySchema = z.object({
   institutionKey: z.string().min(2).max(120),
   weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  riskLevel: z.enum(["watch", "elevated"]),
-  riskScore: z.number().int().min(0).max(100),
-  reasons: z.array(z.string().max(400)).max(8),
   channel: z.enum(["auto", "manual"]),
 });
 
@@ -40,12 +38,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
   }
 
-  if (!isProactiveAlertLevel(parsed.data.riskLevel)) {
+  const metrics = await loadCloudCounselorMetrics(supabase, user.id);
+  if (!metrics.institutionKey || metrics.institutionKey !== parsed.data.institutionKey) {
+    return NextResponse.json({ error: "La institución no coincide con tu perfil." }, { status: 403 });
+  }
+  if (!isProactiveAlertLevel(metrics.risk.level)) {
     return NextResponse.json({ error: "Risk level not eligible for counselor alert." }, { status: 400 });
   }
 
+  const alert = {
+    institutionKey: metrics.institutionKey,
+    weekStart: parsed.data.weekStart,
+    riskLevel: metrics.risk.level as "watch" | "elevated",
+    riskScore: metrics.risk.score,
+    reasons: metrics.risk.reasons,
+    channel: parsed.data.channel,
+  };
+
   try {
-    await insertCounselorAlert(supabase, user.id, parsed.data);
+    await insertCounselorAlert(supabase, user.id, alert);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "";
     if (msg.includes("duplicate") || msg.includes("unique")) {
@@ -56,12 +67,12 @@ export async function POST(req: Request) {
 
   const webhookOk = await postInstitutionWellbeingWebhook({
     event: "wellbeing.counselor_alert",
-    institutionKey: parsed.data.institutionKey,
-    weekStart: parsed.data.weekStart,
-    riskLevel: parsed.data.riskLevel,
-    riskScore: parsed.data.riskScore,
-    reasons: parsed.data.reasons,
-    channel: parsed.data.channel,
+    institutionKey: alert.institutionKey,
+    weekStart: alert.weekStart,
+    riskLevel: alert.riskLevel,
+    riskScore: alert.riskScore,
+    reasons: alert.reasons,
+    channel: alert.channel,
     emittedAt: new Date().toISOString(),
   });
 

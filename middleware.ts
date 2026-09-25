@@ -9,6 +9,22 @@ function hasLikelySupabaseAuthCookie(request: NextRequest): boolean {
   return request.cookies.getAll().some(({ name }) => name.startsWith("sb-"));
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("auth_timeout")), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 function redirectWithSessionCookies(from: NextResponse, url: URL) {
   const redirectResponse = NextResponse.redirect(url);
   from.cookies.getAll().forEach((cookie) => {
@@ -59,20 +75,28 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const user = session?.user ?? null;
-  /** Browsers that entered through /demo can browse the app without a Supabase session. */
-  const demoMode = request.cookies.get("kampus_demo")?.value === "1";
-
-  if (!user && !demoMode && !isAuthPublicPath(pathname)) {
+  let authed = false;
+  try {
+    const claimsResult = await withTimeout(supabase.auth.getClaims(), 4_000);
+    authed = !claimsResult.error && Boolean(claimsResult.data?.claims?.sub);
+  } catch {
+    // Supabase slow or paused: do not hang until Vercel returns 504.
+    if (isAuthPublicPath(pathname)) return NextResponse.next();
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
     return redirectWithSessionCookies(response, loginUrl);
   }
 
-  if (user && (pathname === "/login" || pathname === "/register")) {
+  /** Browsers that entered through /demo can browse the app without a Supabase session. */
+  const demoMode = request.cookies.get("kampus_demo")?.value === "1";
+
+  if (!authed && !demoMode && !isAuthPublicPath(pathname)) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
+    return redirectWithSessionCookies(response, loginUrl);
+  }
+
+  if (authed && (pathname === "/login" || pathname === "/register")) {
     const dest = getSafeInternalRedirect(request.nextUrl.searchParams.get("next"));
     const destUrl = new URL(dest, request.url);
     return redirectWithSessionCookies(response, destUrl);

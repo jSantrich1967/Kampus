@@ -216,18 +216,9 @@ export function TodayDashboard() {
                 </Link>
               </>
             ) : (
-              <>
-                {profile.role === "student" ? (
-                  <Link href="/pass-mode">
-                    <Button className="w-full sm:w-auto">{t.passCta}</Button>
-                  </Link>
-                ) : null}
-                <Link href="/study/library/rescue">
-                  <Button variant="secondary" className="w-full sm:w-auto">
-                    {t.rescueCta}
-                  </Button>
-                </Link>
-              </>
+              <Link href="/study/library" className={buttonClasses({ className: "w-full sm:w-auto" })}>
+                Mis cuadernos
+              </Link>
             )}
           </div>
         }
@@ -239,12 +230,6 @@ export function TodayDashboard() {
         <TodayStep step="Paso 1" label="Empieza aquí">
           <TeacherFirstSteps />
         </TodayStep>
-      ) : null}
-
-      {profile.plan === "free" && profile.role === "student" ? (
-        <div className="rounded-2xl border border-amber-300/20 bg-amber-400/5 px-4 py-3 text-sm text-amber-50">
-          {t.premiumHint}
-        </div>
       ) : null}
 
       {profile.role === "student" && overloaded ? (

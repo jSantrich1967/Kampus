@@ -7,6 +7,7 @@ import {
 } from "@/lib/supabase/psychologist-chat-db";
 import {
   clearPsychologistChatStorage,
+  discardLegacyPsychologistChat,
   loadPsychologistChat,
   savePsychologistChat,
   type PsychologistChatTurn,
@@ -29,7 +30,8 @@ export async function syncPsychologistChatWithCloud(
   client: SupabaseClient,
   userId: string,
 ): Promise<PsychologistChatSyncResult> {
-  const local = loadPsychologistChat();
+  discardLegacyPsychologistChat();
+  const local = loadPsychologistChat(userId);
   if (!isBrowserOnline()) {
     return { messages: local, source: "local" };
   }
@@ -46,7 +48,7 @@ export async function syncPsychologistChatWithCloud(
   }
 
   if (local.length === 0 || remote.messages.length > local.length) {
-    savePsychologistChat(remote.messages);
+    savePsychologistChat(userId, remote.messages);
     notifyPsychologistChatSynced();
     return { messages: remote.messages, source: "remote" };
   }
@@ -57,7 +59,7 @@ export async function syncPsychologistChatWithCloud(
     return { messages: local, source: "merged" };
   }
 
-  savePsychologistChat(remote.messages);
+  savePsychologistChat(userId, remote.messages);
   notifyPsychologistChatSynced();
   return { messages: remote.messages, source: "remote" };
 }
@@ -67,14 +69,15 @@ export async function persistPsychologistChatToCloud(
   userId: string,
   messages: PsychologistChatTurn[],
 ): Promise<void> {
-  savePsychologistChat(messages);
+  savePsychologistChat(userId, messages);
   if (!isBrowserOnline() || messages.length === 0) return;
   await upsertPsychologistChatRemote(client, userId, messages);
   notifyPsychologistChatSynced();
 }
 
 export async function clearPsychologistChatEverywhere(client: SupabaseClient, userId: string): Promise<void> {
-  clearPsychologistChatStorage();
+  clearPsychologistChatStorage(userId);
+  discardLegacyPsychologistChat();
   if (isBrowserOnline()) {
     await deletePsychologistChatRemote(client, userId);
   }

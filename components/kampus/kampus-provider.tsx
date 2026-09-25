@@ -22,6 +22,10 @@ import {
   upsertProfileForUser,
 } from "@/lib/supabase/profile-sync";
 import { loadProfile, saveProfile } from "@/lib/storage/kampus-storage";
+import {
+  clearPsychologistChatStorage,
+  discardLegacyPsychologistChat,
+} from "@/lib/storage/psychologist-chat-storage";
 
 type KampusContextValue = {
   profile: UserProfile;
@@ -43,8 +47,10 @@ export function KampusProvider({ children }: { children: ReactNode }) {
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [locale] = useState<Locale>("es");
   const lastPushedJson = useRef<string>("");
+  const authUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    discardLegacyPsychologistChat();
     const stored = loadProfile();
     setProfileState(stored);
     // Render immediately from local storage; Supabase sync runs in the background.
@@ -105,11 +111,21 @@ export function KampusProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      schedule(session?.user?.id ?? null);
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      const nextId = session?.user?.id ?? null;
+      if (event === "SIGNED_OUT") {
+        clearPsychologistChatStorage(authUserIdRef.current);
+        clearPsychologistChatStorage(null);
+        discardLegacyPsychologistChat();
+      }
+      authUserIdRef.current = nextId;
+      schedule(nextId);
     });
 
-    void supabase.auth.getUser().then(({ data: { user } }) => schedule(user?.id ?? null));
+    void supabase.auth.getUser().then(({ data: { user } }) => {
+      authUserIdRef.current = user?.id ?? authUserIdRef.current;
+      schedule(user?.id ?? null);
+    });
 
     return () => {
       cancelled = true;

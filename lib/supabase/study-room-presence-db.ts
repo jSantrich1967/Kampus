@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { ensureStudyRoomMember } from "@/lib/supabase/study-room-db";
+
 export type StudyRoomPresenceRow = {
   userId: string;
   displayName: string;
@@ -19,6 +21,7 @@ export async function upsertStudyRoomPresence(
   userId: string,
   displayName: string,
 ): Promise<void> {
+  await ensureStudyRoomMember(client, roomCode);
   const { error } = await client.from("collaborate_study_room_presence").upsert(
     {
       room_code: roomCode,
@@ -48,6 +51,7 @@ export async function fetchStudyRoomPresence(
   client: SupabaseClient,
   roomCode: string,
 ): Promise<StudyRoomPresenceRow[]> {
+  await ensureStudyRoomMember(client, roomCode);
   const { data, error } = await client
     .from("collaborate_study_room_presence")
     .select("user_id,display_name,last_seen_at")

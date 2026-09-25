@@ -12,7 +12,6 @@ import { useWellbeingRiskSignal } from "@/hooks/use-wellbeing-risk-signal";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { appendCounselorSignatureBlock, counselorPayloadFromShare } from "@/lib/wellbeing/counselor-sign-shared";
 import {
   buildCounselorMailto,
   buildCounselorShareSummary,
@@ -64,21 +63,16 @@ export function WellbeingCounselorSharePanel() {
         });
         const json = (await res.json()) as {
           ok?: boolean;
-          signature?: string;
-          signedAt?: string;
-          verifyUrl?: string;
+          signedBlock?: string;
           error?: string;
         };
         if (cancelled) return;
-        if (!res.ok || !json.ok || !json.signature || !json.signedAt || !json.verifyUrl) {
+        if (!res.ok || !json.ok || !json.signedBlock) {
           setSignedSummary(null);
           setSignError(json.error ?? null);
           return;
         }
-        const signPayload = counselorPayloadFromShare(sharePayload);
-        setSignedSummary(
-          appendCounselorSignatureBlock(baseSummary, signPayload, json.signature, json.signedAt, json.verifyUrl),
-        );
+        setSignedSummary(json.signedBlock);
       } catch {
         if (!cancelled) setSignedSummary(null);
       } finally {

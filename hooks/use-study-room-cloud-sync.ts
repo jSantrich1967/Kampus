@@ -6,7 +6,11 @@ import { useKampus } from "@/components/kampus/kampus-provider";
 import { parseStudyRoomState, pickNewerStudyRoomState } from "@/lib/collaborate/study-room-cloud-sync";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { fetchCollaborateStudyRoom, upsertCollaborateStudyRoom } from "@/lib/supabase/study-room-db";
+import {
+  ensureStudyRoomMember,
+  fetchCollaborateStudyRoom,
+  upsertCollaborateStudyRoom,
+} from "@/lib/supabase/study-room-db";
 import type { StudyRoomState } from "@/lib/storage/study-room-storage";
 
 const PUSH_DEBOUNCE_MS = 900;
@@ -38,6 +42,7 @@ export function useStudyRoomCloudSync(
     async function pull() {
       try {
         const supabase = createSupabaseBrowserClient();
+        await ensureStudyRoomMember(supabase, roomCode);
         const remote = await fetchCollaborateStudyRoom(supabase, roomCode);
         if (cancelled) return;
         if (remote) {

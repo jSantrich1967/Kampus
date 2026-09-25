@@ -3,8 +3,12 @@ export function normalizeStudyRoomCode(raw: string | null | undefined): string {
   return s || "default";
 }
 
+/** 10 characters from a CSPRNG. Short Math.random codes were easy to guess. */
 export function generateStudyRoomCode(): string {
-  return Math.random().toString(36).slice(2, 8);
+  const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
+  const bytes = new Uint8Array(10);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("");
 }
 
 export function buildStudyRoomHref(room?: string, title?: string, extras?: { video?: string }): string {

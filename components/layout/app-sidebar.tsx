@@ -72,8 +72,16 @@ export function AppSidebar({ onNavigate, luminaMode = false }: AppSidebarProps) 
     if (item.key === "psychologist") {
       return pathname === "/wellbeing/psychologist" || pathname.startsWith("/wellbeing/psychologist/");
     }
-    if (item.key === "myPresentations" || item.key === "myResearch" || item.key === "rooms") {
-      return pathname.startsWith("/collaborate");
+    if (item.key === "rooms") {
+      return pathname.startsWith("/collaborate/aula-virtual") || pathname.startsWith("/collaborate/rooms");
+    }
+    if (item.key === "myPresentations") {
+      return (
+        pathname.startsWith("/collaborate/exposiciones") || pathname.startsWith("/collaborate/presentations")
+      );
+    }
+    if (item.key === "myResearch") {
+      return pathname.startsWith("/collaborate/investigaciones");
     }
     return pathname === item.href || pathname.startsWith(`${item.href}/`);
   }

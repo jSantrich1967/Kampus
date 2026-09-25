@@ -1,4 +1,4 @@
-import { isAuthRouteProtectionEnabled } from "@/lib/supabase/env";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -19,8 +19,8 @@ export async function consumeDailyUserQuota(
   quotaKey: string,
   dailyLimit: number,
 ): Promise<QuotaResult> {
-  /** Local/preview demo: OpenAI routes work with OPENAI_API_KEY only (no Supabase session). */
-  if (!isAuthRouteProtectionEnabled()) {
+  /** Without Supabase there is no user row to count. A configured project always consumes quota. */
+  if (!isSupabaseConfigured()) {
     return {
       ok: true,
       used: 0,
@@ -102,7 +102,7 @@ export async function refundDailyUserQuota(quotaKey: string, userId: string): Pr
 
 /** Refund for the current authenticated user (no-op if auth is disabled). */
 export async function refundDailyUserQuotaForCurrentUser(quotaKey: string): Promise<void> {
-  if (!isAuthRouteProtectionEnabled()) return;
+  if (!isSupabaseConfigured()) return;
 
   const supabase = await createSupabaseServerClient();
   const {
