@@ -2,7 +2,7 @@
 
 import { Timer } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { StudyRoomChatPanel } from "@/components/collaborate/study-room-chat-panel";
 import { StudyRoomAssistantPanel } from "@/components/collaborate/study-room-assistant-panel";
@@ -24,6 +24,7 @@ import { useStudyRoomPresence } from "@/hooks/use-study-room-presence";
 import { collaborateCopy } from "@/lib/i18n/collaborate";
 import {
   defaultStudyRoomState,
+  hasSavedStudyRoom,
   loadStudyRoom,
   saveStudyRoom,
   type StudyRoomState,
@@ -52,10 +53,18 @@ export function StudyRoomPanel() {
   }, [paramRoom]);
 
   const [hydrated, setHydrated] = useState(false);
+  const [hasLocalSave, setHasLocalSave] = useState(false);
   const [state, setState] = useState<StudyRoomState>(defaultStudyRoomState);
   const [running, setRunning] = useState(false);
+  const roomOwnerRef = useRef<string | null | undefined>(undefined);
 
-  const { cloudActive, syncing, realtime, cloudError } = useStudyRoomCloudSync(roomCode, hydrated, state, setState);
+  const { cloudActive, syncing, realtime, cloudError } = useStudyRoomCloudSync(
+    roomCode,
+    hydrated,
+    state,
+    setState,
+    hasLocalSave,
+  );
   const { active: presenceActive, peers } = useStudyRoomPresence(roomCode, hydrated);
 
   useEffect(() => {
@@ -67,19 +76,25 @@ export function StudyRoomPanel() {
   }, [paramRoom, roomCode, paramTitle, router, searchParams]);
 
   useEffect(() => {
-    const loaded = loadStudyRoom(roomCode);
+    const saved = hasSavedStudyRoom(roomCode, authUserId);
+    setHasLocalSave(saved);
+    const loaded = loadStudyRoom(roomCode, authUserId);
     if (paramTitle && loaded.title === defaultStudyRoomState.title) {
       setState({ ...loaded, title: paramTitle });
     } else {
       setState(loaded);
     }
     setHydrated(true);
-  }, [roomCode, paramTitle]);
+  }, [roomCode, paramTitle, authUserId]);
 
   useEffect(() => {
     if (!hydrated) return;
-    saveStudyRoom(state, roomCode);
-  }, [hydrated, state, roomCode]);
+    if (roomOwnerRef.current !== authUserId) {
+      roomOwnerRef.current = authUserId;
+      return;
+    }
+    saveStudyRoom(state, roomCode, authUserId);
+  }, [hydrated, state, roomCode, authUserId]);
 
   useEffect(() => {
     if (!running) return;

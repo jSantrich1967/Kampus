@@ -20,12 +20,13 @@ export function useStudyRoomCloudSync(
   hydrated: boolean,
   state: StudyRoomState,
   setState: Dispatch<SetStateAction<StudyRoomState>>,
+  hasLocalSave: boolean,
 ): { cloudActive: boolean; syncing: boolean; realtime: boolean; cloudError: string | null } {
   const { authUserId } = useKampus();
   const cloudActive = Boolean(isSupabaseConfigured() && authUserId && roomCode !== "default");
   const stateRef = useRef(state);
   stateRef.current = state;
-  const localUpdatedAtRef = useRef(Date.now());
+  const localUpdatedAtRef = useRef(0);
   const pushTimerRef = useRef<number | null>(null);
   const skipNextPushRef = useRef(false);
   const [pullReady, setPullReady] = useState(false);
@@ -38,6 +39,8 @@ export function useStudyRoomCloudSync(
 
     let cancelled = false;
     setPullReady(false);
+    // A saved box is this account's offline copy. An empty box must not overwrite the shared room.
+    localUpdatedAtRef.current = hasLocalSave ? Date.now() : 0;
 
     async function pull() {
       try {
@@ -94,7 +97,7 @@ export function useStudyRoomCloudSync(
       void supabase.removeChannel(channel);
       setRealtime(false);
     };
-  }, [cloudActive, authUserId, hydrated, roomCode, setState]);
+  }, [cloudActive, authUserId, hydrated, roomCode, setState, hasLocalSave]);
 
   useEffect(() => {
     if (!cloudActive || !authUserId || !hydrated || !pullReady) return;
