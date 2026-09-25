@@ -42,10 +42,10 @@ export async function syncCancellationsWithCloud(
 
   const after = await fetchClassCancellationsRemote(client, userId);
   const merged = mergeCancellations(local, after);
-  saveClassCancellations(merged);
+  saveClassCancellations(merged, userId);
   return merged;
 }
 
-export function cacheCancellationsLocally(rows: ClassCancellation[]) {
-  saveClassCancellations(rows);
+export function cacheCancellationsLocally(rows: ClassCancellation[], userId?: string | null) {
+  saveClassCancellations(rows, userId);
 }

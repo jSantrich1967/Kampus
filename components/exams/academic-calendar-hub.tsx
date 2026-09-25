@@ -512,12 +512,12 @@ export function AcademicCalendarHub() {
         const mergedCancellations = await syncCancellationsWithCloud(
           supabase,
           authUserId!,
-          loadClassCancellations(),
+          loadClassCancellations(authUserId),
         );
         setExams(examList);
         setWorks(workList);
         setClasses(classList);
-        saveClassSchedule(classList);
+        saveClassSchedule(classList, authUserId);
         setCancellations(mergedCancellations);
         setPresentationSlices(
           deckSummaries.map((s) => ({
