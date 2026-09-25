@@ -532,7 +532,7 @@ export function AcademicCalendarHub() {
         setWorks(loadStudentWorks());
         setClasses(loadClassSchedule());
         setCancellations(loadClassCancellations());
-        const loc = loadPresentation();
+        const loc = loadPresentation(authUserId);
         const due = loc.presentationDueDate?.trim();
         setPresentationSlices(
           due
@@ -760,8 +760,8 @@ export function AcademicCalendarHub() {
           notifyStudentWorksChanged();
         } else if (ref.kind === "presentation") {
           if (ref.entityId === LOCAL_ONLY_PRESENTATION_ID) {
-            const loc = loadPresentation();
-            savePresentation({ ...loc, presentationDueDate: newDateIso });
+            const loc = loadPresentation(authUserId);
+            savePresentation({ ...loc, presentationDueDate: newDateIso }, authUserId);
           } else if (useCloud) {
             const supabase = createSupabaseBrowserClient();
             await updatePresentationDueDateRemote(supabase, authUserId!, ref.entityId, newDateIso);

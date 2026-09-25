@@ -58,6 +58,7 @@ export function PresentationPlanner() {
   const [deckSummaries, setDeckSummaries] = useState<PresentationDeckSummary[]>([]);
   const [activeDeckId, setActiveDeckId] = useState<string | null>(null);
   const [state, setState] = useState<PresentationState>(() => ({ ...createBlankPresentationState(), teamSessionCode: "" }));
+  const presentationOwnerRef = useRef<string | null | undefined>(undefined);
   const [rehearsalSeconds, setRehearsalSeconds] = useState(0);
   const [running, setRunning] = useState(false);
   const [teleIndex, setTeleIndex] = useState(0);
@@ -116,7 +117,7 @@ export function PresentationPlanner() {
     };
 
     if (!useCloud) {
-      const loc = loadPresentation();
+      const loc = loadPresentation(authUserId);
       setState(loc);
       setActiveDeckId(null);
       setDeckSummaries([]);
@@ -154,7 +155,7 @@ export function PresentationPlanner() {
 
         const url = typeof window !== "undefined" ? new URL(window.location.href) : null;
         const paramDeck = url?.searchParams.get("deck")?.trim() ?? null;
-        const stored = loadActivePresentationDeckId();
+        const stored = loadActivePresentationDeckId(authUserId);
         const ordered = sortPresentationDeckSummaries(summaries);
 
         let aulaDeckId: string | null = null;
@@ -190,7 +191,7 @@ export function PresentationPlanner() {
         const record = await fetchPresentationDeckByIdRemote(supabase, authUserId!, pick);
         if (cancelled) return;
         setActiveDeckId(pick);
-        saveActivePresentationDeckId(pick);
+        saveActivePresentationDeckId(pick, authUserId);
         const rawEq = url?.searchParams.get("equipo")?.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") ?? "";
         const fromInvite = rawEq.length >= 6 ? rawEq.slice(0, 8) : null;
         setState(
@@ -213,7 +214,7 @@ export function PresentationPlanner() {
       } catch (e) {
         console.error(e);
         if (!cancelled) {
-          const loc = loadPresentation();
+          const loc = loadPresentation(authUserId);
           setState(loc);
           setActiveDeckId(null);
           setDeckSummaries([]);
@@ -257,7 +258,7 @@ export function PresentationPlanner() {
       }
       const record = await fetchPresentationDeckByIdRemote(supabase, authUserId, id);
       setActiveDeckId(id);
-      saveActivePresentationDeckId(id);
+      saveActivePresentationDeckId(id, authUserId);
       setState(record.state);
       resetPlannerUi();
       const qs = new URLSearchParams(window.location.search);
@@ -290,7 +291,7 @@ export function PresentationPlanner() {
       const newId = nextSummaries[0]!.id;
       const record = await fetchPresentationDeckByIdRemote(supabase, authUserId, newId);
       setActiveDeckId(newId);
-      saveActivePresentationDeckId(newId);
+      saveActivePresentationDeckId(newId, authUserId);
       setState(record.state);
       resetPlannerUi();
       const qs = new URLSearchParams(window.location.search);
@@ -314,7 +315,7 @@ export function PresentationPlanner() {
 
     if (!useCloud || !authUserId) {
       setState(next);
-      savePresentation(next);
+      savePresentation(next, authUserId);
       resetPlannerUi();
       setNewDeckFormOpen(false);
       setNewDeckTitle("");
@@ -340,7 +341,7 @@ export function PresentationPlanner() {
         ]),
       );
       setActiveDeckId(row.id);
-      saveActivePresentationDeckId(row.id);
+      saveActivePresentationDeckId(row.id, authUserId);
       setState(row.state);
       resetPlannerUi();
       const qs = new URLSearchParams(window.location.search);
@@ -362,7 +363,7 @@ export function PresentationPlanner() {
     });
     setState(next);
     if (!useCloud) {
-      savePresentation(next);
+      savePresentation(next, authUserId);
     }
     resetPlannerUi();
   }
@@ -508,10 +509,14 @@ export function PresentationPlanner() {
 
   useEffect(() => {
     if (!hydrated) return;
+    if (presentationOwnerRef.current !== authUserId) {
+      presentationOwnerRef.current = authUserId;
+      return;
+    }
     if (useCloud) return;
-    savePresentation(state);
+    savePresentation(state, authUserId);
     notifyPresentationsChanged();
-  }, [hydrated, useCloud, state]);
+  }, [hydrated, useCloud, state, authUserId]);
 
   useEffect(() => {
     if (!hydrated || !useCloud || !activeDeckId || !authUserId) return;

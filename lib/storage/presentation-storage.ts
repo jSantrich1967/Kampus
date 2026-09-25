@@ -1,5 +1,3 @@
-const STORAGE_KEY = "kampus.presentation.v1";
-
 export type PresentationMember = { id: string; name: string; role: string };
 export type PresentationSection = {
   id: string;
@@ -23,6 +21,30 @@ export type PresentationState = {
   teleprompterFontPx: number;
   teleprompterLineHeight: number;
 };
+
+/** Old builds used one box for every account. Never read it into a user. */
+const LEGACY_KEY = "kampus.presentation.v1";
+const LEGACY_ACTIVE_DECK_KEY = "kampus.presentation.activeDeckId.v1";
+
+let accountId: string | null = null;
+
+export function setPresentationStorageOwner(userId: string | null) {
+  accountId = userId;
+}
+
+export function presentationStorageKey(userId: string | null = accountId): string {
+  if (!userId) return "kampus.presentation.v1.anonymous";
+  return `kampus.presentation.v1.${userId}`;
+}
+
+export function activePresentationDeckStorageKey(userId: string | null = accountId): string {
+  if (!userId) return "kampus.presentation.activeDeckId.v1.anonymous";
+  return `kampus.presentation.activeDeckId.v1.${userId}`;
+}
+
+function resolveOwner(userId?: string | null): string | null {
+  return userId === undefined ? accountId : userId;
+}
 
 export function generateTeamSessionCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -83,13 +105,13 @@ export const defaultPresentationState: PresentationState = {
   teleprompterLineHeight: 1.35,
 };
 
-export function loadPresentation(): PresentationState {
+export function loadPresentation(userId?: string | null): PresentationState {
   /** Evita códigos aleatorios en SSR (hydration). */
   if (typeof window === "undefined") {
     return { ...createBlankPresentationState(), teamSessionCode: "" };
   }
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(presentationStorageKey(resolveOwner(userId)));
     if (!raw) return ensurePresentationTeamCode(createBlankPresentationState());
     const parsed = JSON.parse(raw) as PresentationState;
     if (!parsed || typeof parsed !== "object") return ensurePresentationTeamCode(createBlankPresentationState());
@@ -99,23 +121,34 @@ export function loadPresentation(): PresentationState {
   }
 }
 
-export function savePresentation(state: PresentationState) {
+export function savePresentation(state: PresentationState, userId?: string | null) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  window.localStorage.setItem(presentationStorageKey(resolveOwner(userId)), JSON.stringify(state));
 }
 
-const ACTIVE_DECK_ID_KEY = "kampus.presentation.activeDeckId.v1";
-
-export function loadActivePresentationDeckId(): string | null {
+export function loadActivePresentationDeckId(userId?: string | null): string | null {
   if (typeof window === "undefined") return null;
-  const v = window.localStorage.getItem(ACTIVE_DECK_ID_KEY)?.trim();
+  const v = window.localStorage.getItem(activePresentationDeckStorageKey(resolveOwner(userId)))?.trim();
   return v || null;
 }
 
-export function saveActivePresentationDeckId(id: string | null) {
+export function saveActivePresentationDeckId(id: string | null, userId?: string | null) {
   if (typeof window === "undefined") return;
-  if (!id) window.localStorage.removeItem(ACTIVE_DECK_ID_KEY);
-  else window.localStorage.setItem(ACTIVE_DECK_ID_KEY, id);
+  const key = activePresentationDeckStorageKey(resolveOwner(userId));
+  if (!id) window.localStorage.removeItem(key);
+  else window.localStorage.setItem(key, id);
+}
+
+export function clearPresentationStorage(userId: string | null = accountId) {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(presentationStorageKey(userId));
+  window.localStorage.removeItem(activePresentationDeckStorageKey(userId));
+}
+
+export function discardLegacyPresentationStorage() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(LEGACY_KEY);
+  window.localStorage.removeItem(LEGACY_ACTIVE_DECK_KEY);
 }
 
 /** Merge JSONB from Supabase into a full PresentationState (migraciones / filas vacías). */
