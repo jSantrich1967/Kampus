@@ -31,17 +31,17 @@ export function useClassSchedule() {
       try {
         const supabase = createSupabaseBrowserClient();
         const rows = await fetchClassScheduleRemote(supabase, authUserId!);
-        saveClassSchedule(rows);
+        saveClassSchedule(rows, authUserId);
         setSchedule(rows);
       } catch {
-        setSchedule(loadClassSchedule());
+        setSchedule(loadClassSchedule(authUserId));
       } finally {
         setLoading(false);
       }
       return;
     }
 
-    setSchedule(loadClassSchedule());
+    setSchedule(loadClassSchedule(authUserId));
   }, [hydrated, useCloud, authUserId]);
 
   useEffect(() => {
