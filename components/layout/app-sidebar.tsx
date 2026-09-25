@@ -215,19 +215,6 @@ export function AppSidebar({ onNavigate, luminaMode = false }: AppSidebarProps) 
       </nav>
 
       <div className="border-t border-white/5 p-4">
-        {luminaMode && profile.plan === "free" ? (
-          <div className="mb-4 rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-600/20 to-indigo-600/20 p-4">
-            <p className="mb-3 text-xs leading-relaxed text-purple-300">
-              Sincroniza tus apuntes en todos tus dispositivos.
-            </p>
-            <Link
-              href="/settings"
-              className="block min-h-11 w-full touch-manipulation rounded-lg bg-purple-600 py-2.5 text-center text-sm font-bold leading-none text-white transition-all hover:bg-purple-500"
-            >
-              Upgrade to Pro
-            </Link>
-          </div>
-        ) : null}
         {isSupabaseConfigured() && authUserId ? (
           <Button
             type="button"

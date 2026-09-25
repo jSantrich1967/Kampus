@@ -2,7 +2,7 @@
 
 import { ArrowLeft, GraduationCap, Lock } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
@@ -16,7 +16,6 @@ import { buildProfessorSimulatorPrompts } from "@/lib/study/professor-simulator"
 import { cn } from "@/lib/cn";
 
 export function ProfessorSimulatorPanel() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { profile } = useKampus();
   const { plan } = usePassModePlan();
@@ -73,11 +72,6 @@ export function ProfessorSimulatorPanel() {
             </CardTitle>
             <CardDescription>{t.simulatorPremiumHint}</CardDescription>
           </CardHeader>
-          <div className="px-6 pb-6">
-            <Button type="button" onClick={() => router.push("/settings")}>
-              {t.simulatorPremiumCta}
-            </Button>
-          </div>
         </Card>
       ) : null}
 
@@ -149,9 +143,7 @@ export function ProfessorSimulatorPanel() {
                   <Button>{t.backToPassMode}</Button>
                 </Link>
               ) : (
-                <Button type="button" onClick={() => router.push("/settings")}>
-                  {t.simulatorUnlockAll}
-                </Button>
+                <p className="text-sm text-slate-400">{t.simulatorUnlockAll}</p>
               )}
             </div>
           </div>

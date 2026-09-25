@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ShareLinkButton } from "@/components/growth/share-link-button";
@@ -36,7 +36,6 @@ import { syncProfileStudyStreak } from "@/lib/today/sync-profile-streak";
 import { cn } from "@/lib/cn";
 
 export function PassModePanel() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { profile, setProfile } = useKampus();
   const t = passModeCopy.es;
@@ -245,19 +244,6 @@ export function PassModePanel() {
             </div>
           </Card>
 
-          {profile.plan === "free" ? (
-            <Card className="border-indigo-400/30 bg-gradient-to-br from-indigo-500/10 to-cyan-400/5">
-              <CardHeader>
-                <CardTitle>Desbloquea Premium</CardTitle>
-                <CardDescription>
-                  Recalibración diaria, simulador de profesor y kits de estudio profundos sin límite.
-                </CardDescription>
-              </CardHeader>
-              <Button type="button" className="mx-6 mb-6 w-[calc(100%-3rem)]" onClick={() => router.push("/settings")}>
-                Ver planes
-              </Button>
-            </Card>
-          ) : null}
         </div>
       </div>
     </div>

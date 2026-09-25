@@ -306,7 +306,7 @@ export const guideCopy: Record<
           "Modo prueba premium para explorar kits completos.",
           "Control de privacidad y cierre de sesión.",
         ],
-        tip: "Usa «Activar modo prueba premium» si quieres ver todas las funciones antes de decidir un plan real.",
+        tip: "«Activar modo prueba premium» solo sirve para recorrer la app. No es un pago.",
       },
     },
   },
