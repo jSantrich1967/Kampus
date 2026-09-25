@@ -4,8 +4,40 @@ import { demoExamDueDatesSameMonth, localIsoDate } from "@/lib/calendar/local-is
 import { examAttemptSchema, examSchema, type Exam, type ExamAttempt, type ExamFeedback } from "@/lib/schemas/exams";
 import { loadProfile, saveProfile } from "@/lib/storage/kampus-storage";
 
-const EXAMS_KEY = "kampus.exams.v1";
-const ATTEMPTS_KEY = "kampus.examAttempts.v1";
+const LEGACY_EXAMS_KEY = "kampus.exams.v1";
+const LEGACY_ATTEMPTS_KEY = "kampus.examAttempts.v1";
+
+let ownerId: string | null = null;
+
+export function setExamStorageOwner(userId: string | null) {
+  ownerId = userId;
+}
+
+function resolveOwner(userId?: string | null): string | null {
+  return userId === undefined ? ownerId : userId;
+}
+
+export function examsStorageKey(userId: string | null = ownerId): string {
+  if (!userId) return "kampus.exams.v1.anonymous";
+  return `kampus.exams.v1.${userId}`;
+}
+
+export function examAttemptsStorageKey(userId: string | null = ownerId): string {
+  if (!userId) return "kampus.examAttempts.v1.anonymous";
+  return `kampus.examAttempts.v1.${userId}`;
+}
+
+export function clearExamStorage(userId: string | null = ownerId) {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(examsStorageKey(userId));
+  window.localStorage.removeItem(examAttemptsStorageKey(userId));
+}
+
+export function discardLegacyExamStorage() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(LEGACY_EXAMS_KEY);
+  window.localStorage.removeItem(LEGACY_ATTEMPTS_KEY);
+}
 
 const examsArraySchema = z.array(examSchema);
 const attemptsArraySchema = z.array(examAttemptSchema);
@@ -104,7 +136,7 @@ export function syncDemoExamsWithUpcoming(upcoming: Array<{ subject: string; dat
   const existing = loadExams();
   const userExams = existing.filter((exam) => !exam.title.includes(DEMO_TITLE_MARK));
   const demo = upcoming.slice(0, 3).map((u, i) => buildDemoExam(u.subject, (u.date || "").slice(0, 10), i));
-  writeJson(EXAMS_KEY, [...userExams, ...demo]);
+  writeJson(examsStorageKey(), [...userExams, ...demo]);
 }
 
 /**
@@ -150,7 +182,7 @@ export function seedDemoExamsIfEmpty(subjectHint?: string) {
   if (existing.length === 0) {
     const subject = (subjectHint && subjectHint.trim()) || "Econometría";
     const { due1, due2 } = demoExamDueDatesSameMonth();
-    writeJson(EXAMS_KEY, [buildDemoExam(subject, due1, 0), buildDemoExam(subject, due2, 1)]);
+    writeJson(examsStorageKey(), [buildDemoExam(subject, due1, 0), buildDemoExam(subject, due2, 1)]);
   }
 
   // Los demos sembrados en visitas viejas pueden haber vencido: renuévalos
@@ -158,29 +190,29 @@ export function seedDemoExamsIfEmpty(subjectHint?: string) {
   refreshExpiredDemoExams();
 }
 
-export function loadExams(): Exam[] {
-  const json = readJson(EXAMS_KEY);
+export function loadExams(userId?: string | null): Exam[] {
+  const json = readJson(examsStorageKey(resolveOwner(userId)));
   const parsed = examsArraySchema.safeParse(json);
   return parsed.success ? parsed.data : [];
 }
 
-export function saveExams(exams: Exam[]) {
-  writeJson(EXAMS_KEY, exams);
+export function saveExams(exams: Exam[], userId?: string | null) {
+  writeJson(examsStorageKey(resolveOwner(userId)), exams);
 }
 
-export function updateExamDueDate(examId: string, dueDate: string) {
-  const next = loadExams().map((e) => (e.id === examId ? { ...e, dueDate } : e));
-  saveExams(next);
+export function updateExamDueDate(examId: string, dueDate: string, userId?: string | null) {
+  const next = loadExams(userId).map((e) => (e.id === examId ? { ...e, dueDate } : e));
+  saveExams(next, userId);
 }
 
-export function loadAttempts(): ExamAttempt[] {
-  const json = readJson(ATTEMPTS_KEY);
+export function loadAttempts(userId?: string | null): ExamAttempt[] {
+  const json = readJson(examAttemptsStorageKey(resolveOwner(userId)));
   const parsed = attemptsArraySchema.safeParse(json);
   return parsed.success ? parsed.data : [];
 }
 
-export function saveAttempts(attempts: ExamAttempt[]) {
-  writeJson(ATTEMPTS_KEY, attempts);
+export function saveAttempts(attempts: ExamAttempt[], userId?: string | null) {
+  writeJson(examAttemptsStorageKey(resolveOwner(userId)), attempts);
 }
 
 export function getExamById(examId: string): Exam | null {
