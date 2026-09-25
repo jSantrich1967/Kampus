@@ -1,12 +1,9 @@
-/** Days from today until an ISO date (local midnight). */
-export function daysUntilDate(isoDate: string): number | null {
+import { daysUntilCalendarDate } from "@/lib/calendar/local-iso-date";
+
+/** Days from today until an ISO date (local calendar day, not UTC midnight). */
+export function daysUntilDate(isoDate: string, now: Date = new Date()): number | null {
   if (!isoDate.trim()) return null;
-  const target = new Date(isoDate);
-  if (Number.isNaN(target.getTime())) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  target.setHours(0, 0, 0, 0);
-  return Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  return daysUntilCalendarDate(isoDate, now);
 }
 
 export function urgencyTone(days: number | null): "danger" | "warning" | "neutral" | "success" {

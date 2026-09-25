@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
+import { daysUntilCalendarDate } from "@/lib/calendar/local-iso-date";
 import { useClassSchedule } from "@/hooks/use-class-schedule";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -65,13 +66,9 @@ export function useTodayContext(prioritySubjects: string[] = []): TodayContextDa
 
   const examDaysBySubject = useMemo(() => {
     const map = new Map<string, number>();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     for (const exam of profile.upcomingExams) {
-      const target = new Date(exam.date);
-      if (Number.isNaN(target.getTime())) continue;
-      target.setHours(0, 0, 0, 0);
-      const days = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      const days = daysUntilCalendarDate(exam.date);
+      if (days === null) continue;
       map.set(exam.subject, days);
     }
     return map;

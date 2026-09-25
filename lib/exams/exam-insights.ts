@@ -1,14 +1,10 @@
+import { daysUntilCalendarDate } from "@/lib/calendar/local-iso-date";
 import type { Exam } from "@/lib/schemas/exams";
 
-/** Days from today (local midnight) until an ISO date, or null if invalid. */
-export function daysUntilExam(isoDate?: string): number | null {
+/** Days from today until an exam date. Date-only strings stay on that calendar day. */
+export function daysUntilExam(isoDate?: string, now: Date = new Date()): number | null {
   if (!isoDate?.trim()) return null;
-  const target = new Date(isoDate);
-  if (Number.isNaN(target.getTime())) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  target.setHours(0, 0, 0, 0);
-  return Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  return daysUntilCalendarDate(isoDate, now);
 }
 
 /** Parse "12–18 min" style hints from exam description. */

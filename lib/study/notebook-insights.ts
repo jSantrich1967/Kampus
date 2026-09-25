@@ -1,3 +1,4 @@
+import { daysUntilCalendarDate } from "@/lib/calendar/local-iso-date";
 import { subjectToPathSegment } from "@/lib/notebooks/paths";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 import type { UserProfile } from "@/lib/schemas/profile";
@@ -41,16 +42,11 @@ function latestEditIso(pages: NotebookDocumentRow[]): string | undefined {
 }
 
 function examDaysForSubject(profile: UserProfile, subject: string): number | null {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
   let best: number | null = null;
   for (const exam of profile.upcomingExams) {
     if (exam.subject.toLowerCase() !== subject.toLowerCase()) continue;
-    const target = new Date(exam.date);
-    if (Number.isNaN(target.getTime())) continue;
-    target.setHours(0, 0, 0, 0);
-    const days = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    if (days < 0) continue;
+    const days = daysUntilCalendarDate(exam.date);
+    if (days === null || days < 0) continue;
     if (best === null || days < best) best = days;
   }
   return best;

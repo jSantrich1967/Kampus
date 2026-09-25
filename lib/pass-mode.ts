@@ -1,3 +1,4 @@
+import { daysUntilCalendarDate } from "@/lib/calendar/local-iso-date";
 import type { UserProfile } from "@/lib/schemas/profile";
 import { buildCommunitySubjectHref } from "@/lib/community/channels";
 
@@ -42,13 +43,7 @@ export type BuildPassModePlanOptions = {
 const MINIMAL_BUDGET_MINUTES = 15;
 
 function daysUntil(isoDate: string): number | null {
-  const target = new Date(isoDate);
-  if (Number.isNaN(target.getTime())) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  target.setHours(0, 0, 0, 0);
-  const diff = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  return diff;
+  return daysUntilCalendarDate(isoDate);
 }
 
 function teacherRiskReasons(
