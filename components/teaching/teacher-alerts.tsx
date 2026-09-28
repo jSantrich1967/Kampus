@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -159,11 +159,9 @@ export function TeacherAlerts() {
                         </li>
                       ))}
                     </ul>
-                    <Link href="/teaching/reportes">
-                      <Button type="button" size="sm" variant="secondary">
+                    <Link href="/teaching/reportes" className={buttonClasses({ variant: "secondary", size: "sm" })}>
                         Ver reporte semanal
-                      </Button>
-                    </Link>
+                      </Link>
                   </div>
                 </Card>
               );

@@ -15,7 +15,7 @@ import { PassModeRisksPanel } from "@/components/pass-mode/pass-mode-risks-panel
 import { useTodayContext } from "@/components/today/use-today-context";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { passModeCopy } from "@/lib/i18n/pass-mode";
@@ -189,9 +189,7 @@ export function PassModePanel() {
                     <div className="mt-1 text-sm text-slate-200">Enfoque: {block.focus}</div>
                     <p className="mt-2 text-xs text-slate-400">{block.rationale}</p>
                     <div className="mt-4 flex flex-wrap gap-2">
-                      <Link href={getStudyBlockActionHref(block)}>
-                        <Button size="sm">{getStudyBlockActionLabel(block)}</Button>
-                      </Link>
+                      <Link href={getStudyBlockActionHref(block)} className={buttonClasses({ size: "sm" })}>{getStudyBlockActionLabel(block)}</Link>
                       {!done ? (
                         <Button type="button" size="sm" variant="secondary" onClick={() => markBlockDone(block.id)}>
                           {t.markDone}
@@ -218,17 +216,13 @@ export function PassModePanel() {
               <CardDescription>{t.practiceHint}</CardDescription>
             </CardHeader>
             <div className="flex flex-col gap-2 px-6 pb-6">
-              <Link href={buildPassModeFlashcardsPath(flashBlock?.subject ?? topSubject, flashBlock?.minutes)}>
-                <Button variant="secondary" className="w-full">
+              <Link href={buildPassModeFlashcardsPath(flashBlock?.subject ?? topSubject, flashBlock?.minutes)} className={buttonClasses({ variant: "secondary", className: "w-full" })}>
                   {t.flashcardsCta}
-                </Button>
-              </Link>
-              <Link href={buildProfessorSimulatorPath(topSubject)}>
-                <Button variant="secondary" className="w-full">
+                </Link>
+              <Link href={buildProfessorSimulatorPath(topSubject)} className={buttonClasses({ variant: "secondary", className: "w-full" })}>
                   {t.simulatorCta}
                   {profile.plan === "free" ? " · Premium" : ""}
-                </Button>
-              </Link>
+                </Link>
             </div>
           </Card>
 

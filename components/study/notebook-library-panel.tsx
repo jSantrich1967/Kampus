@@ -17,7 +17,7 @@ import { useKampus } from "@/components/kampus/kampus-provider";
 import { NotebookCardClasses } from "@/components/study/notebook-card-classes";
 import { getNotebookSubjectIcon } from "@/components/study/notebook-subject-icon";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import {
   EmptyState,
   EmptyStateIllustrationNotebook,
@@ -563,12 +563,10 @@ export function NotebookLibraryPanel({
             {!authUserId ? (
               <div className="space-y-4">
                 <p className="text-sm text-gray-400">Inicia sesión para crear cuadernos en la nube.</p>
-                <Link href="/login">
-                  <Button className="w-full gap-2">
+                <Link href="/login" className={buttonClasses({ className: "w-full gap-2" })}>
                     <LogIn className="h-4 w-4" />
                     Iniciar sesión
-                  </Button>
-                </Link>
+                  </Link>
               </div>
             ) : (
               <>

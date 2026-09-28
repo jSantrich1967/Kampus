@@ -4,7 +4,7 @@ import { CalendarDays, Sparkles, Upload, Zap } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { libraryCopy } from "@/lib/i18n/library";
 import type { NotebookClassSummary, NotebookSubjectStats } from "@/lib/study/notebook-class-summary";
@@ -65,31 +65,23 @@ export function NotebookSubjectHub({
               {t.quickUpload}
             </Button>
           ) : (
-            <Link href={uploadHref}>
-              <Button size="sm" variant="secondary" className="gap-1.5">
+            <Link href={uploadHref} className={buttonClasses({ variant: "secondary", size: "sm", className: "gap-1.5" })}>
                 <Upload className="h-3.5 w-3.5" aria-hidden />
                 {t.quickUpload}
-              </Button>
-            </Link>
+              </Link>
           )}
-          <Link href={quizHref}>
-            <Button size="sm" variant="secondary" className="gap-1.5">
+          <Link href={quizHref} className={buttonClasses({ variant: "secondary", size: "sm", className: "gap-1.5" })}>
               <Zap className="h-3.5 w-3.5" aria-hidden />
               {t.quickQuiz}
-            </Button>
-          </Link>
-          <Link href={kitHref}>
-            <Button size="sm" variant="ghost" className="gap-1.5">
+            </Link>
+          <Link href={kitHref} className={buttonClasses({ variant: "ghost", size: "sm", className: "gap-1.5" })}>
               <Sparkles className="h-3.5 w-3.5" aria-hidden />
               {t.subjectHubKit}
-            </Button>
-          </Link>
-          <Link href="/exams/calendar">
-            <Button size="sm" variant="ghost" className="gap-1.5">
+            </Link>
+          <Link href="/exams/calendar" className={buttonClasses({ variant: "ghost", size: "sm", className: "gap-1.5" })}>
               <CalendarDays className="h-3.5 w-3.5" aria-hidden />
               {t.openCalendarCta}
-            </Button>
-          </Link>
+            </Link>
         </div>
 
         {recent.length ? (

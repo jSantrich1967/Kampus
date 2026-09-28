@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { useExamSubjectMaterial } from "@/hooks/use-exam-subject-material";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { defaultEstimatedMinutes, daysUntilExam, parseEstimatedMinutes } from "@/lib/exams/exam-insights";
 import { examsCopy } from "@/lib/i18n/exams";
@@ -119,9 +119,7 @@ export function StudentExamDetail({ examId }: { examId: string }) {
     return (
       <div className="space-y-4">
         <PageHeader eyebrow={t.eyebrow} title={t.loadErrorTitle} description={loadError} />
-        <Link href="/exams">
-          <Button variant="secondary">{t.backList}</Button>
-        </Link>
+        <Link href="/exams" className={buttonClasses({ variant: "secondary" })}>{t.backList}</Link>
       </div>
     );
   }
@@ -130,9 +128,7 @@ export function StudentExamDetail({ examId }: { examId: string }) {
     return (
       <div className="space-y-4">
         <PageHeader eyebrow={t.eyebrow} title={t.notFoundTitle} description={t.notFoundHint} />
-        <Link href="/exams">
-          <Button variant="secondary">{t.backList}</Button>
-        </Link>
+        <Link href="/exams" className={buttonClasses({ variant: "secondary" })}>{t.backList}</Link>
       </div>
     );
   }
@@ -185,18 +181,12 @@ export function StudentExamDetail({ examId }: { examId: string }) {
                 {daysLeft < 0 ? t.daysOverdue(daysLeft) : t.daysLeft(daysLeft)}
               </Badge>
             ) : null}
-            <Link href="/exams">
-              <Button variant="secondary">{t.detailBack}</Button>
-            </Link>
+            <Link href="/exams" className={buttonClasses({ variant: "secondary" })}>{t.detailBack}</Link>
             {profile.interestedInCommunity !== false ? (
               <>
-                <Link href={buildCommunitySubjectHref(exam.subject)}>
-                  <Button variant="ghost">{t.communitySubjectCta}</Button>
-                </Link>
+                <Link href={buildCommunitySubjectHref(exam.subject)} className={buttonClasses({ variant: "ghost" })}>{t.communitySubjectCta}</Link>
                 {exam.dueDate ? (
-                  <Link href={buildCommunityExamHref(exam.subject, exam.dueDate)}>
-                    <Button variant="ghost">{t.communityExamCta}</Button>
-                  </Link>
+                  <Link href={buildCommunityExamHref(exam.subject, exam.dueDate)} className={buttonClasses({ variant: "ghost" })}>{t.communityExamCta}</Link>
                 ) : null}
               </>
             ) : null}
@@ -253,11 +243,9 @@ export function StudentExamDetail({ examId }: { examId: string }) {
                 resuelto y recibes análisis de errores con IA.
               </p>
               <div className="mt-2">
-                <Link href="/exams/mi-correccion">
-                  <Button size="sm" variant="secondary">
+                <Link href="/exams/mi-correccion" className={buttonClasses({ variant: "secondary", size: "sm" })}>
                     Ir a Mi corrección
-                  </Button>
-                </Link>
+                  </Link>
               </div>
             </div>
 
@@ -305,11 +293,9 @@ export function StudentExamDetail({ examId }: { examId: string }) {
                 <p className="mt-2 text-sm text-emerald-50/90">{t.submitSuccessBody}</p>
                 <p className="mt-2 text-sm text-slate-300">{t.submitSuccessCorrectionHint}</p>
                 <div className="mt-3">
-                  <Link href="/exams/mi-correccion">
-                    <Button size="sm" variant="secondary">
+                  <Link href="/exams/mi-correccion" className={buttonClasses({ variant: "secondary", size: "sm" })}>
                       {t.submitSuccessCorrectionCta}
-                    </Button>
-                  </Link>
+                    </Link>
                 </div>
               </div>
             ) : null}
@@ -335,11 +321,9 @@ export function StudentExamDetail({ examId }: { examId: string }) {
                       <span className="font-semibold text-slate-200">Mi corrección</span> para recibir el
                       análisis de errores con IA.
                     </p>
-                    <Link href="/exams/mi-correccion">
-                      <Button size="sm" variant="secondary">
+                    <Link href="/exams/mi-correccion" className={buttonClasses({ variant: "secondary", size: "sm" })}>
                         Ir a Mi corrección
-                      </Button>
-                    </Link>
+                      </Link>
                   </div>
 
                   {submittedId === a.id ? <div className="mt-2 text-xs text-indigo-200">{t.attemptLast}</div> : null}

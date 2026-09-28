@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { PageHeader } from "@/components/layout/page-header";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { usePassModePlan } from "@/lib/hooks/use-pass-mode-plan";
@@ -106,12 +106,10 @@ export function PlanFlashcardsSession() {
         title={t.flashcardsTitle}
         description={t.flashcardsHint(subject, minutes)}
         actions={
-          <Link href={fromHub ? "/study/flashcards" : "/pass-mode"}>
-            <Button variant="secondary" size="sm" className="gap-2">
+          <Link href={fromHub ? "/study/flashcards" : "/pass-mode"} className={buttonClasses({ variant: "secondary", size: "sm", className: "gap-2" })}>
               <ArrowLeft className="h-4 w-4" />
               {fromHub ? "Volver a Tarjetas" : t.backToPassMode}
-            </Button>
-          </Link>
+            </Link>
         }
       />
 
@@ -171,9 +169,7 @@ export function PlanFlashcardsSession() {
           </CardHeader>
           <div className="flex flex-wrap gap-2 px-6 pb-6">
             {nextBlock && nextBlock.id !== "flashcards" ? (
-              <Link href={getStudyBlockActionHref(nextBlock)}>
-                <Button>{t.quizDoneNext}: {getStudyBlockActionLabel(nextBlock)}</Button>
-              </Link>
+              <Link href={getStudyBlockActionHref(nextBlock)} className={buttonClasses()}>{t.quizDoneNext}: {getStudyBlockActionLabel(nextBlock)}</Link>
             ) : null}
             <Button type="button" variant="secondary" onClick={() => router.push(fromHub ? "/study/flashcards" : "/pass-mode")}>
               {fromHub ? "Volver a Tarjetas" : t.backToPassMode}

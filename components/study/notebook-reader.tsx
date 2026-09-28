@@ -15,7 +15,7 @@ import { NotebookSubjectHub } from "@/components/study/notebook-subject-hub";
 import { NotebookUploadDropZone } from "@/components/study/notebook-upload-drop-zone";
 import { getNotebookSubjectCover } from "@/components/study/notebook-subject-cover";
 import { getNotebookSubjectIcon } from "@/components/study/notebook-subject-icon";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { EmptyState, EmptyStateIllustrationNotebook } from "@/components/ui/empty-state";
 import { initialsFromSubject, notebookCoverGradient } from "@/lib/notebooks/cover-styles";
 import { generateNotebookBookPdf } from "@/lib/notebooks/book-pdf";
@@ -521,12 +521,10 @@ export function NotebookReader({ subjectSlug }: Props) {
           title={subjectLabel}
           description={lib.demoReaderBody}
           actions={
-            <Link href="/study/library">
-              <Button variant="secondary" size="sm" className="gap-2">
+            <Link href="/study/library" className={buttonClasses({ variant: "secondary", size: "sm", className: "gap-2" })}>
                 <ArrowLeft className="h-4 w-4" />
                 Volver a mis cuadernos
-              </Button>
-            </Link>
+              </Link>
           }
         />
 
@@ -543,9 +541,7 @@ export function NotebookReader({ subjectSlug }: Props) {
           title={lib.demoReaderTitle}
           description={lib.demoReaderBody}
           actions={
-            <Link href="/login">
-              <Button>Iniciar sesión para subir apuntes</Button>
-            </Link>
+            <Link href="/login" className={buttonClasses()}>Iniciar sesión para subir apuntes</Link>
           }
         />
       </div>
@@ -571,12 +567,10 @@ export function NotebookReader({ subjectSlug }: Props) {
         title={loading ? "Abriendo…" : subjectLabel}
         description="Navega como en un cuaderno: cada archivo es una hoja — hojea con efecto de página, clic en los bordes o flechas ← →. Aquí puedes hacer subida rápida y editar etiquetas; para vincular material a una clase del horario, usa Mis cuadernos."
         actions={
-          <Link href="/study/library">
-            <Button variant="secondary" size="sm" className="gap-2">
+          <Link href="/study/library" className={buttonClasses({ variant: "secondary", size: "sm", className: "gap-2" })}>
               <ArrowLeft className="h-4 w-4" />
               Volver a mis cuadernos
-            </Button>
-          </Link>
+            </Link>
         }
       />
 
@@ -625,11 +619,9 @@ export function NotebookReader({ subjectSlug }: Props) {
                   onFiles={(files) => void uploadMoreFiles(files)}
                 />
                 {!calendarUploadMode ? (
-                  <Link href="/study/library">
-                    <Button variant="secondary" size="sm">
+                  <Link href="/study/library" className={buttonClasses({ variant: "secondary", size: "sm" })}>
                       Mis cuadernos (con calendario)
-                    </Button>
-                  </Link>
+                    </Link>
                 ) : null}
               </>
             }

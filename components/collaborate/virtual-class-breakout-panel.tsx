@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { CollaborateVideoEmbed } from "@/components/collaborate/collaborate-video-embed";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { generateStudyRoomCode, buildStudyRoomHref } from "@/lib/collaborate/study-room-path";
 import { collaborateCopy } from "@/lib/i18n/collaborate";
@@ -138,15 +138,11 @@ export function VirtualClassBreakoutPanel({ sessionId, isCreator, courseTitle }:
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-sm font-medium text-white">{row.label}</span>
                   <div className="flex flex-wrap gap-2">
-                    <Link
-                      href={buildStudyRoomHref(row.roomCode, `${courseTitle} · ${row.label}`, {
+                    <Link href={buildStudyRoomHref(row.roomCode, `${courseTitle} · ${row.label}`, {
                         video: row.videoUrl ?? undefined,
-                      })}
-                    >
-                      <Button type="button" size="sm" variant="secondary">
+                      })} className={buttonClasses({ variant: "secondary", size: "sm" })}>
                         {t.breakoutEnterCta}
-                      </Button>
-                    </Link>
+                      </Link>
                     {isCreator ? (
                       <Button
                         type="button"

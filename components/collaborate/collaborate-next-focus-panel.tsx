@@ -5,7 +5,7 @@ import { CalendarClock, Microscope, Presentation } from "lucide-react";
 
 import { useCollaborationNextFocus } from "@/hooks/use-collaboration-next-focus";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { collaborateCopy } from "@/lib/i18n/collaborate";
 
@@ -56,14 +56,10 @@ export function CollaborateNextFocusPanel() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Link href={next.href}>
-            <Button size="sm">{t.nextFocusCta}</Button>
-          </Link>
-          <Link href="/exams/calendar">
-            <Button size="sm" variant="secondary">
+          <Link href={next.href} className={buttonClasses({ size: "sm" })}>{t.nextFocusCta}</Link>
+          <Link href="/exams/calendar" className={buttonClasses({ variant: "secondary", size: "sm" })}>
               {t.calendarCta}
-            </Button>
-          </Link>
+            </Link>
         </div>
       </div>
     </Card>

@@ -20,7 +20,7 @@ import { useEffect, useRef, useState } from "react";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatNotebookCloudError } from "@/lib/notebooks/storage-errors";
 import {
@@ -130,9 +130,7 @@ export function MaterialConverter() {
             </CardDescription>
           </CardHeader>
           <div className="px-6 pb-6">
-            <Link href="/study">
-              <Button size="sm">Volver a Estudio</Button>
-            </Link>
+            <Link href="/study" className={buttonClasses({ size: "sm" })}>Volver a Estudio</Link>
           </div>
         </Card>
       </div>
@@ -383,12 +381,10 @@ export function MaterialConverter() {
                 Convertir otro
               </Button>
               {saved ? (
-                <Link href="/study/library">
-                  <Button size="sm" variant="secondary" className="gap-2">
+                <Link href="/study/library" className={buttonClasses({ variant: "secondary", size: "sm", className: "gap-2" })}>
                     <NotebookPen className="h-4 w-4" />
                     Ver en Mis cuadernos
-                  </Button>
-                </Link>
+                  </Link>
               ) : (
                 <Button size="sm" onClick={saveToLibrary} disabled={saving} className="gap-2">
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <NotebookPen className="h-4 w-4" />}

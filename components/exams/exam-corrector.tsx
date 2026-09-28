@@ -6,7 +6,7 @@ import { CheckCircle2, Loader2, Sparkles, Upload, XCircle } from "lucide-react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { PageHeader } from "@/components/layout/page-header";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { ExamCorrection } from "@/lib/schemas/exam-corrector";
@@ -52,9 +52,7 @@ export function ExamCorrector() {
             </CardDescription>
           </CardHeader>
           <div className="px-6 pb-6">
-            <Link href="/exams">
-              <Button size="sm">Volver a Exámenes</Button>
-            </Link>
+            <Link href="/exams" className={buttonClasses({ size: "sm" })}>Volver a Exámenes</Link>
           </div>
         </Card>
       </div>

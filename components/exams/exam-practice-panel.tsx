@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Brain, Layers, Zap } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { examsCopy } from "@/lib/i18n/exams";
 import { buildPassModeSubjectHref } from "@/lib/today/block-action-href";
@@ -24,24 +24,18 @@ export function ExamPracticePanel({ subject, compact = false }: ExamPracticePane
   if (compact) {
     return (
       <div className="flex flex-wrap gap-2">
-        <Link href={quizHref}>
-          <Button size="sm" variant="secondary" className="gap-2">
+        <Link href={quizHref} className={buttonClasses({ variant: "secondary", size: "sm", className: "gap-2" })}>
             <Zap className="h-3.5 w-3.5" aria-hidden />
             {t.practiceQuizCta}
-          </Button>
-        </Link>
-        <Link href={flashcardsHref}>
-          <Button size="sm" variant="secondary" className="gap-2">
+          </Link>
+        <Link href={flashcardsHref} className={buttonClasses({ variant: "secondary", size: "sm", className: "gap-2" })}>
             <Layers className="h-3.5 w-3.5" aria-hidden />
             {t.practiceFlashcardsCta}
-          </Button>
-        </Link>
-        <Link href={passModeHref}>
-          <Button size="sm" variant="ghost" className="gap-2">
+          </Link>
+        <Link href={passModeHref} className={buttonClasses({ variant: "ghost", size: "sm", className: "gap-2" })}>
             <Brain className="h-3.5 w-3.5" aria-hidden />
             {t.practicePassModeCta}
-          </Button>
-        </Link>
+          </Link>
       </div>
     );
   }
@@ -53,24 +47,18 @@ export function ExamPracticePanel({ subject, compact = false }: ExamPracticePane
         <CardDescription>{t.practiceHint}</CardDescription>
       </CardHeader>
       <div className="flex flex-wrap gap-2 px-6 pb-6">
-        <Link href={quizHref}>
-          <Button size="sm" className="gap-2">
+        <Link href={quizHref} className={buttonClasses({ size: "sm", className: "gap-2" })}>
             <Zap className="h-4 w-4" aria-hidden />
             {t.practiceQuizCta}
-          </Button>
-        </Link>
-        <Link href={flashcardsHref}>
-          <Button size="sm" variant="secondary" className="gap-2">
+          </Link>
+        <Link href={flashcardsHref} className={buttonClasses({ variant: "secondary", size: "sm", className: "gap-2" })}>
             <Layers className="h-4 w-4" aria-hidden />
             {t.practiceFlashcardsCta}
-          </Button>
-        </Link>
-        <Link href={passModeHref}>
-          <Button size="sm" variant="ghost" className="gap-2">
+          </Link>
+        <Link href={passModeHref} className={buttonClasses({ variant: "ghost", size: "sm", className: "gap-2" })}>
             <Brain className="h-4 w-4" aria-hidden />
             {t.practicePassModeCta}
-          </Button>
-        </Link>
+          </Link>
       </div>
     </Card>
   );

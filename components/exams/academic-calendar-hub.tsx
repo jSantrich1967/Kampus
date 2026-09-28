@@ -1257,40 +1257,30 @@ export function AcademicCalendarHub() {
                       </Badge>
                     ) : null}
                     {ev.kind === "exam" && ev.passModeHref ? (
-                      <Link href={ev.passModeHref}>
-                        <Button type="button" size="sm" variant="secondary">
+                      <Link href={ev.passModeHref} className={buttonClasses({ variant: "secondary", size: "sm" })}>
                           {examsCopy.es.calendarPassModeCta}
-                        </Button>
-                      </Link>
+                        </Link>
                     ) : null}
                     {ev.kind === "exam" && profile.interestedInCommunity !== false ? (
-                      <Link href={buildCommunityExamHref(ev.subject, ev.date)}>
-                        <Button type="button" size="sm" variant="ghost">
+                      <Link href={buildCommunityExamHref(ev.subject, ev.date)} className={buttonClasses({ variant: "ghost", size: "sm" })}>
                           {calendarCopy.es.communityExamCta}
-                        </Button>
-                      </Link>
+                        </Link>
                     ) : null}
                     {ev.kind === "exam" ? <ExamPracticePanel subject={ev.subject} compact /> : null}
                     {ev.kind === "presentation" ? (
                       <>
-                        <Link href={ev.href}>
-                          <Button type="button" size="sm" variant="secondary">
+                        <Link href={ev.href} className={buttonClasses({ variant: "secondary", size: "sm" })}>
                             {calendarCopy.es.calendarPresentationCta}
-                          </Button>
-                        </Link>
-                        <Link href="/collaborate/sala-estudio">
-                          <Button type="button" size="sm" variant="ghost">
+                          </Link>
+                        <Link href="/collaborate/sala-estudio" className={buttonClasses({ variant: "ghost", size: "sm" })}>
                             {calendarCopy.es.calendarStudyRoomCta}
-                          </Button>
-                        </Link>
+                          </Link>
                       </>
                     ) : null}
                     {isClass && scheduleId ? (
-                      <Link href={buildVirtualClassFromScheduleHref(scheduleId, ev.date)}>
-                        <Button type="button" size="sm" variant="ghost">
+                      <Link href={buildVirtualClassFromScheduleHref(scheduleId, ev.date)} className={buttonClasses({ variant: "ghost", size: "sm" })}>
                           {cal.calendarVirtualClassCta}
-                        </Button>
-                      </Link>
+                        </Link>
                     ) : null}
                     {isClass ? (
                       <Button
@@ -1725,11 +1715,9 @@ export function AcademicCalendarHub() {
                   </Link>
                   <span className="text-amber-200/70"> · {e.subject}</span>
                 </span>
-                <Link href={buildPassModeSubjectHref(e.subject)}>
-                  <Button size="sm" variant="secondary">
+                <Link href={buildPassModeSubjectHref(e.subject)} className={buttonClasses({ variant: "secondary", size: "sm" })}>
                     {examsCopy.es.calendarPassModeCta}
-                  </Button>
-                </Link>
+                  </Link>
               </li>
             ))}
           </ul>

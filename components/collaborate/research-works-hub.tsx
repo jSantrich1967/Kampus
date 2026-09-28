@@ -9,7 +9,7 @@ import { CollaborateSubnav } from "@/components/collaborate/collaborate-subnav";
 import { ResearchOnboardingPanel } from "@/components/collaborate/research-onboarding-panel";
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { presentationDueBadgeLabel } from "@/lib/calendar/presentation-due-label";
 import { cn } from "@/lib/cn";
@@ -244,21 +244,15 @@ export function ResearchWorksHub() {
         description={t.researchPageDescription}
         actions={
           <div className="flex flex-wrap gap-2">
-            <Link href="/exams/calendar">
-              <Button variant="secondary" size="sm">
+            <Link href="/exams/calendar" className={buttonClasses({ variant: "secondary", size: "sm" })}>
                 {t.calendarCta}
-              </Button>
-            </Link>
-            <Link href="/exams/student">
-              <Button variant="secondary" size="sm">
+              </Link>
+            <Link href="/exams/student" className={buttonClasses({ variant: "secondary", size: "sm" })}>
                 {t.examsCta}
-              </Button>
-            </Link>
-            <Link href="/collaborate/exposiciones">
-              <Button variant="ghost" size="sm">
+              </Link>
+            <Link href="/collaborate/exposiciones" className={buttonClasses({ variant: "ghost", size: "sm" })}>
                 {t.subnavPresentations}
-              </Button>
-            </Link>
+              </Link>
             <Button type="button" variant="ghost" size="sm" onClick={refresh} disabled={loading}>
               <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", loading && "animate-spin")} />
               Actualizar

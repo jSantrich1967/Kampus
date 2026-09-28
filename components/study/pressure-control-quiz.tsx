@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { useTodayContext } from "@/components/today/use-today-context";
 import { useKampus } from "@/components/kampus/kampus-provider";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import type { RescueQuizItem } from "@/lib/class-rescue";
@@ -256,12 +256,10 @@ export function PressureControlQuiz() {
         title={t.title}
         description={t.description(subject, minutes)}
         actions={
-          <Link href="/pass-mode">
-            <Button variant="ghost" size="sm" className="gap-2">
+          <Link href="/pass-mode" className={buttonClasses({ variant: "ghost", size: "sm", className: "gap-2" })}>
               <ArrowLeft className="h-4 w-4" />
               {t.backToPlan}
-            </Button>
-          </Link>
+            </Link>
         }
       />
 
@@ -276,19 +274,13 @@ export function PressureControlQuiz() {
           </CardHeader>
           <div className="flex flex-wrap gap-2 px-6 pb-4">
             {subjectAlerts[0] ? (
-              <Link href={subjectAlerts[0].href}>
-                <Button size="sm">{t.uploadMaterialCta}</Button>
-              </Link>
+              <Link href={subjectAlerts[0].href} className={buttonClasses({ size: "sm" })}>{t.uploadMaterialCta}</Link>
             ) : (
-              <Link href={`/study/notebook/${subjectSlug}?upload=1`}>
-                <Button size="sm">{t.uploadMaterialCta}</Button>
-              </Link>
+              <Link href={`/study/notebook/${subjectSlug}?upload=1`} className={buttonClasses({ size: "sm" })}>{t.uploadMaterialCta}</Link>
             )}
-            <Link href={`/study/notebook/${subjectSlug}`}>
-              <Button size="sm" variant="secondary">
+            <Link href={`/study/notebook/${subjectSlug}`} className={buttonClasses({ variant: "secondary", size: "sm" })}>
                 {t.openNotebook}
-              </Button>
-            </Link>
+              </Link>
           </div>
         </Card>
       ) : null}
@@ -315,9 +307,7 @@ export function PressureControlQuiz() {
             <Button type="button" onClick={() => void loadQuiz()}>
               {t.retry}
             </Button>
-            <Link href={`/study/notebook/${subjectSlug}`}>
-              <Button variant="secondary">{t.openNotebook}</Button>
-            </Link>
+            <Link href={`/study/notebook/${subjectSlug}`} className={buttonClasses({ variant: "secondary" })}>{t.openNotebook}</Link>
           </div>
         </Card>
       ) : null}
@@ -359,9 +349,7 @@ export function PressureControlQuiz() {
               <Button type="button" onClick={startQuiz}>
                 {t.startQuiz}
               </Button>
-              <Link href={`/study/notebook/${subjectSlug}`}>
-                <Button variant="secondary">{t.viewNotes}</Button>
-              </Link>
+              <Link href={`/study/notebook/${subjectSlug}`} className={buttonClasses({ variant: "secondary" })}>{t.viewNotes}</Link>
             </div>
           </div>
         </Card>
@@ -434,11 +422,9 @@ export function PressureControlQuiz() {
                   <p className="w-full text-sm text-slate-300">{current.explanation}</p>
                 ) : null}
                 {revealed && selected !== current.answerIndex ? (
-                  <Link href={buildNotebookReviewHref(subject, current.sourceDocumentId, { openKit: true })}>
-                    <Button variant="secondary" size="sm">
+                  <Link href={buildNotebookReviewHref(subject, current.sourceDocumentId, { openKit: true })} className={buttonClasses({ variant: "secondary", size: "sm" })}>
                       {t.reviewClass}
-                    </Button>
-                  </Link>
+                    </Link>
                 ) : null}
                 <Button type="button" onClick={goNext}>
                   {currentIdx + 1 >= questions.length ? t.seeResults : t.nextQuestion}
@@ -509,11 +495,9 @@ export function PressureControlQuiz() {
                         )}
                       </p>
                       {q.explanation ? <p className="mb-2 text-slate-300">{q.explanation}</p> : null}
-                      <Link href={buildNotebookReviewHref(subject, q.sourceDocumentId, { openKit: true })}>
-                        <Button variant="secondary" size="sm">
+                      <Link href={buildNotebookReviewHref(subject, q.sourceDocumentId, { openKit: true })} className={buttonClasses({ variant: "secondary", size: "sm" })}>
                           {t.reviewClass}
-                        </Button>
-                      </Link>
+                        </Link>
                     </li>
                   ))}
                 </ul>
@@ -521,18 +505,14 @@ export function PressureControlQuiz() {
             ) : null}
             <div className="flex flex-wrap gap-2">
               {nextBlockAfterQuiz ? (
-                <Link href={getStudyBlockActionHref(nextBlockAfterQuiz)}>
-                  <Button type="button">
+                <Link href={getStudyBlockActionHref(nextBlockAfterQuiz)} className={buttonClasses()}>
                     {tPass.quizDoneNext}: {getStudyBlockActionLabel(nextBlockAfterQuiz)}
-                  </Button>
-                </Link>
+                  </Link>
               ) : null}
               <Button type="button" onClick={() => void loadQuiz()}>
                 {t.repeatQuiz}
               </Button>
-              <Link href={`/study/notebook/${subjectSlug}`}>
-                <Button variant="secondary">{t.openNotebook}</Button>
-              </Link>
+              <Link href={`/study/notebook/${subjectSlug}`} className={buttonClasses({ variant: "secondary" })}>{t.openNotebook}</Link>
               <Button variant="ghost" type="button" onClick={() => router.push("/pass-mode")}>
                 {tPass.backToPassMode}
               </Button>

@@ -7,7 +7,7 @@ import { ShareLinkButton } from "@/components/growth/share-link-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { FlashcardsOnboardingPanel } from "@/components/study/flashcards-onboarding-panel";
 import { useKampus } from "@/components/kampus/kampus-provider";
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePassModePlan } from "@/lib/hooks/use-pass-mode-plan";
 import { flashcardsCopy } from "@/lib/i18n/flashcards";
@@ -78,11 +78,9 @@ export function FlashcardsWorkspace() {
             {cards.length > preview.length ? (
               <p className="text-xs text-slate-500">{fc.previewMore(cards.length - preview.length)}</p>
             ) : null}
-            <Link href={sessionHref}>
-              <Button size="sm" className="mt-2">
+            <Link href={sessionHref} className={buttonClasses({ size: "sm", className: "mt-2" })}>
                 {fc.planCta}
-              </Button>
-            </Link>
+              </Link>
           </div>
         ) : null}
       </Card>
@@ -95,19 +93,13 @@ export function FlashcardsWorkspace() {
           </CardDescription>
         </CardHeader>
         <div className="flex flex-wrap gap-2 px-6 pb-6">
-          <Link href={sessionHref}>
-            <Button>{pm.flashcardsCta}</Button>
-          </Link>
-          <Link href="/pass-mode">
-            <Button size="sm" variant="secondary">
+          <Link href={sessionHref} className={buttonClasses()}>{pm.flashcardsCta}</Link>
+          <Link href="/pass-mode" className={buttonClasses({ variant: "secondary", size: "sm" })}>
               {fc.passModeCta}
-            </Button>
-          </Link>
-          <Link href="/risk">
-            <Button size="sm" variant="ghost">
+            </Link>
+          <Link href="/risk" className={buttonClasses({ variant: "ghost", size: "sm" })}>
               {fc.radarCta}
-            </Button>
-          </Link>
+            </Link>
         </div>
       </Card>
 
@@ -117,17 +109,13 @@ export function FlashcardsWorkspace() {
           <CardDescription>{pm.practiceHint}</CardDescription>
         </CardHeader>
         <div className="flex flex-wrap gap-2 px-6 pb-6">
-          <Link href={buildProfessorSimulatorPath(topSubject)}>
-            <Button size="sm" variant="secondary">
+          <Link href={buildProfessorSimulatorPath(topSubject)} className={buttonClasses({ variant: "secondary", size: "sm" })}>
               {pm.simulatorCta}
               {profile.plan === "free" ? " · Premium" : ""}
-            </Button>
-          </Link>
-          <Link href="/study/library/rescue">
-            <Button size="sm" variant="ghost">
+            </Link>
+          <Link href="/study/library/rescue" className={buttonClasses({ variant: "ghost", size: "sm" })}>
               {fc.rescueCta}
-            </Button>
-          </Link>
+            </Link>
         </div>
       </Card>
     </div>

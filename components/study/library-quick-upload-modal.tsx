@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { useFileDropZone } from "@/lib/hooks/use-file-drop-zone";
 import { libraryCopy } from "@/lib/i18n/library";
@@ -127,12 +127,8 @@ export function LibraryQuickUploadModal({ target, onClose, onSuccess }: LibraryQ
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link href={readerHref}>
-                <Button>{t.openReader}</Button>
-              </Link>
-              <Link href={kitHref}>
-                <Button variant="secondary">{t.quickKit}</Button>
-              </Link>
+              <Link href={readerHref} className={buttonClasses()}>{t.openReader}</Link>
+              <Link href={kitHref} className={buttonClasses({ variant: "secondary" })}>{t.quickKit}</Link>
               <Button type="button" variant="ghost" onClick={handleClose}>
                 {t.quickUploadClose}
               </Button>
@@ -159,9 +155,7 @@ export function LibraryQuickUploadModal({ target, onClose, onSuccess }: LibraryQ
             {!authUserId ? (
               <div className="space-y-3">
                 <p className="text-sm text-slate-400">{t.demoReaderBody}</p>
-                <Link href="/login">
-                  <Button className="w-full">{t.quickUploadLoginCta}</Button>
-                </Link>
+                <Link href="/login" className={buttonClasses({ className: "w-full" })}>{t.quickUploadLoginCta}</Link>
               </div>
             ) : (
               <>

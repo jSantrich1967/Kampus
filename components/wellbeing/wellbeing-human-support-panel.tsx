@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Heart, Phone } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { HUMAN_SUPPORT_RESOURCES, phoneTelHref, VENEZUELA_EMERGENCY_PHONE } from "@/lib/wellbeing/human-support-resources";
 import { wellbeingCopy } from "@/lib/i18n/wellbeing";
@@ -26,11 +26,9 @@ export function WellbeingHumanSupportPanel({ compact = false }: Props) {
               {t.humanSupportEmergencyCta}
             </Button>
           </a>
-          <Link href="/wellbeing#apoyo-humano">
-            <Button size="sm" variant="ghost">
+          <Link href="/wellbeing#apoyo-humano" className={buttonClasses({ variant: "ghost", size: "sm" })}>
               {t.humanSupportSeeAll}
-            </Button>
-          </Link>
+            </Link>
         </div>
       </div>
     );
@@ -66,11 +64,9 @@ export function WellbeingHumanSupportPanel({ compact = false }: Props) {
                   </a>
                 ) : null}
                 {r.href ? (
-                  <Link href={r.href}>
-                    <Button size="sm" variant="ghost">
+                  <Link href={r.href} className={buttonClasses({ variant: "ghost", size: "sm" })}>
                       {t.humanSupportOpen}
-                    </Button>
-                  </Link>
+                    </Link>
                 ) : null}
               </div>
             </div>

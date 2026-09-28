@@ -6,7 +6,7 @@ import { Suspense, useState } from "react";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { PageHeader } from "@/components/layout/page-header";
 import { SectionProntoBanner } from "@/components/layout/section-pronto-banner";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PresentationPlanner } from "@/components/collaborate/presentation-planner";
 
@@ -30,14 +30,10 @@ export function ExposicionesEntry() {
         description="Revisa, comenta y califica las exposiciones asignadas. También puedes crear la plantilla que usarán tus estudiantes."
         actions={
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Link href="/teaching">
-              <Button className="w-full sm:w-auto">Abrir Copiloto docente</Button>
-            </Link>
-            <Link href="/collaborate/aula-virtual">
-              <Button variant="secondary" className="w-full sm:w-auto">
+            <Link href="/teaching" className={buttonClasses({ className: "w-full sm:w-auto" })}>Abrir Copiloto docente</Link>
+            <Link href="/collaborate/aula-virtual" className={buttonClasses({ variant: "secondary", className: "w-full sm:w-auto" })}>
                 Ir al aula virtual
-              </Button>
-            </Link>
+              </Link>
           </div>
         }
       />
@@ -53,9 +49,7 @@ export function ExposicionesEntry() {
             </CardDescription>
           </CardHeader>
           <div className="px-6 pb-6">
-            <Link href="/teaching">
-              <Button variant="secondary">Abrir Copiloto docente</Button>
-            </Link>
+            <Link href="/teaching" className={buttonClasses({ variant: "secondary" })}>Abrir Copiloto docente</Link>
           </div>
         </Card>
         <Card>
@@ -66,9 +60,7 @@ export function ExposicionesEntry() {
             </CardDescription>
           </CardHeader>
           <div className="px-6 pb-6">
-            <Link href="/collaborate/aula-virtual">
-              <Button variant="secondary">Ir al aula virtual</Button>
-            </Link>
+            <Link href="/collaborate/aula-virtual" className={buttonClasses({ variant: "secondary" })}>Ir al aula virtual</Link>
           </div>
         </Card>
       </div>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 
 export default function MainSectionError({
   error,
@@ -26,11 +26,9 @@ export default function MainSectionError({
         <Button type="button" size="sm" onClick={() => reset()}>
           Reintentar
         </Button>
-        <Link href="/today">
-          <Button type="button" size="sm" variant="secondary">
+        <Link href="/today" className={buttonClasses({ variant: "secondary", size: "sm" })}>
             Ir a Hoy
-          </Button>
-        </Link>
+          </Link>
       </div>
     </div>
   );

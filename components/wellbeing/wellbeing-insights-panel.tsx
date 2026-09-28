@@ -6,7 +6,7 @@ import { Activity, TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { useDiaryInsights } from "@/hooks/use-diary-insights";
 import { useDiaryCheckInStatus } from "@/hooks/use-diary-check-in-status";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatBlock } from "@/components/ui/stat-block";
 import { moodEmoji } from "@/lib/wellbeing/diary-insights";
@@ -53,11 +53,9 @@ export function WellbeingInsightsPanel() {
             <CardDescription>{t.insightsLowMoodHint}</CardDescription>
           </CardHeader>
           <div className="px-6 pb-4">
-            <Link href={buildPsychologistHref()}>
-              <Button size="sm" variant="secondary">
+            <Link href={buildPsychologistHref()} className={buttonClasses({ variant: "secondary", size: "sm" })}>
                 {t.insightsTalkCta}
-              </Button>
-            </Link>
+              </Link>
           </div>
         </Card>
       ) : null}
