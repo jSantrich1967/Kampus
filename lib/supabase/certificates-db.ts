@@ -22,6 +22,53 @@ interface CertificateRow {
   issued_at: string;
 }
 
+export type CertificateKind = "self_declared" | "accredited";
+
+/** A credit from another account. The same person writing their own title is not accredited. */
+export function certificateKind(cert: Pick<Certificate, "ownerId" | "issuerId">): CertificateKind {
+  if (cert.issuerId && cert.issuerId !== cert.ownerId) return "accredited";
+  return "self_declared";
+}
+
+export function certificatePublicCopy(kind: CertificateKind): { title: string; body: string } {
+  if (kind === "accredited") {
+    return {
+      title: "Emitido por otra cuenta",
+      body: "Otra cuenta de Kampus guardó este código. Kampus no confirma que esa cuenta sea un docente de una institución ni el contenido del curso.",
+    };
+  }
+  return {
+    title: "Logro declarado",
+    body: "La misma persona escribió este logro. El código existe en Kampus. Ningún docente lo acreditó.",
+  };
+}
+
+/**
+ * Same rule as the insert policies.
+ * A caller may declare their own achievement with no issuer, or issue as themselves for someone else.
+ * They may not store another account's id in issuer_id.
+ */
+export function certificateInsertAllowed(
+  callerId: string,
+  input: { ownerId?: string | null; issuerId?: string | null },
+): boolean {
+  const ownerId = input.ownerId ?? null;
+  const issuerId = input.issuerId ?? null;
+  const selfDeclared = ownerId === callerId && issuerId === null;
+  const accreditedByCaller = issuerId === callerId && (ownerId === null || ownerId !== callerId);
+  return selfDeclared || accreditedByCaller;
+}
+
+export type CertificateLookupStatus = "found" | "missing" | "unavailable";
+
+/** A service failure is not the same as a code that does not exist. */
+export function classifyCertificateLookup(
+  outcome: { ok: true; certificate: Certificate | null } | { ok: false },
+): CertificateLookupStatus {
+  if (!outcome.ok) return "unavailable";
+  return outcome.certificate ? "found" : "missing";
+}
+
 function toCertificate(row: CertificateRow): Certificate {
   return {
     id: row.id,
@@ -56,6 +103,15 @@ export async function issueCertificate(
     detail?: string;
   },
 ): Promise<Certificate> {
+  const { data: userData, error: userError } = await client.auth.getUser();
+  const callerId = userData.user?.id ?? null;
+  if (userError || !callerId) {
+    throw new Error("Inicia sesión para guardar este código.");
+  }
+  if (!certificateInsertAllowed(callerId, input)) {
+    throw new Error("No puedes atribuir la emisión a otra cuenta.");
+  }
+
   let lastError: unknown = null;
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const code = randomCode();
@@ -118,11 +174,12 @@ export function certificateVerifyUrl(origin: string, code: string): string {
 
 /** Mensaje listo para compartir por WhatsApp. */
 export function certificateShareText(origin: string, cert: Certificate): string {
-  return (
-    `🎓 ¡Obtuve mi certificado en Kampus!\n` +
-    `${cert.title} — ${cert.ownerName}\n` +
-    `Verifícalo aquí: ${certificateVerifyUrl(origin, cert.code)}`
-  );
+  const kind = certificateKind(cert);
+  const intro =
+    kind === "accredited"
+      ? "Otra cuenta de Kampus emitió este reconocimiento. No es una verificación de una institución."
+      : "Declaré este logro en Kampus. No es una acreditación de un docente.";
+  return `${intro}\n${cert.title} — ${cert.ownerName}\nVer el código: ${certificateVerifyUrl(origin, cert.code)}`;
 }
 
 export function whatsappShareUrl(text: string): string {

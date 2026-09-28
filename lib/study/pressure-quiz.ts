@@ -9,6 +9,15 @@ export function getPressureQuizBlock(plan: PassModePlan): StudyBlock | undefined
   return plan.sequence.find((b) => b.id === "quiz");
 }
 
+/**
+ * Reload only before the student starts or while they are still on the ready screen.
+ * Finishing records a study streak, which changes the profile. That update must not
+ * rebuild the questions and wipe the score.
+ */
+export function shouldReloadPressureQuiz(phase: "loading" | "ready" | "running" | "finished"): boolean {
+  return phase === "loading" || phase === "ready";
+}
+
 export function buildPressureQuizPath(subject: string, minutes?: number): string {
   const params = new URLSearchParams({ subject: subject.trim() || "General" });
   if (minutes && minutes > 0) params.set("minutes", String(minutes));

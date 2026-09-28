@@ -3,6 +3,7 @@ import { combineNotebookExtractedTextForPack } from "@/lib/notebooks/document-ta
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 import { postRescuePack } from "@/lib/rescue/post-rescue-pack";
 import type { UserProfile } from "@/lib/schemas/profile";
+import { buildDemoSubjectQuiz, demoLessonForSubject } from "@/lib/study/demo-subject-quiz";
 import {
   buildPressureQuizPackInput,
   describePressureQuizSources,
@@ -62,22 +63,17 @@ export async function generatePressureQuizQuestions(
   const packInput = buildPressureQuizPackInput(subject, selected, profile);
 
   if (packInput.isDemoSource) {
-    const { questions, packWarning } = await fetchQuizFromText(
-      subject,
-      packInput.extractedFileText,
-      packInput.sourceLabel,
-      packInput.fallbackSeed,
-      0,
-    );
+    const lesson = demoLessonForSubject(subject);
+    const questions = buildDemoSubjectQuiz(subject);
     return {
-      questions: questions.slice(0, MAX_QUESTIONS).map((q) => ({
-        ...q,
-        sourceClassLabel: "Perfil demo (sin apuntes)",
-        sourceClassDate: null,
-      })),
-      sourceLabel: packInput.sourceLabel,
+      questions,
+      sourceLabel: lesson
+        ? `Lección de muestra · ${lesson.label}`
+        : "Sin lección de muestra para esta materia",
       isDemoSource: true,
-      packWarning,
+      packWarning: lesson
+        ? "Lección de muestra. No usa tus apuntes."
+        : "La demo no trae una lección de esta materia. Elige Cálculo, Programación, Bases de datos o Estadística, o sube apuntes.",
     };
   }
 

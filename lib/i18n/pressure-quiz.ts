@@ -52,7 +52,7 @@ export const pressureQuizCopy: Record<
     readyTitle: "Listo para empezar",
     readySource: (label) => `Fuente: ${label}`,
     demoSourceWarning:
-      "Sin apuntes reales en el cuaderno — las preguntas serán genéricas. Sube PDFs para practicar con material de clase.",
+      "Esta es una lección de muestra de la materia, no tus apuntes. Sube PDFs al cuaderno para practicar con tu clase.",
     readyRules: (count, minutes) => [
       `${count} preguntas de opción múltiple`,
       `Cronómetro: ${minutes} minutos (como en tu plan del día)`,

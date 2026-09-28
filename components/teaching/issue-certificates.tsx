@@ -64,7 +64,13 @@ export function IssueCertificates() {
   }, [load]);
 
   async function handleIssue() {
-    if (!authUserId || !isSupabaseConfigured()) return;
+    if (!isSupabaseConfigured() || !authUserId) {
+      setMessage({
+        ok: false,
+        text: "Inicia sesión para emitir una acreditación. Sin una cuenta no se guarda el código.",
+      });
+      return;
+    }
     if (!studentName.trim() || !title.trim()) {
       setMessage({ ok: false, text: "Escribe el nombre del estudiante y el curso." });
       return;
@@ -84,7 +90,10 @@ export function IssueCertificates() {
       setStudentName("");
       setTitle("");
       setDetail("");
-      setMessage({ ok: true, text: `Certificado emitido con código ${cert.code}.` });
+      setMessage({
+        ok: true,
+        text: `Acreditación guardada con código ${cert.code}. La página pública dirá que la emitió tu cuenta, no que una institución la verificó.`,
+      });
     } catch {
       setMessage({ ok: false, text: "No se pudo emitir el certificado. Inténtalo de nuevo." });
     } finally {
@@ -121,7 +130,7 @@ export function IssueCertificates() {
       <div className="space-y-6">
         <PageHeader
           eyebrow="Docencia"
-          title="Certificados"
+          title="Acreditar logros"
           description="Esta herramienta es para docentes. Cambia tu rol a docente en ajustes."
         />
       </div>
@@ -132,8 +141,8 @@ export function IssueCertificates() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Docencia"
-        title="Emitir certificados"
-        description="Reconoce a tus estudiantes con certificados verificables. Cada uno lleva un código público que cualquiera puede validar."
+          title="Acreditar a un estudiante"
+          description="Tu cuenta queda como emisora. Quien abra el código verá que lo guardaste tú. Kampus no lo presenta como un sello de una institución."
       />
 
       {message ? (
@@ -142,8 +151,8 @@ export function IssueCertificates() {
 
       <Card className="border-white/10">
         <CardHeader>
-          <CardTitle className="text-base">Nuevo certificado</CardTitle>
-          <CardDescription>El estudiante podrá verlo y compartirlo desde su cuenta.</CardDescription>
+          <CardTitle className="text-base">Nueva acreditación</CardTitle>
+          <CardDescription>La emite tu cuenta. No se puede poner el identificador de otra persona como emisor.</CardDescription>
         </CardHeader>
         <div className="grid gap-4 px-6 pb-6 sm:grid-cols-3">
           <div>
@@ -173,10 +182,24 @@ export function IssueCertificates() {
               placeholder="60 horas · Promedio 19/20"
             />
           </div>
-          <div className="sm:col-span-3">
-            <Button type="button" onClick={() => void handleIssue()} disabled={issuing} className="gap-2">
+          <div className="space-y-2 sm:col-span-3">
+            {!isSupabaseConfigured() ? (
+              <p className="text-sm text-amber-200">
+                Este equipo no tiene el servicio de certificados, así que no se puede guardar el código.
+              </p>
+            ) : !authUserId ? (
+              <p className="text-sm text-amber-200">
+                Inicia sesión para acreditar un logro. Sin una cuenta el código no se guarda.
+              </p>
+            ) : null}
+            <Button
+              type="button"
+              onClick={() => void handleIssue()}
+              disabled={issuing || !authUserId || !isSupabaseConfigured()}
+              className="gap-2"
+            >
               {issuing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Award className="h-4 w-4" />}
-              {issuing ? "Emitiendo…" : "Emitir certificado"}
+              {issuing ? "Guardando…" : "Acreditar logro"}
             </Button>
           </div>
         </div>

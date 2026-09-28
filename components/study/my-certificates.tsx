@@ -1,6 +1,7 @@
 "use client";
 
 import { Award, Copy, Check, Loader2, Trash2, MessageCircle } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
@@ -10,6 +11,8 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
+  certificateKind,
+  certificatePublicCopy,
   certificateShareText,
   certificateVerifyUrl,
   deleteCertificate,
@@ -62,7 +65,20 @@ export function MyCertificates() {
   }, [load]);
 
   async function handleIssue() {
-    if (!authUserId || !isSupabaseConfigured()) return;
+    if (!isSupabaseConfigured()) {
+      setMessage({
+        ok: false,
+        text: "Este equipo no tiene el servicio de certificados. No se puede guardar el código aquí.",
+      });
+      return;
+    }
+    if (!authUserId) {
+      setMessage({
+        ok: false,
+        text: "Inicia sesión para declarar un logro. Sin una cuenta el código no se guarda ni se puede compartir.",
+      });
+      return;
+    }
     const ownerName = profile.displayName.trim() || "Estudiante Kampus";
     if (!title.trim()) {
       setMessage({ ok: false, text: "Escribe el nombre del curso o logro." });
@@ -81,9 +97,12 @@ export function MyCertificates() {
       setCerts((prev) => [cert, ...prev]);
       setTitle("");
       setDetail("");
-      setMessage({ ok: true, text: `Certificado emitido con código ${cert.code}. ¡Compártelo!` });
+      setMessage({
+        ok: true,
+        text: `Logro declarado con código ${cert.code}. Quien abra el enlace verá que lo escribiste tú, no que un docente lo acreditó.`,
+      });
     } catch {
-      setMessage({ ok: false, text: "No se pudo emitir el certificado. Inténtalo de nuevo." });
+      setMessage({ ok: false, text: "No se pudo guardar el logro. Inténtalo de nuevo." });
     } finally {
       setIssuing(false);
     }
@@ -114,12 +133,19 @@ export function MyCertificates() {
     }
   }
 
+  const canDeclare = Boolean(authUserId) && isSupabaseConfigured();
+  const blockedReason = !isSupabaseConfigured()
+    ? "Este equipo no tiene el servicio de certificados, así que el botón está apagado."
+    : !authUserId
+      ? "Inicia sesión para declarar un logro. Sin una cuenta el código no se guarda."
+      : null;
+
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Estudio"
-        title="Mis certificados"
-        description="Emite un certificado por cada curso o logro que completes. Cada uno tiene un código público de verificación que puedes compartir."
+        title="Mis logros"
+        description="Puedes declarar un curso o meta que completaste. Ese código no es una acreditación de un docente. Quien lo abra verá que lo escribiste tú."
       />
 
       {message ? (
@@ -128,8 +154,10 @@ export function MyCertificates() {
 
       <Card className="border-white/10">
         <CardHeader>
-          <CardTitle className="text-base">Emitir certificado</CardTitle>
-          <CardDescription>Para ti, por un curso, taller o meta que completaste.</CardDescription>
+          <CardTitle className="text-base">Declarar un logro</CardTitle>
+          <CardDescription>
+            Esto queda a tu nombre. No se presenta como un certificado acreditado por un docente.
+          </CardDescription>
         </CardHeader>
         <div className="grid gap-4 px-6 pb-6 sm:grid-cols-2">
           <div>
@@ -150,10 +178,20 @@ export function MyCertificates() {
               placeholder="40 horas · Promedio 18/20"
             />
           </div>
-          <div className="sm:col-span-2">
-            <Button type="button" onClick={() => void handleIssue()} disabled={issuing} className="gap-2">
+          <div className="space-y-2 sm:col-span-2">
+            {blockedReason ? (
+              <p className="text-sm text-amber-200">
+                {blockedReason}{" "}
+                {!authUserId && isSupabaseConfigured() ? (
+                  <Link href="/login" className="font-semibold text-white underline-offset-2 hover:underline">
+                    Entrar
+                  </Link>
+                ) : null}
+              </p>
+            ) : null}
+            <Button type="button" onClick={() => void handleIssue()} disabled={issuing || !canDeclare} className="gap-2">
               {issuing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Award className="h-4 w-4" />}
-              {issuing ? "Emitiendo…" : "Emitir mi certificado"}
+              {issuing ? "Guardando…" : "Declarar mi logro"}
             </Button>
           </div>
         </div>
@@ -166,7 +204,7 @@ export function MyCertificates() {
           <Card className="border-dashed border-white/15 sm:col-span-2">
             <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
               <Award className="h-8 w-8 text-slate-500" />
-              <p className="text-sm text-slate-400">Aún no tienes certificados. Emite el primero arriba.</p>
+              <p className="text-sm text-slate-400">Aún no declaras logros. El formulario de arriba guarda el primero.</p>
             </div>
           </Card>
         ) : (
@@ -191,6 +229,9 @@ export function MyCertificates() {
                   </div>
                   <div>
                     <p className="font-semibold text-white">{cert.title}</p>
+                    <p className="text-xs uppercase tracking-wide text-amber-200/90">
+                      {certificatePublicCopy(certificateKind(cert)).title}
+                    </p>
                     <p className="text-sm text-slate-300">{cert.ownerName}</p>
                     {cert.detail ? <p className="text-xs text-slate-500">{cert.detail}</p> : null}
                     <p className="mt-1 text-xs text-slate-500">

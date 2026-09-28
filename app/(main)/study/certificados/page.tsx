@@ -3,7 +3,7 @@ import { Suspense } from "react";
 
 import { MyCertificates } from "@/components/study/my-certificates";
 
-export const metadata: Metadata = { title: "Mis certificados" };
+export const metadata: Metadata = { title: "Mis logros" };
 
 export default function CertificatesPage() {
   return (

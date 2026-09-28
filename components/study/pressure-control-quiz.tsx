@@ -3,7 +3,7 @@
 import { ArrowLeft, BookOpen, CheckCircle2, Clock, Loader2, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { useTodayContext } from "@/components/today/use-today-context";
@@ -33,6 +33,7 @@ import {
   filterDocsForSubject,
   getPressureQuizBlock,
   listUniqueClassLabels,
+  shouldReloadPressureQuiz,
 } from "@/lib/study/pressure-quiz";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -110,6 +111,8 @@ export function PressureControlQuiz() {
   const [selected, setSelected] = useState<number | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(minutes * 60);
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
 
   const loadQuiz = useCallback(async () => {
     setPhase("loading");
@@ -144,7 +147,9 @@ export function PressureControlQuiz() {
 
     const qs = result.questions;
     if (qs.length === 0) {
-      setLoadError("No se generaron preguntas. Sube apuntes al cuaderno e inténtalo de nuevo.");
+      setLoadError(
+        result.packWarning ?? "No se generaron preguntas. Sube apuntes al cuaderno e inténtalo de nuevo.",
+      );
       setPhase("ready");
       return;
     }
@@ -159,6 +164,7 @@ export function PressureControlQuiz() {
   }, [authUserId, minutes, profile, subject]);
 
   useEffect(() => {
+    if (!shouldReloadPressureQuiz(phaseRef.current)) return;
     void loadQuiz();
   }, [loadQuiz]);
 
