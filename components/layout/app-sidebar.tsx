@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 import { KampusLogo } from "@/components/brand/kampus-logo";
 import { useKampus } from "@/components/kampus/kampus-provider";
+import { ContextSwitcher } from "@/components/layout/context-switcher";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { navCopy, navLabelForRole, navGroupLabelForRole } from "@/lib/i18n/nav";
@@ -107,6 +108,7 @@ export function AppSidebar({ onNavigate, luminaMode = false }: AppSidebarProps) 
           </Badge>
           <Badge tone="accent">{roleLabel}</Badge>
         </div>
+        <ContextSwitcher userId={authUserId} />
       </div>
 
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 pb-6">

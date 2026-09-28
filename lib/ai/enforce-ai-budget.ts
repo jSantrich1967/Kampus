@@ -1,6 +1,10 @@
-import { aiBudgetDecision, aiBudgetExceededResponse, type PlanLimits, type UsageTotals } from "@/lib/ai/ai-budget";
+import { aiBudgetDecision, aiBudgetExceededResponse, type UsageTotals } from "@/lib/ai/ai-budget";
+import { readStoredContext, type ContextMembership } from "@/lib/context/active-context";
+import { resolveUserEntitlements, type PlanSnapshot } from "@/lib/context/entitlements";
+import { listMyOrganizations } from "@/lib/supabase/organizations-db";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 type PlanRow = {
   daily_ai_requests: number;
@@ -39,10 +43,16 @@ export async function aiBudgetBlockResponse(): Promise<Response | null> {
     });
     if (totalsError) return null;
 
-    const limits = await loadLimits(admin, userId);
-    if (!limits) return null;
+    const personalPlan = await loadPersonalPlan(admin, userId);
+    const context = await loadAcceptedContext(supabase, userId);
+    const entitlements = resolveUserEntitlements({
+      context,
+      personalPlan,
+      organizationLicense: null,
+    });
+    if (!entitlements) return null;
 
-    const decision = aiBudgetDecision(readTotals(totals), limits);
+    const decision = aiBudgetDecision(readTotals(totals), entitlements.limits);
     if (decision.ok) return null;
     return aiBudgetExceededResponse(decision.message);
   } catch {
@@ -50,10 +60,23 @@ export async function aiBudgetBlockResponse(): Promise<Response | null> {
   }
 }
 
-async function loadLimits(
+async function loadAcceptedContext(supabase: SupabaseClient, userId: string) {
+  const memberships = await listMyOrganizations(supabase, userId).catch(() => []);
+  const choices: ContextMembership[] = memberships.map((membership) => ({
+    organizationId: membership.organizationId,
+    name: membership.name,
+    memberStatus: membership.memberStatus,
+    organizationStatus: membership.organizationStatus,
+  }));
+  const stored = await supabase.from("user_contexts").select("organization_id").eq("user_id", userId).maybeSingle();
+  const storedId = stored.error || typeof stored.data?.organization_id !== "string" ? null : stored.data.organization_id;
+  return readStoredContext(storedId, choices);
+}
+
+async function loadPersonalPlan(
   admin: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
   userId: string,
-): Promise<PlanLimits | null> {
+): Promise<PlanSnapshot | null> {
   const { data: assignment, error: assignmentError } = await admin
     .from("user_plans")
     .select("plan_id")
@@ -72,10 +95,13 @@ async function loadLimits(
 
   const row = plan as PlanRow;
   return {
-    dailyAiRequests: row.daily_ai_requests,
-    monthlyAiRequests: row.monthly_ai_requests,
-    dailyTokenLimit: row.daily_token_limit,
-    monthlyTokenLimit: row.monthly_token_limit,
+    planId,
+    limits: {
+      dailyAiRequests: row.daily_ai_requests,
+      monthlyAiRequests: row.monthly_ai_requests,
+      dailyTokenLimit: row.daily_token_limit,
+      monthlyTokenLimit: row.monthly_token_limit,
+    },
   };
 }
 

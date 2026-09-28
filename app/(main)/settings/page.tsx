@@ -6,6 +6,7 @@ import * as Sentry from "@sentry/nextjs";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
+import { MyOrganizations } from "@/components/settings/my-organizations";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -145,6 +146,8 @@ export default function SettingsPage() {
           )}
         </div>
       </Card>
+
+      <MyOrganizations userId={authUserId} />
 
       <Card>
         <CardHeader>
