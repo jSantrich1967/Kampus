@@ -44,6 +44,7 @@ export const navCopy = {
       teaching: "Copiloto docente",
       reviewWorks: "Revisar trabajos",
       examGenerator: "Generador de exámenes",
+      autoGrader: "Corrección automática",
       issueCertificates: "Acreditar logros",
       myCertificates: "Mis logros",
       familyReport: "Reporte familiar",

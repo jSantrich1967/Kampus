@@ -99,6 +99,13 @@ export function examGeneratorRateLimits(): { max: number; windowMs: number } {
   };
 }
 
+export function autoGraderRateLimits(): { max: number; windowMs: number } {
+  return {
+    max: parseInt(process.env.API_RL_MAX_AUTO_GRADER ?? "30", 10),
+    windowMs: parseInt(process.env.API_RL_AUTO_GRADER_WINDOW_MS ?? String(60 * 60 * 1000), 10),
+  };
+}
+
 export function socraticTutorRateLimits(): { max: number; windowMs: number } {
   return {
     max: parseInt(process.env.API_RL_MAX_SOCRATIC_TUTOR ?? "40", 10),

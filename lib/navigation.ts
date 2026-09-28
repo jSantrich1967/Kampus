@@ -25,6 +25,7 @@ import {
   Send,
   Bell,
   ClipboardCheck,
+  BadgeCheck,
   Megaphone,
   Award,
   Bot,
@@ -106,6 +107,7 @@ export const navigationGroups: NavGroup[] = [
     items: [
       { href: "/teaching", key: "teaching", icon: School, roles: ["teacher"] },
       { href: "/teaching/examenes", key: "examGenerator", icon: FileUp, roles: ["teacher"] },
+      { href: "/teaching/corregir", key: "autoGrader", icon: BadgeCheck, roles: ["teacher"] },
       { href: "/teaching/trabajos", key: "reviewWorks", icon: ClipboardCheck, roles: ["teacher"] },
       { href: "/teaching/certificados", key: "issueCertificates", icon: Award, roles: ["teacher"] },
       { href: "/teaching/avisos", key: "teacherNotices", icon: Megaphone, roles: ["teacher"] },
@@ -148,7 +150,7 @@ const studentNavStructure: Array<{ id: NavGroup["id"]; keys: NavItemKey[] }> = [
 const teacherNavStructure: Array<{ id: NavGroup["id"]; keys: NavItemKey[] }> = [
   { id: "command", keys: ["today"] },
   { id: "teach", keys: ["library", "classes", "reviewWorks", "teacherNotices"] },
-  { id: "evaluate", keys: ["exams", "examGenerator", "risk"] },
+  { id: "evaluate", keys: ["exams", "examGenerator", "autoGrader", "risk"] },
   { id: "followup", keys: ["teacherAlerts", "teacherReports", "issueCertificates"] },
   { id: "social", keys: ["community"] },
   { id: "system", keys: ["settings"] },
