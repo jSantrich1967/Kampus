@@ -39,6 +39,16 @@ import {
 } from "@/lib/storage/presentation-storage";
 import { clearStudyPlan, discardLegacyStudyPlan, setStudyPlanOwner } from "@/lib/storage/study-plan-storage";
 import {
+  clearCounselorAlertStorage,
+  discardLegacyCounselorAlert,
+  setCounselorAlertOwner,
+} from "@/lib/wellbeing/counselor-alert-storage";
+import {
+  clearInstitutionOptIn,
+  discardLegacyInstitutionOptIn,
+  setInstitutionOptInOwner,
+} from "@/lib/wellbeing/institution-pulse-storage";
+import {
   clearStudyRoomStorage,
   discardLegacyStudyRooms,
   setStudyRoomOwner,
@@ -95,6 +105,8 @@ export function KampusProvider({ children }: { children: ReactNode }) {
   setPresentationStorageOwner(authUserId);
   setStudyPlanOwner(authUserId);
   setStudyRoomOwner(authUserId);
+  setCounselorAlertOwner(authUserId);
+  setInstitutionOptInOwner(authUserId);
 
   useEffect(() => {
     discardLegacyPsychologistChat();
@@ -107,6 +119,8 @@ export function KampusProvider({ children }: { children: ReactNode }) {
     discardLegacyPresentationStorage();
     discardLegacyStudyPlan();
     discardLegacyStudyRooms();
+    discardLegacyCounselorAlert();
+    discardLegacyInstitutionOptIn();
     const stored = loadProfile();
     setProfileState(stored);
     // Render immediately from local storage; Supabase sync runs in the background.
@@ -143,6 +157,8 @@ export function KampusProvider({ children }: { children: ReactNode }) {
       setPresentationStorageOwner(userId);
       setStudyPlanOwner(userId);
       setStudyRoomOwner(userId);
+      setCounselorAlertOwner(userId);
+      setInstitutionOptInOwner(userId);
       const local = loadProfile(userId);
 
       try {
@@ -215,6 +231,14 @@ export function KampusProvider({ children }: { children: ReactNode }) {
         clearStudyRoomStorage(null);
         discardLegacyStudyRooms();
         setStudyRoomOwner(null);
+        clearCounselorAlertStorage(authUserIdRef.current);
+        clearCounselorAlertStorage(null);
+        discardLegacyCounselorAlert();
+        setCounselorAlertOwner(null);
+        clearInstitutionOptIn(authUserIdRef.current);
+        clearInstitutionOptIn(null);
+        discardLegacyInstitutionOptIn();
+        setInstitutionOptInOwner(null);
       }
       authUserIdRef.current = nextId;
       schedule(nextId);

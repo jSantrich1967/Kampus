@@ -7,6 +7,7 @@ import { parseJsonFromModelText } from "@/lib/openai/parse-json-response";
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
 import { examGeneratorRateLimits } from "@/lib/rate-limit/openai-defaults";
 import { consumeDailyUserQuota } from "@/lib/rate-limit/user-quota";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   examGeneratorRequestSchema,
   generatedExamSchema,
@@ -26,6 +27,18 @@ const DIFFICULTY_LABELS: Record<string, string> = {
   medio: "medio (aplicar y analizar)",
   dificil: "difícil (evaluar y crear, problemas no triviales)",
 };
+
+async function callerIsTeacher(): Promise<boolean> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return false;
+  const { data } = await supabase.from("profiles").select("body").eq("id", user.id).maybeSingle();
+  const body = data?.body;
+  if (!body || typeof body !== "object") return false;
+  return (body as { role?: unknown }).role === "teacher";
+}
 
 export async function POST(req: Request) {
   const ip = getClientIpKey(req);
@@ -52,6 +65,14 @@ export async function POST(req: Request) {
             ? { "Retry-After": String(quota.retryAfterSec) }
             : undefined,
       },
+    );
+  }
+
+  const teacher = await callerIsTeacher();
+  if (!teacher) {
+    return NextResponse.json(
+      { error: "Solo una cuenta docente puede generar este examen." },
+      { status: 403 },
     );
   }
 

@@ -40,3 +40,21 @@ export const examCorrectionSchema = z.object({
 });
 
 export type ExamCorrection = z.infer<typeof examCorrectionSchema>;
+
+function roundScore(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+/** The model may invent a total. The saved grade is the sum of the item points. */
+export function reconcileExamCorrection(raw: unknown): ExamCorrection {
+  const parsed = examCorrectionSchema.parse(raw);
+  const items = parsed.items.map((item) => ({
+    ...item,
+    points: roundScore(Math.min(Math.max(item.points, 0), item.maxPoints)),
+  }));
+  const totalEarned = roundScore(items.reduce((sum, item) => sum + item.points, 0));
+  const totalPossible = roundScore(items.reduce((sum, item) => sum + item.maxPoints, 0));
+  const percentage =
+    totalPossible <= 0 ? 0 : Math.min(100, roundScore((totalEarned / totalPossible) * 100));
+  return { ...parsed, items, totalEarned, totalPossible, percentage };
+}

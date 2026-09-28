@@ -5,6 +5,7 @@ import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
 import {
   examCorrectionRequestSchema,
   examCorrectionSchema,
+  reconcileExamCorrection,
 } from "@/lib/schemas/exam-corrector";
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
 import { examCorrectorRateLimits } from "@/lib/rate-limit/openai-defaults";
@@ -251,7 +252,7 @@ export async function POST(req: Request) {
       const payload = (await res.json()) as unknown;
       const text = extractTextFromOpenAIResponses(payload);
       const parsedJson = tryParseJsonObject(text);
-      const correction = examCorrectionSchema.parse(parsedJson);
+      const correction = reconcileExamCorrection(parsedJson);
 
       return NextResponse.json({ correction });
     });

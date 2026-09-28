@@ -37,6 +37,7 @@ const distDir = devDistDirFromEnv();
 const nextConfig: NextConfig = {
   ...(distDir ? { distDir } : {}),
   devIndicators: false,
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   serverExternalPackages: ["pdf-parse", "@napi-rs/canvas"],
   ...(envFlag("KAMPUS_NEXT_DISABLE_DIST_LOCK")
     ? { experimental: { lockDistDir: false } }

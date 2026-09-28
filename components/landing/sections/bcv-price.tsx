@@ -43,11 +43,11 @@ export function BcvPrice({ usdPrice }: { usdPrice: number }) {
 
 /** Nota al pie de la sección de precios con la fecha de la tasa vigente. */
 export function BcvRateNote() {
-  const { date } = useBcvRate();
+  const { date, live } = useBcvRate();
+  const text = live
+    ? `Precio en bolívares calculado a la tasa oficial del BCV del ${formatBcvDate(date)}.`
+    : `Precio en bolívares calculado con la tasa de respaldo del ${formatBcvDate(date)}, porque no pudimos leer la tasa de hoy.`;
   return (
-    <p className="mx-auto mt-10 max-w-7xl px-6 text-center text-xs text-gray-400">
-      Precio en bolívares calculado a la tasa oficial del BCV del {formatBcvDate(date)}. La tasa
-      se actualiza automáticamente todos los días.
-    </p>
+    <p className="mx-auto mt-10 max-w-7xl px-6 text-center text-xs text-gray-400">{text}</p>
   );
 }

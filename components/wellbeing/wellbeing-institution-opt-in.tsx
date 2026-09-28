@@ -40,8 +40,8 @@ export function WellbeingInstitutionOptIn() {
 
   useEffect(() => {
     setHydrated(true);
-    setOptIn(loadInstitutionWellbeingOptIn());
-  }, []);
+    setOptIn(loadInstitutionWellbeingOptIn(authUserId));
+  }, [authUserId]);
 
   const syncPulse = useCallback(async () => {
     if (!canSync || !authUserId || !institutionKey) return;
@@ -62,7 +62,7 @@ export function WellbeingInstitutionOptIn() {
     setBusy(true);
     try {
       if (optIn) {
-        saveInstitutionWellbeingOptIn(false);
+        saveInstitutionWellbeingOptIn(false, authUserId);
         setOptIn(false);
         if (canSync && authUserId) {
           const supabase = createSupabaseBrowserClient();
@@ -74,7 +74,7 @@ export function WellbeingInstitutionOptIn() {
           setMessage(t.institutionOptInNoUniversity);
           return;
         }
-        saveInstitutionWellbeingOptIn(true);
+        saveInstitutionWellbeingOptIn(true, authUserId);
         setOptIn(true);
         if (canSync) await syncPulse();
         setMessage(t.institutionOptInOk);

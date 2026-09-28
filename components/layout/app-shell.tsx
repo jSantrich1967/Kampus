@@ -69,7 +69,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         <header
           className={cn(
-            "sticky top-0 z-30 flex min-h-[4.25rem] items-center justify-between gap-2 overflow-x-hidden border-b px-3 py-2 backdrop-blur md:hidden",
+            "sticky top-0 z-[60] flex min-h-[4.25rem] items-center justify-between gap-2 overflow-x-hidden border-b px-3 py-2 backdrop-blur md:hidden",
             theme === "student" && "border-white/10 bg-slate-950/90",
             theme === "faculty" && "border-teal-400/25 bg-slate-950/92",
             theme === "institution" && "border-amber-400/25 bg-slate-950/92",
@@ -100,7 +100,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
             <aside
               className={cn(
-                "fixed inset-y-0 left-0 z-50 w-[min(88vw,320px)] border-r bg-slate-950 shadow-2xl transition-transform duration-200 ease-out will-change-transform md:hidden",
+                "fixed bottom-0 left-0 top-[4.25rem] z-50 w-[min(88vw,320px)] border-r bg-slate-950 shadow-2xl transition-transform duration-200 ease-out will-change-transform md:hidden",
                 theme === "student" && "border-white/10",
                 theme === "faculty" && "border-teal-400/25",
                 theme === "institution" && "border-amber-400/25",

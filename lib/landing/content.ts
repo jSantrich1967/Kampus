@@ -47,12 +47,12 @@ export const PRICING_PLANS = [
     price: "$10,30",
     period: "/ mes",
     usdPrice: 10.3,
-    description: "Para rendir al máximo cuando se acerca el examen.",
+    description: "Precio de referencia. Crear cuenta no cobra: el pago todavía no está activo.",
     features: [
-      "Todo lo del plan Estudiante, sin límites",
-      "Generador de exámenes de práctica ilimitados",
-      "Modo Aprobar: repaso intensivo antes del examen",
-      "Reportes para tu familia",
+      "El botón crea una cuenta gratis, sin tarjeta",
+      "El cobro de 10,30 USD al mes todavía no existe",
+      "Modo Aprobar y los exámenes usan el límite de tu cuenta",
+      "Premium dentro de la app es un interruptor de prueba",
     ],
     highlighted: true,
   },
@@ -84,12 +84,12 @@ export const FAQS = [
   {
     question: "¿Kampus es gratis?",
     answer:
-      "Sí. El plan Estudiante es gratis para siempre e incluye tu misión diaria de estudio, plan adaptativo según tus exámenes, tarjetas y resúmenes con IA, y seguimiento de tu progreso. El plan Pro quita los límites, suma exámenes de práctica ilimitados, el Modo Aprobar y reportes para tu familia.",
+      "Sí. El plan Estudiante es gratis. El precio Pro de la página es una referencia: todavía no hay cobro, y crear cuenta no pide tarjeta.",
   },
   {
     question: "¿Cómo se calcula el precio en bolívares?",
     answer:
-      "El precio en bolívares se calcula automáticamente con la tasa oficial del dólar publicada por el BCV y se actualiza todos los días, así que siempre pagas el equivalente justo en el momento de tu suscripción.",
+      "El número en bolívares multiplica 10,30 USD por la tasa del BCV. Si la fuente no responde, se muestra la última tasa guardada y su fecha. Hoy ese precio no se cobra.",
   },
   {
     question: "¿Puedo usar Kampus en mi colegio o universidad?",
@@ -112,9 +112,9 @@ export const FAQS = [
       "Solo crear tu cuenta gratis. En minutos tienes tu primera misión de estudio lista, sin tarjeta ni compromiso.",
   },
   {
-    question: "¿Qué pasa con mis datos si cancelo el plan Pro?",
+    question: "¿Qué pasa si más adelante existe el plan Pro?",
     answer:
-      "Nada se borra: vuelves al plan Estudiante gratis y conservas tu cuenta, tu progreso y tus materiales. Puedes volver a Pro cuando quieras.",
+      "Hoy Pro no se cobra. Cuando exista un pago de verdad, cancelarlo no borra tu cuenta, tu progreso ni tus materiales.",
   },
 ] as const;
 

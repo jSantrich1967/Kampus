@@ -37,8 +37,8 @@ export function WellbeingCounselorAlertPanel() {
 
   useEffect(() => {
     setHydrated(true);
-    setAutoEnabled(loadCounselorAutoAlertEnabled());
-  }, []);
+    setAutoEnabled(loadCounselorAutoAlertEnabled(authUserId));
+  }, [authUserId]);
 
   const sendManual = useCallback(async () => {
     if (!canAlert || !institutionKey) return;
@@ -72,7 +72,7 @@ export function WellbeingCounselorAlertPanel() {
 
   function toggleAuto() {
     const next = !autoEnabled;
-    saveCounselorAutoAlertEnabled(next);
+    saveCounselorAutoAlertEnabled(next, authUserId);
     setAutoEnabled(next);
     setMessage(next ? t.counselorAlertAutoOn : t.counselorAlertAutoOff);
   }

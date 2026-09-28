@@ -97,13 +97,12 @@ export async function getCertificateByCode(
   client: SupabaseClient,
   code: string,
 ): Promise<Certificate | null> {
-  const { data, error } = await client
-    .from("certificates")
-    .select("id, code, owner_id, issuer_id, owner_name, title, detail, issued_at")
-    .eq("code", code.trim().toUpperCase())
-    .maybeSingle();
+  const { data, error } = await client.rpc("get_certificate_by_code", {
+    p_code: code.trim().toUpperCase(),
+  });
   if (error) throw error;
-  return data ? toCertificate(data as CertificateRow) : null;
+  const row = Array.isArray(data) ? data[0] : data;
+  return row ? toCertificate(row as CertificateRow) : null;
 }
 
 export async function deleteCertificate(client: SupabaseClient, id: string): Promise<void> {

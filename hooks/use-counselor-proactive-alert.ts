@@ -23,7 +23,7 @@ export function useCounselorProactiveAlert() {
   const inflight = useRef(false);
 
   useEffect(() => {
-    if (!loadCounselorAutoAlertEnabled()) return;
+    if (!loadCounselorAutoAlertEnabled(authUserId)) return;
     if (!authUserId || !isSupabaseConfigured()) return;
     if (insights.entriesLast14Days === 0) return;
 
@@ -31,7 +31,7 @@ export function useCounselorProactiveAlert() {
     if (!institutionKey) return;
 
     const weekStart = currentWeekStartIso();
-    const lastWeek = loadLastAutoAlertWeek();
+    const lastWeek = loadLastAutoAlertWeek(authUserId);
     if (!shouldSendProactiveCounselorAlert(signal, weekStart, lastWeek)) return;
     if (inflight.current) return;
 
@@ -49,7 +49,7 @@ export function useCounselorProactiveAlert() {
       }),
     })
       .then((res) => {
-        if (res.ok) saveLastAutoAlertWeek(weekStart);
+        if (res.ok) saveLastAutoAlertWeek(weekStart, authUserId);
       })
       .finally(() => {
         inflight.current = false;

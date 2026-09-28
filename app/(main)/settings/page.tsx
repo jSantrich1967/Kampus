@@ -167,7 +167,7 @@ export default function SettingsPage() {
           <CardTitle>Rol (demo)</CardTitle>
           <CardDescription>
             Prueba la app como docente u otros perfiles sin repetir el onboarding. Afecta “Hoy”, el menú y rutas como{" "}
-            <span className="font-mono text-slate-400">/teaching</span>.
+            <span className="font-mono text-slate-400">/teaching</span>. No abre las clases ni el pulso de otras personas.
           </CardDescription>
         </CardHeader>
         <div className="flex flex-wrap gap-2">

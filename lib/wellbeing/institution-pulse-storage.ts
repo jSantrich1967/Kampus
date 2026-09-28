@@ -1,14 +1,42 @@
-const OPT_IN_KEY = "kampus.wellbeing.institutionOptIn.v1";
+/** Old builds used one switch for every account on this computer. Never copy it into a user. */
+const LEGACY_OPT_IN_KEY = "kampus.wellbeing.institutionOptIn.v1";
 
-export function loadInstitutionWellbeingOptIn(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.localStorage.getItem(OPT_IN_KEY) === "1";
+let ownerId: string | null = null;
+
+export function setInstitutionOptInOwner(userId: string | null) {
+  ownerId = userId;
 }
 
-export function saveInstitutionWellbeingOptIn(value: boolean): void {
+function resolveOwner(userId?: string | null): string | null {
+  return userId === undefined ? ownerId : userId;
+}
+
+function optInKey(userId: string | null): string {
+  return userId
+    ? `kampus.wellbeing.institutionOptIn.v1.${userId}`
+    : "kampus.wellbeing.institutionOptIn.v1.anonymous";
+}
+
+export function loadInstitutionWellbeingOptIn(userId?: string | null): boolean {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(optInKey(resolveOwner(userId))) === "1";
+}
+
+export function saveInstitutionWellbeingOptIn(value: boolean, userId?: string | null): void {
   if (typeof window === "undefined") return;
-  if (value) window.localStorage.setItem(OPT_IN_KEY, "1");
-  else window.localStorage.removeItem(OPT_IN_KEY);
+  const key = optInKey(resolveOwner(userId));
+  if (value) window.localStorage.setItem(key, "1");
+  else window.localStorage.removeItem(key);
+}
+
+export function clearInstitutionOptIn(userId: string | null): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(optInKey(userId));
+}
+
+export function discardLegacyInstitutionOptIn(): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(LEGACY_OPT_IN_KEY);
 }
 
 export function normalizeInstitutionKey(university: string): string {
