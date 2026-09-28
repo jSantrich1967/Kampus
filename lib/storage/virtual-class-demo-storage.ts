@@ -4,6 +4,8 @@
  * el docente las crea y el estudiante las ve en el mismo dispositivo.
  */
 
+import { readAccountItem, writeAccountItem } from "@/lib/storage/account-box";
+
 export type DemoVcSession = {
   id: string;
   course: string;
@@ -21,22 +23,21 @@ export type DemoVcSession = {
   createdAt: string;
 };
 
-const SESSIONS_KEY = "kampus.vcDemoSessions.v1";
-const ENROLLED_KEY = "kampus.vcDemoEnrolled.v1";
+const SESSIONS_BASE = "kampus.vcDemoSessions.v1";
+const ENROLLED_BASE = "kampus.vcDemoEnrolled.v1";
 
-function readJson(key: string): unknown {
-  if (typeof window === "undefined") return null;
+function readJson(base: string, userId?: string | null): unknown {
+  const raw = readAccountItem(base, userId);
+  if (!raw) return null;
   try {
-    const raw = window.localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as unknown) : null;
+    return JSON.parse(raw) as unknown;
   } catch {
     return null;
   }
 }
 
-function writeJson(key: string, value: unknown) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(key, JSON.stringify(value));
+function writeJson(base: string, value: unknown, userId?: string | null) {
+  writeAccountItem(base, JSON.stringify(value), userId);
 }
 
 function isDemoVcSession(value: unknown): value is DemoVcSession {
@@ -45,10 +46,10 @@ function isDemoVcSession(value: unknown): value is DemoVcSession {
   return typeof v.id === "string" && typeof v.course === "string" && typeof v.startsAt === "string";
 }
 
-export function loadDemoVcSessions(): DemoVcSession[] {
-  const json = readJson(SESSIONS_KEY);
+export function loadDemoVcSessions(userId?: string | null): DemoVcSession[] {
+  const json = readJson(SESSIONS_BASE, userId);
   if (!Array.isArray(json)) return [];
-  const enrolledIds = loadDemoVcEnrolledIds();
+  const enrolledIds = loadDemoVcEnrolledIds(userId);
   return json
     .filter(isDemoVcSession)
     .map((s) => ({ ...s, demo: true as const, isEnrolled: enrolledIds.includes(s.id) }))
@@ -57,32 +58,35 @@ export function loadDemoVcSessions(): DemoVcSession[] {
 
 type DemoVcSessionRow = Omit<DemoVcSession, "isEnrolled">;
 
-function loadDemoVcSessionRows(): DemoVcSessionRow[] {
-  const json = readJson(SESSIONS_KEY);
+function loadDemoVcSessionRows(userId?: string | null): DemoVcSessionRow[] {
+  const json = readJson(SESSIONS_BASE, userId);
   if (!Array.isArray(json)) return [];
   return json.filter(isDemoVcSession).map((s) => ({ ...s, demo: true as const }));
 }
 
-export function saveDemoVcSession(session: Omit<DemoVcSessionRow, "demo" | "createdAt">): DemoVcSession {
+export function saveDemoVcSession(
+  session: Omit<DemoVcSessionRow, "demo" | "createdAt">,
+  userId?: string | null,
+): DemoVcSession {
   const row: DemoVcSessionRow = {
     ...session,
     demo: true,
     createdAt: new Date().toISOString(),
   };
-  writeJson(SESSIONS_KEY, [...loadDemoVcSessionRows(), row]);
+  writeJson(SESSIONS_BASE, [...loadDemoVcSessionRows(userId), row], userId);
   return { ...row, isEnrolled: false };
 }
 
-export function loadDemoVcEnrolledIds(): string[] {
-  const json = readJson(ENROLLED_KEY);
+export function loadDemoVcEnrolledIds(userId?: string | null): string[] {
+  const json = readJson(ENROLLED_BASE, userId);
   return Array.isArray(json) ? json.filter((v): v is string => typeof v === "string") : [];
 }
 
 /** Alterna la inscripción local a una sesión demo. Devuelve el nuevo estado. */
-export function toggleDemoVcEnrollment(sessionId: string): boolean {
-  const ids = loadDemoVcEnrolledIds();
+export function toggleDemoVcEnrollment(sessionId: string, userId?: string | null): boolean {
+  const ids = loadDemoVcEnrolledIds(userId);
   const next = ids.includes(sessionId) ? ids.filter((id) => id !== sessionId) : [...ids, sessionId];
-  writeJson(ENROLLED_KEY, next);
+  writeJson(ENROLLED_BASE, next, userId);
   return next.includes(sessionId);
 }
 

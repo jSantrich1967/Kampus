@@ -19,28 +19,31 @@ export function buildDeadlineNotifyBody(items: CollaborationFocusItem[]): string
   return `«${top.title}» vence mañana — planifica en Colaborar.`;
 }
 
-export async function fireCollaborationDeadlineNotification(items: CollaborationFocusItem[]): Promise<void> {
+export async function fireCollaborationDeadlineNotification(
+  items: CollaborationFocusItem[],
+  userId?: string | null,
+): Promise<void> {
   if (typeof window === "undefined") return;
-  if (!loadCollaborateDeadlineNotifyEnabled()) return;
+  if (!loadCollaborateDeadlineNotifyEnabled(userId)) return;
   if (!("Notification" in window) || Notification.permission !== "granted") return;
 
   const urgent = urgentCollaborationDeadlines(items);
   if (urgent.length === 0) return;
 
   const today = localIsoDate();
-  if (loadCollaborateDeadlineNotifyLastFiredDate() === today) return;
+  if (loadCollaborateDeadlineNotifyLastFiredDate(userId) === today) return;
 
   const title = urgent.length === 1 ? "Entrega próxima" : `${urgent.length} entregas próximas`;
   const body = buildDeadlineNotifyBody(urgent);
 
   try {
     const sent = await import("@/lib/wellbeing/pwa-check-in").then((m) =>
-      m.showPwaCheckInNotification(title, body, "/collaborate"),
+      m.showPwaCheckInNotification(title, body, "/collaborate", userId),
     );
     if (!sent) {
       new Notification(title, { body, tag: "kampus-collab-deadline", icon: "/icons/icon-192.svg" });
     }
-    saveCollaborateDeadlineNotifyLastFiredDate(today);
+    saveCollaborateDeadlineNotifyLastFiredDate(today, userId);
   } catch {
     /* ignore */
   }

@@ -3,6 +3,7 @@
 import { Check, Download, Loader2, Smartphone } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -18,6 +19,7 @@ import { usePwaCheckInScheduler } from "@/hooks/use-pwa-check-in-scheduler";
 import { wellbeingCopy } from "@/lib/i18n/wellbeing";
 
 export function WellbeingPwaPanel() {
+  const { authUserId } = useKampus();
   const t = wellbeingCopy.es;
   const [hydrated, setHydrated] = useState(false);
   const [pwaEnabled, setPwaEnabled] = useState(false);
@@ -30,7 +32,7 @@ export function WellbeingPwaPanel() {
 
   useEffect(() => {
     setHydrated(true);
-    setPwaEnabled(loadPwaRemindersEnabled());
+    setPwaEnabled(loadPwaRemindersEnabled(authUserId));
     setStandalone(isStandalonePwa());
 
     if (!pwaSupported()) return;
@@ -43,7 +45,7 @@ export function WellbeingPwaPanel() {
     };
     window.addEventListener("beforeinstallprompt", onBip);
     return () => window.removeEventListener("beforeinstallprompt", onBip);
-  }, []);
+  }, [authUserId]);
 
   const enablePwaReminders = useCallback(async () => {
     setBusy(true);
@@ -51,18 +53,18 @@ export function WellbeingPwaPanel() {
       await registerWellbeingServiceWorker();
       const perm = await requestBrowserNotifyPermission();
       if (perm !== "granted") return;
-      saveBrowserNotifyEnabled(true);
-      savePwaRemindersEnabled(true);
+      saveBrowserNotifyEnabled(true, authUserId);
+      savePwaRemindersEnabled(true, authUserId);
       setPwaEnabled(true);
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [authUserId]);
 
   const disablePwaReminders = useCallback(() => {
-    savePwaRemindersEnabled(false);
+    savePwaRemindersEnabled(false, authUserId);
     setPwaEnabled(false);
-  }, []);
+  }, [authUserId]);
 
   async function onInstall() {
     if (!installPrompt) return;

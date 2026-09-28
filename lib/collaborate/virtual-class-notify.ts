@@ -28,9 +28,10 @@ export function buildVirtualClassNotifyBody(course: string, startsAt: string): s
 
 export async function fireVirtualClassReminderNotification(
   sessions: VirtualClassReminderTarget[],
+  userId?: string | null,
 ): Promise<void> {
   if (typeof window === "undefined") return;
-  if (!loadVirtualClassNotifyEnabled()) return;
+  if (!loadVirtualClassNotifyEnabled(userId)) return;
   if (!("Notification" in window) || Notification.permission !== "granted") return;
 
   const now = Date.now();
@@ -38,7 +39,7 @@ export async function fireVirtualClassReminderNotification(
 
   for (const session of sessions) {
     if (!virtualClassInReminderWindow(session.startsAt, now)) continue;
-    if (wasVirtualClassNotified(session.id, today)) continue;
+    if (wasVirtualClassNotified(session.id, today, userId)) continue;
 
     const title = "Clase virtual pronto";
     const body = buildVirtualClassNotifyBody(session.course, session.startsAt);
@@ -46,12 +47,12 @@ export async function fireVirtualClassReminderNotification(
 
     try {
       const sent = await import("@/lib/wellbeing/pwa-check-in").then((m) =>
-        m.showPwaCheckInNotification(title, body, url),
+        m.showPwaCheckInNotification(title, body, url, userId),
       );
       if (!sent) {
         new Notification(title, { body, tag: `kampus-vc-${session.id}`, icon: "/icons/icon-192.svg" });
       }
-      markVirtualClassNotified(session.id, today);
+      markVirtualClassNotified(session.id, today, userId);
     } catch {
       /* ignore */
     }

@@ -71,7 +71,11 @@ export function CommunityHub() {
 
   const [feedSort, setFeedSort] = useState<CommunityFeedSort>("recent");
   const [feedFilter, setFeedFilter] = useState<"all" | "saved">("all");
-  const [savedPostIds, setSavedPostIds] = useState<Set<string>>(() => new Set(loadSavedPostIds()));
+  const [savedPostIds, setSavedPostIds] = useState<Set<string>>(() => new Set(loadSavedPostIds(authUserId)));
+
+  useEffect(() => {
+    setSavedPostIds(new Set(loadSavedPostIds(authUserId)));
+  }, [authUserId]);
 
   const canUseCloud = Boolean(isSupabaseConfigured() && authUserId);
   const { notifications, dismiss: dismissReplies } = useCommunityReplyNotifications(authUserId);
@@ -246,8 +250,8 @@ export function CommunityHub() {
   }
 
   function handleToggleSaved(postId: string) {
-    toggleSavedPostId(postId);
-    setSavedPostIds(new Set(loadSavedPostIds()));
+    toggleSavedPostId(postId, authUserId);
+    setSavedPostIds(new Set(loadSavedPostIds(authUserId)));
   }
 
   function handleNotebookAttach(payload: {

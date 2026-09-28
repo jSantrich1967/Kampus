@@ -28,6 +28,7 @@ export function parseShareAttribution(searchParams: URLSearchParams): {
   return { isKampusShare: isKampusShare && !!campaign, campaign, ref };
 }
 
-export function attributionDismissKey(campaign: ShareCampaign, ref: string | null) {
-  return `kampus.share.dismiss:${campaign}:${ref ?? "none"}`;
+export function attributionDismissKey(campaign: ShareCampaign, ref: string | null, userId?: string | null) {
+  const owner = userId ? userId : "anonymous";
+  return `kampus.share.dismiss:${owner}:${campaign}:${ref ?? "none"}`;
 }

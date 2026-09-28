@@ -3,6 +3,7 @@
 import { Eraser, Pencil, RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
@@ -17,11 +18,13 @@ type Props = {
 
 const COLORS = ["#a78bfa", "#22d3ee", "#fbbf24", "#fb7185", "#34d399"] as const;
 
-function storageKey(documentId: string) {
-  return `kampus-annotate:${documentId}`;
+function storageKey(documentId: string, userId?: string | null) {
+  const owner = userId ? userId : "anonymous";
+  return `kampus-annotate:${owner}:${documentId}`;
 }
 
 export function NotebookPageAnnotator({ documentId, imageUrl, className }: Props) {
+  const { authUserId } = useKampus();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const drawingRef = useRef(false);
@@ -69,21 +72,21 @@ export function NotebookPageAnnotator({ documentId, imageUrl, className }: Props
 
   const persist = useCallback(() => {
     try {
-      sessionStorage.setItem(storageKey(documentId), JSON.stringify(strokesRef.current));
+      sessionStorage.setItem(storageKey(documentId, authUserId), JSON.stringify(strokesRef.current));
     } catch {
       // ignore quota
     }
-  }, [documentId]);
+  }, [authUserId, documentId]);
 
   useEffect(() => {
     try {
-      const raw = sessionStorage.getItem(storageKey(documentId));
+      const raw = sessionStorage.getItem(storageKey(documentId, authUserId));
       if (raw) strokesRef.current = JSON.parse(raw) as Stroke[];
     } catch {
       strokesRef.current = [];
     }
     redraw();
-  }, [documentId, imageUrl, redraw]);
+  }, [authUserId, documentId, imageUrl, redraw]);
 
   useEffect(() => {
     toolRef.current = tool;

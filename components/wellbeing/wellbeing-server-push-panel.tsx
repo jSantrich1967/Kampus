@@ -29,12 +29,12 @@ export function WellbeingServerPushPanel() {
 
   useEffect(() => {
     setHydrated(true);
-    setEnabled(loadServerPushEnabled());
+    setEnabled(loadServerPushEnabled(authUserId));
     void fetch("/api/wellbeing/push/vapid")
       .then((r) => r.json())
       .then((j: { configured?: boolean }) => setConfigured(Boolean(j.configured)))
       .catch(() => setConfigured(false));
-  }, []);
+  }, [authUserId]);
 
   const enable = useCallback(async () => {
     if (!authUserId || !isSupabaseConfigured()) {
@@ -55,8 +55,8 @@ export function WellbeingServerPushPanel() {
         setMessage(t.serverPushError);
         return;
       }
-      saveBrowserNotifyEnabled(true);
-      saveServerPushEnabled(true);
+      saveBrowserNotifyEnabled(true, authUserId);
+      saveServerPushEnabled(true, authUserId);
       setEnabled(true);
       setMessage(t.serverPushOnOk);
     } finally {
@@ -68,13 +68,13 @@ export function WellbeingServerPushPanel() {
     setBusy(true);
     try {
       await unregisterServerPushSubscription();
-      saveServerPushEnabled(false);
+      saveServerPushEnabled(false, authUserId);
       setEnabled(false);
       setMessage(t.serverPushOffOk);
     } finally {
       setBusy(false);
     }
-  }, [t.serverPushOffOk]);
+  }, [authUserId, t.serverPushOffOk]);
 
   if (!hydrated || !serverPushSupported()) return null;
   if (configured === false) return null;

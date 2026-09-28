@@ -27,10 +27,11 @@ import { buildPsychologistContextBlock } from "@/lib/wellbeing/psychologist-cont
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
+import { readAccountFlag, writeAccountFlag } from "@/lib/storage/account-box";
 
 type ChatTurn = { role: "user" | "assistant"; content: string };
 
-const STORAGE_KEY = "kampus.psychologist.disclaimerAccepted.v1";
+const DISCLAIMER_BASE = "kampus.psychologist.disclaimerAccepted.v1";
 
 const WORKFLOW_STEPS = [
   {
@@ -59,15 +60,12 @@ const WORKFLOW_STEPS = [
   },
 ];
 
-function loadDisclaimerAccepted(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.localStorage.getItem(STORAGE_KEY) === "1";
+function loadDisclaimerAccepted(userId?: string | null): boolean {
+  return readAccountFlag(DISCLAIMER_BASE, userId);
 }
 
-function saveDisclaimerAccepted(value: boolean) {
-  if (typeof window === "undefined") return;
-  if (value) window.localStorage.setItem(STORAGE_KEY, "1");
-  else window.localStorage.removeItem(STORAGE_KEY);
+function saveDisclaimerAccepted(value: boolean, userId?: string | null) {
+  writeAccountFlag(DISCLAIMER_BASE, value, userId);
 }
 
 type BrowserSpeechRecognition = {
@@ -151,7 +149,7 @@ export function PsychologistHub() {
 
   useEffect(() => {
     setHydrated(true);
-    setDisclaimerAccepted(loadDisclaimerAccepted());
+    setDisclaimerAccepted(loadDisclaimerAccepted(authUserId));
     void syncChat().then((restored) => {
       if (restored.length > 0) {
         setMessages(restored);
@@ -159,7 +157,7 @@ export function PsychologistHub() {
         window.setTimeout(() => setChatRestored(false), 6000);
       }
     });
-  }, [syncChat]);
+  }, [authUserId, syncChat]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -183,7 +181,7 @@ export function PsychologistHub() {
 
   const onToggleDisclaimer = (checked: boolean) => {
     setDisclaimerAccepted(checked);
-    saveDisclaimerAccepted(checked);
+    saveDisclaimerAccepted(checked, authUserId);
   };
 
   const sendMessage = useCallback(

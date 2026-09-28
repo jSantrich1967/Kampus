@@ -1,6 +1,22 @@
 import type { PassPlanIntensity } from "@/lib/pass-mode";
 
-const STORAGE_KEY = "kampus.passModeIntensity.v1";
+/** Old builds used one box for every account. Never read it into a user. */
+const LEGACY_KEY = "kampus.passModeIntensity.v1";
+
+let ownerId: string | null = null;
+
+export function setPassModeIntensityOwner(userId: string | null) {
+  ownerId = userId;
+}
+
+export function passModeIntensityStorageKey(userId: string | null = ownerId): string {
+  if (!userId) return "kampus.passModeIntensity.v1.anonymous";
+  return `kampus.passModeIntensity.v1.${userId}`;
+}
+
+function resolveOwner(userId?: string | null): string | null {
+  return userId === undefined ? ownerId : userId;
+}
 
 export type PassModeIntensityState = {
   intensity: PassPlanIntensity;
@@ -22,10 +38,10 @@ function emptyState(): PassModeIntensityState {
   return { intensity: "full", date: todayDateKey(), userOverride: false };
 }
 
-export function loadPassModeIntensityState(): PassModeIntensityState {
+export function loadPassModeIntensityState(userId?: string | null): PassModeIntensityState {
   if (typeof window === "undefined") return emptyState();
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(passModeIntensityStorageKey(resolveOwner(userId)));
     if (!raw) return emptyState();
     const parsed = JSON.parse(raw) as Partial<PassModeIntensityState>;
     const intensity = parsed.intensity === "minimal" || parsed.intensity === "full" ? parsed.intensity : "full";
@@ -42,31 +58,53 @@ export function loadPassModeIntensityState(): PassModeIntensityState {
   }
 }
 
-export function loadPassModeIntensity(): PassPlanIntensity {
-  return loadPassModeIntensityState().intensity;
+export function loadPassModeIntensity(userId?: string | null): PassPlanIntensity {
+  return loadPassModeIntensityState(userId).intensity;
 }
 
-export function savePassModeIntensity(intensity: PassPlanIntensity, userOverride = true) {
-  writePassModeIntensityState(intensity, userOverride);
+export function savePassModeIntensity(
+  intensity: PassPlanIntensity,
+  userOverride = true,
+  userId?: string | null,
+) {
+  writePassModeIntensityState(intensity, userOverride, userId);
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent("kampus-pass-intensity-change", { detail: intensity }));
 }
 
-function writePassModeIntensityState(intensity: PassPlanIntensity, userOverride: boolean) {
+function writePassModeIntensityState(
+  intensity: PassPlanIntensity,
+  userOverride: boolean,
+  userId?: string | null,
+) {
   if (typeof window === "undefined") return;
   const state: PassModeIntensityState = {
     intensity,
     date: todayDateKey(),
     userOverride,
   };
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  window.localStorage.setItem(passModeIntensityStorageKey(resolveOwner(userId)), JSON.stringify(state));
 }
 
 /** Persist without broadcasting — avoids setState on siblings still mounting. */
-export function savePassModeIntensitySilent(intensity: PassPlanIntensity, userOverride = false) {
-  writePassModeIntensityState(intensity, userOverride);
+export function savePassModeIntensitySilent(
+  intensity: PassPlanIntensity,
+  userOverride = false,
+  userId?: string | null,
+) {
+  writePassModeIntensityState(intensity, userOverride, userId);
 }
 
-export function saveAutoMinimalIntensity() {
-  savePassModeIntensitySilent("minimal", false);
+export function saveAutoMinimalIntensity(userId?: string | null) {
+  savePassModeIntensitySilent("minimal", false, userId);
+}
+
+export function clearPassModeIntensity(userId?: string | null) {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(passModeIntensityStorageKey(resolveOwner(userId)));
+}
+
+export function discardLegacyPassModeIntensity() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(LEGACY_KEY);
 }

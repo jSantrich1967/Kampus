@@ -2,12 +2,16 @@
 
 import { useEffect } from "react";
 
+import { useKampus } from "@/components/kampus/kampus-provider";
 import { wellbeingCopy } from "@/lib/i18n/wellbeing";
+import { readAccountItem, writeAccountItem } from "@/lib/storage/account-box";
 import { msUntilNextCheckInHour, showPwaCheckInNotification } from "@/lib/wellbeing/pwa-check-in";
 
-const LAST_PWA_FIRED_KEY = "kampus.wellbeing.pwaNotify.lastFired.v1";
+const LAST_PWA_FIRED_BASE = "kampus.wellbeing.pwaNotify.lastFired.v1";
 
 export function usePwaCheckInScheduler(enabled: boolean): void {
+  const { authUserId } = useKampus();
+
   useEffect(() => {
     if (!enabled) return;
 
@@ -16,15 +20,17 @@ export function usePwaCheckInScheduler(enabled: boolean): void {
 
     const maybeNotify = () => {
       const today = new Date().toISOString().slice(0, 10);
-      if (window.localStorage.getItem(LAST_PWA_FIRED_KEY) === today) return;
+      if (readAccountItem(LAST_PWA_FIRED_BASE, authUserId) === today) return;
 
       const hour = new Date().getHours();
       if (hour < 18) return;
 
       const t = wellbeingCopy.es;
-      void showPwaCheckInNotification(t.checkInReminderTitle, t.browserNotifyBody).then((sent) => {
-        if (sent) window.localStorage.setItem(LAST_PWA_FIRED_KEY, today);
-      });
+      void showPwaCheckInNotification(t.checkInReminderTitle, t.browserNotifyBody, "/wellbeing/diary", authUserId).then(
+        (sent) => {
+          if (sent) writeAccountItem(LAST_PWA_FIRED_BASE, today, authUserId);
+        },
+      );
     };
 
     const scheduleNext = () => {
@@ -42,5 +48,5 @@ export function usePwaCheckInScheduler(enabled: boolean): void {
       if (timeoutId) window.clearTimeout(timeoutId);
       if (intervalId) window.clearInterval(intervalId);
     };
-  }, [enabled]);
+  }, [enabled, authUserId]);
 }

@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button } from "@/components/ui/button";
 import { attributionDismissKey, parseShareAttribution } from "@/lib/growth/attribution";
 
 export function AttributionBanner() {
   const searchParams = useSearchParams();
+  const { authUserId } = useKampus();
 
   const { isKampusShare, campaign, ref } = useMemo(() => parseShareAttribution(searchParams), [searchParams]);
 
@@ -19,15 +21,15 @@ export function AttributionBanner() {
       setHidden(true);
       return;
     }
-    const key = attributionDismissKey(campaign, ref);
+    const key = attributionDismissKey(campaign, ref, authUserId);
     setHidden(sessionStorage.getItem(key) === "1");
-  }, [isKampusShare, campaign, ref]);
+  }, [authUserId, isKampusShare, campaign, ref]);
 
   if (!isKampusShare || !campaign || hidden) return null;
 
   function dismiss() {
     if (!campaign) return;
-    sessionStorage.setItem(attributionDismissKey(campaign, ref), "1");
+    sessionStorage.setItem(attributionDismissKey(campaign, ref, authUserId), "1");
     setHidden(true);
   }
 

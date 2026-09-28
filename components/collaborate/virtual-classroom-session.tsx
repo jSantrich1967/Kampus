@@ -89,7 +89,7 @@ export function VirtualClassroomSession({ sessionId }: Props) {
 
   useEffect(() => {
     if (!demoMode || authUserId) return;
-    const found = loadDemoVcSessions().find((s) => s.id === sessionId) ?? null;
+    const found = loadDemoVcSessions(authUserId).find((s) => s.id === sessionId) ?? null;
     setSession(
       found
         ? {

@@ -109,7 +109,7 @@ export function VirtualClassroomCreateForm({ onCreated, schedulePrefill }: Props
           startsAt: new Date(startsLocal).toISOString(),
           joinUrl: joinUrl.trim() || null,
           embedVideoUrl: embedVideoUrl.trim() || null,
-        });
+        }, authUserId);
         setMessage(t.createSessionOk);
         setTopic("");
         onCreated?.();

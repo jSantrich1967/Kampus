@@ -46,9 +46,9 @@ export default function SettingsPage() {
   const [subjectDraft, setSubjectDraft] = useState("");
 
   useEffect(() => {
-    setAuthBypassDismissed(loadAuthBypassBannerDismissed());
+    setAuthBypassDismissed(loadAuthBypassBannerDismissed(authUserId));
     setAuthBypassHydrated(true);
-  }, []);
+  }, [authUserId]);
 
   const showAuthBypassUi =
     showAuthBypassBanner && authBypassHydrated && !authBypassDismissed;
@@ -83,7 +83,7 @@ export default function SettingsPage() {
               variant="secondary"
               className="border-amber-400/30 bg-amber-950/40 text-amber-50 hover:bg-amber-950/60"
               onClick={() => {
-                saveAuthBypassBannerDismissed();
+                saveAuthBypassBannerDismissed(authUserId);
                 setAuthBypassDismissed(true);
               }}
             >
@@ -98,7 +98,7 @@ export default function SettingsPage() {
           type="button"
           className="text-left text-xs text-slate-500 underline decoration-slate-600 underline-offset-2 hover:text-slate-400"
           onClick={() => {
-            clearAuthBypassBannerDismissed();
+            clearAuthBypassBannerDismissed(authUserId);
             setAuthBypassDismissed(false);
           }}
         >

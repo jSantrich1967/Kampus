@@ -1,15 +1,14 @@
-const PWA_PREFS_KEY = "kampus.wellbeing.pwaReminders.v1";
+import { readAccountFlag, writeAccountFlag } from "@/lib/storage/account-box";
+
+const PWA_PREFS_BASE = "kampus.wellbeing.pwaReminders.v1";
 const SW_URL = "/sw.js";
 
-export function loadPwaRemindersEnabled(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.localStorage.getItem(PWA_PREFS_KEY) === "1";
+export function loadPwaRemindersEnabled(userId?: string | null): boolean {
+  return readAccountFlag(PWA_PREFS_BASE, userId);
 }
 
-export function savePwaRemindersEnabled(value: boolean): void {
-  if (typeof window === "undefined") return;
-  if (value) window.localStorage.setItem(PWA_PREFS_KEY, "1");
-  else window.localStorage.removeItem(PWA_PREFS_KEY);
+export function savePwaRemindersEnabled(value: boolean, userId?: string | null): void {
+  writeAccountFlag(PWA_PREFS_BASE, value, userId);
 }
 
 export function pwaSupported(): boolean {
@@ -29,8 +28,9 @@ export async function showPwaCheckInNotification(
   title: string,
   body: string,
   url = "/wellbeing/diary",
+  userId?: string | null,
 ): Promise<boolean> {
-  if (!pwaSupported() || !loadPwaRemindersEnabled()) return false;
+  if (!pwaSupported() || !loadPwaRemindersEnabled(userId)) return false;
   if (Notification.permission !== "granted") return false;
 
   const reg = await navigator.serviceWorker.ready.catch(() => null);

@@ -1,18 +1,16 @@
+import { readAccountFlag, readAccountItem, writeAccountFlag, writeAccountItem } from "@/lib/storage/account-box";
 import { loadServerPushEnabled } from "@/lib/wellbeing/server-push-client";
 import { loadPwaRemindersEnabled, showPwaCheckInNotification } from "@/lib/wellbeing/pwa-check-in";
 
-const PREFS_KEY = "kampus.wellbeing.browserNotify.v1";
-const LAST_FIRED_KEY = "kampus.wellbeing.browserNotify.lastFired.v1";
+const PREFS_BASE = "kampus.wellbeing.browserNotify.v1";
+const LAST_FIRED_BASE = "kampus.wellbeing.browserNotify.lastFired.v1";
 
-export function loadBrowserNotifyEnabled(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.localStorage.getItem(PREFS_KEY) === "1";
+export function loadBrowserNotifyEnabled(userId?: string | null): boolean {
+  return readAccountFlag(PREFS_BASE, userId);
 }
 
-export function saveBrowserNotifyEnabled(value: boolean): void {
-  if (typeof window === "undefined") return;
-  if (value) window.localStorage.setItem(PREFS_KEY, "1");
-  else window.localStorage.removeItem(PREFS_KEY);
+export function saveBrowserNotifyEnabled(value: boolean, userId?: string | null): void {
+  writeAccountFlag(PREFS_BASE, value, userId);
 }
 
 export function browserNotifySupported(): boolean {
@@ -30,25 +28,26 @@ export async function fireCheckInBrowserNotification(
   title: string,
   body: string,
   tag = "kampus-check-in",
+  userId?: string | null,
 ): Promise<void> {
   if (!browserNotifySupported()) return;
   if (Notification.permission !== "granted") return;
-  if (!loadBrowserNotifyEnabled() && !loadPwaRemindersEnabled() && !loadServerPushEnabled()) return;
+  if (!loadBrowserNotifyEnabled(userId) && !loadPwaRemindersEnabled(userId) && !loadServerPushEnabled(userId)) return;
 
   const today = new Date().toISOString().slice(0, 10);
-  if (typeof window !== "undefined" && window.localStorage.getItem(LAST_FIRED_KEY) === today) return;
+  if (readAccountItem(LAST_FIRED_BASE, userId) === today) return;
 
   try {
-    if (loadPwaRemindersEnabled()) {
-      const sent = await showPwaCheckInNotification(title, body, "/wellbeing/diary");
+    if (loadPwaRemindersEnabled(userId)) {
+      const sent = await showPwaCheckInNotification(title, body, "/wellbeing/diary", userId);
       if (sent) {
-        window.localStorage.setItem(LAST_FIRED_KEY, today);
+        writeAccountItem(LAST_FIRED_BASE, today, userId);
         return;
       }
     }
-    if (loadBrowserNotifyEnabled()) {
+    if (loadBrowserNotifyEnabled(userId)) {
       new Notification(title, { body, tag, icon: "/icons/icon-192.svg" });
-      window.localStorage.setItem(LAST_FIRED_KEY, today);
+      writeAccountItem(LAST_FIRED_BASE, today, userId);
     }
   } catch {
     /* ignore — some browsers block without gesture */

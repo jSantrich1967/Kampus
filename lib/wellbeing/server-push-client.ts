@@ -1,14 +1,13 @@
-const SERVER_PUSH_PREFS_KEY = "kampus.wellbeing.serverPush.v1";
+import { readAccountFlag, writeAccountFlag } from "@/lib/storage/account-box";
 
-export function loadServerPushEnabled(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.localStorage.getItem(SERVER_PUSH_PREFS_KEY) === "1";
+const SERVER_PUSH_PREFS_BASE = "kampus.wellbeing.serverPush.v1";
+
+export function loadServerPushEnabled(userId?: string | null): boolean {
+  return readAccountFlag(SERVER_PUSH_PREFS_BASE, userId);
 }
 
-export function saveServerPushEnabled(value: boolean): void {
-  if (typeof window === "undefined") return;
-  if (value) window.localStorage.setItem(SERVER_PUSH_PREFS_KEY, "1");
-  else window.localStorage.removeItem(SERVER_PUSH_PREFS_KEY);
+export function saveServerPushEnabled(value: boolean, userId?: string | null): void {
+  writeAccountFlag(SERVER_PUSH_PREFS_BASE, value, userId);
 }
 
 export function serverPushSupported(): boolean {

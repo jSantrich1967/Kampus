@@ -56,6 +56,26 @@ import {
   setStudyStreakOwner,
 } from "@/lib/storage/study-streak-storage";
 import {
+  clearPassModeIntensity,
+  discardLegacyPassModeIntensity,
+  setPassModeIntensityOwner,
+} from "@/lib/storage/pass-mode-intensity-storage";
+import {
+  clearPassCloseCycle,
+  discardLegacyPassCloseCycle,
+  setPassCloseCycleOwner,
+} from "@/lib/storage/pass-close-cycle-storage";
+import {
+  clearSharedAccountBoxes,
+  discardLegacySharedAccountBoxes,
+  setAccountBoxOwner,
+} from "@/lib/storage/account-box";
+import {
+  clearCommunitySaved,
+  discardLegacyCommunitySaved,
+  setCommunitySavedOwner,
+} from "@/lib/storage/community-saved-storage";
+import {
   clearCounselorAlertStorage,
   discardLegacyCounselorAlert,
   setCounselorAlertOwner,
@@ -129,6 +149,10 @@ export function KampusProvider({ children }: { children: ReactNode }) {
   setStudentWorkOwner(authUserId);
   setTodayMissionOwner(authUserId);
   setStudyStreakOwner(authUserId);
+  setPassModeIntensityOwner(authUserId);
+  setPassCloseCycleOwner(authUserId);
+  setCommunitySavedOwner(authUserId);
+  setAccountBoxOwner(authUserId);
 
   useEffect(() => {
     discardLegacyPsychologistChat();
@@ -146,6 +170,10 @@ export function KampusProvider({ children }: { children: ReactNode }) {
     discardLegacyStudentWorks();
     discardLegacyTodayMission();
     discardLegacyStudyStreak();
+    discardLegacyPassModeIntensity();
+    discardLegacyPassCloseCycle();
+    discardLegacyCommunitySaved();
+    discardLegacySharedAccountBoxes();
     const stored = loadProfile();
     setProfileState(stored);
     // Render immediately from local storage; Supabase sync runs in the background.
@@ -188,6 +216,10 @@ export function KampusProvider({ children }: { children: ReactNode }) {
       setStudentWorkOwner(userId);
       setTodayMissionOwner(userId);
       setStudyStreakOwner(userId);
+      setPassModeIntensityOwner(userId);
+      setPassCloseCycleOwner(userId);
+      setCommunitySavedOwner(userId);
+      setAccountBoxOwner(userId);
       const local = loadProfile(userId);
 
       try {
@@ -284,6 +316,22 @@ export function KampusProvider({ children }: { children: ReactNode }) {
         clearStudyStreak(null);
         discardLegacyStudyStreak();
         setStudyStreakOwner(null);
+        clearPassModeIntensity(authUserIdRef.current);
+        clearPassModeIntensity(null);
+        discardLegacyPassModeIntensity();
+        setPassModeIntensityOwner(null);
+        clearPassCloseCycle(authUserIdRef.current);
+        clearPassCloseCycle(null);
+        discardLegacyPassCloseCycle();
+        setPassCloseCycleOwner(null);
+        clearCommunitySaved(authUserIdRef.current);
+        clearCommunitySaved(null);
+        discardLegacyCommunitySaved();
+        setCommunitySavedOwner(null);
+        clearSharedAccountBoxes(authUserIdRef.current);
+        clearSharedAccountBoxes(null);
+        discardLegacySharedAccountBoxes();
+        setAccountBoxOwner(null);
         accountRoleRef.current = null;
       }
       authUserIdRef.current = nextId;

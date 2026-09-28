@@ -14,14 +14,14 @@ import {
 /** Ensures auto-minimal runs once per page load across multiple hook instances. */
 let autoMinimalBootstrapped = false;
 
-function readIntensityState(profile: ReturnType<typeof useKampus>["profile"]) {
-  const stored = loadPassModeIntensityState();
+function readIntensityState(profile: ReturnType<typeof useKampus>["profile"], userId: string | null) {
+  const stored = loadPassModeIntensityState(userId);
   const overloaded = isPlanOverloaded(profile);
 
   if (overloaded && !stored.userOverride && stored.intensity === "full") {
     if (!autoMinimalBootstrapped) {
       autoMinimalBootstrapped = true;
-      saveAutoMinimalIntensity();
+      saveAutoMinimalIntensity(userId);
     }
     return {
       intensity: "minimal" as PassPlanIntensity,
@@ -38,23 +38,23 @@ function readIntensityState(profile: ReturnType<typeof useKampus>["profile"]) {
 }
 
 export function usePassModePlan() {
-  const { profile } = useKampus();
+  const { authUserId, profile } = useKampus();
   const [intensity, setIntensityState] = useState<PassPlanIntensity>("full");
   const [userOverride, setUserOverride] = useState(false);
   const [autoMinimalApplied, setAutoMinimalApplied] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const next = readIntensityState(profile);
+    const next = readIntensityState(profile, authUserId);
     setIntensityState(next.intensity);
     setUserOverride(next.userOverride);
     setAutoMinimalApplied(next.autoMinimalApplied);
     setHydrated(true);
-  }, [profile]);
+  }, [authUserId, profile]);
 
   useEffect(() => {
     const syncFromStorage = () => {
-      const stored = loadPassModeIntensityState();
+      const stored = loadPassModeIntensityState(authUserId);
       setIntensityState(stored.intensity);
       setUserOverride(stored.userOverride);
       setAutoMinimalApplied(
@@ -68,7 +68,7 @@ export function usePassModePlan() {
       window.removeEventListener("kampus-pass-intensity-change", syncFromStorage);
       window.removeEventListener("focus", syncFromStorage);
     };
-  }, [profile]);
+  }, [authUserId, profile]);
 
   const plan = useMemo(
     () => buildPassModePlan(profile, { intensity: hydrated ? intensity : "full" }),
@@ -78,11 +78,11 @@ export function usePassModePlan() {
   const overloaded = useMemo(() => isPlanOverloaded(profile), [profile]);
 
   const setIntensity = useCallback((next: PassPlanIntensity) => {
-    savePassModeIntensity(next, true);
+    savePassModeIntensity(next, true, authUserId);
     setIntensityState(next);
     setUserOverride(true);
     setAutoMinimalApplied(false);
-  }, []);
+  }, [authUserId]);
 
   return {
     plan,

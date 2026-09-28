@@ -1,14 +1,13 @@
-const SERVER_PUSH_PREFS_KEY = "kampus.collaborate.deadlineServerPush.v1";
+import { readAccountFlag, writeAccountFlag } from "@/lib/storage/account-box";
 
-export function loadCollaborateDeadlineServerPushEnabled(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.localStorage.getItem(SERVER_PUSH_PREFS_KEY) === "1";
+const SERVER_PUSH_PREFS_BASE = "kampus.collaborate.deadlineServerPush.v1";
+
+export function loadCollaborateDeadlineServerPushEnabled(userId?: string | null): boolean {
+  return readAccountFlag(SERVER_PUSH_PREFS_BASE, userId);
 }
 
-export function saveCollaborateDeadlineServerPushEnabled(value: boolean): void {
-  if (typeof window === "undefined") return;
-  if (value) window.localStorage.setItem(SERVER_PUSH_PREFS_KEY, "1");
-  else window.localStorage.removeItem(SERVER_PUSH_PREFS_KEY);
+export function saveCollaborateDeadlineServerPushEnabled(value: boolean, userId?: string | null): void {
+  writeAccountFlag(SERVER_PUSH_PREFS_BASE, value, userId);
 }
 
 export async function registerCollaborateDeadlineServerPush(): Promise<boolean> {
@@ -24,11 +23,11 @@ export async function registerCollaborateDeadlineServerPush(): Promise<boolean> 
   return res.ok;
 }
 
-export async function unregisterCollaborateDeadlineServerPush(): Promise<void> {
+export async function unregisterCollaborateDeadlineServerPush(userId?: string | null): Promise<void> {
   await fetch("/api/collaborate/push/opt-in", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ enabled: false }),
   });
-  saveCollaborateDeadlineServerPushEnabled(false);
+  saveCollaborateDeadlineServerPushEnabled(false, userId);
 }

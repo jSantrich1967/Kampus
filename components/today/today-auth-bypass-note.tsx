@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { useKampus } from "@/components/kampus/kampus-provider";
 import { todayCopy } from "@/lib/i18n/today";
 import { shouldShowAuthBypassWarning } from "@/lib/supabase/env";
 import {
@@ -14,15 +15,16 @@ import {
  * Compact notice on Hoy when auth middleware is bypassed; shares dismiss state with Ajustes.
  */
 export function TodayAuthBypassNote() {
+  const { authUserId } = useKampus();
   const t = todayCopy.es;
   const [dismissed, setDismissed] = useState(false);
   const [ready, setReady] = useState(false);
   const envWantsNotice = shouldShowAuthBypassWarning();
 
   useEffect(() => {
-    setDismissed(loadAuthBypassBannerDismissed());
+    setDismissed(loadAuthBypassBannerDismissed(authUserId));
     setReady(true);
-  }, []);
+  }, [authUserId]);
 
   if (!envWantsNotice || !ready || dismissed) return null;
 
@@ -39,7 +41,7 @@ export function TodayAuthBypassNote() {
         type="button"
         className="shrink-0 text-left text-amber-200/85 hover:text-amber-50 sm:text-right"
         onClick={() => {
-          saveAuthBypassBannerDismissed();
+          saveAuthBypassBannerDismissed(authUserId);
           setDismissed(true);
         }}
       >

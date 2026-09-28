@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Bell, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { useKampus } from "@/components/kampus/kampus-provider";
 import { useDiaryCheckInStatus } from "@/hooks/use-diary-check-in-status";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +20,7 @@ type Props = {
 };
 
 export function WellbeingCheckInReminder({ compact = false }: Props) {
+  const { authUserId } = useKampus();
   const t = wellbeingCopy.es;
   const { hasCheckedInToday, loading } = useDiaryCheckInStatus();
   const [visible, setVisible] = useState(false);
@@ -26,10 +28,10 @@ export function WellbeingCheckInReminder({ compact = false }: Props) {
 
   useEffect(() => {
     const update = () => {
-      const show = shouldShowCheckInReminder(hasCheckedInToday);
+      const show = shouldShowCheckInReminder(hasCheckedInToday, new Date(), authUserId);
       setVisible(show);
       if (show) {
-        fireCheckInBrowserNotification(t.checkInReminderTitle, t.browserNotifyBody);
+        fireCheckInBrowserNotification(t.checkInReminderTitle, t.browserNotifyBody, "kampus-check-in", authUserId);
       }
     };
     update();
@@ -38,12 +40,12 @@ export function WellbeingCheckInReminder({ compact = false }: Props) {
       update();
     }, 60_000);
     return () => window.clearInterval(id);
-  }, [hasCheckedInToday, t.checkInReminderTitle, t.browserNotifyBody]);
+  }, [authUserId, hasCheckedInToday, t.checkInReminderTitle, t.browserNotifyBody]);
 
   if (loading || !visible) return null;
 
   function dismiss() {
-    dismissCheckInReminderForToday();
+    dismissCheckInReminderForToday(authUserId);
     setVisible(false);
   }
 

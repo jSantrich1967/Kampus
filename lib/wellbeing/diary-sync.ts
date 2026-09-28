@@ -15,15 +15,16 @@ import {
 import { notifyDiaryChanged, notifyDiarySyncCompleted } from "@/lib/wellbeing/diary-events";
 import { flushDiaryPendingQueue } from "@/lib/wellbeing/diary-offline-flush";
 
-const SYNC_META_KEY = "kampus.diary.syncMeta.v1";
+import { readAccountItem, writeAccountItem } from "@/lib/storage/account-box";
+
+const SYNC_META_BASE = "kampus.diary.syncMeta.v1";
 
 type SyncMeta = { userId: string; syncedAt: string };
 
-function readSyncMeta(): SyncMeta | null {
-  if (typeof window === "undefined") return null;
+function readSyncMeta(userId: string): SyncMeta | null {
+  const raw = readAccountItem(SYNC_META_BASE, userId);
+  if (!raw) return null;
   try {
-    const raw = window.localStorage.getItem(SYNC_META_KEY);
-    if (!raw) return null;
     return JSON.parse(raw) as SyncMeta;
   } catch {
     return null;
@@ -31,16 +32,15 @@ function readSyncMeta(): SyncMeta | null {
 }
 
 export function markDiarySyncedForUser(userId: string) {
-  if (typeof window === "undefined") return;
   const meta: SyncMeta = { userId, syncedAt: new Date().toISOString() };
-  window.localStorage.setItem(SYNC_META_KEY, JSON.stringify(meta));
+  writeAccountItem(SYNC_META_BASE, JSON.stringify(meta), userId);
 }
 
 /** True when local rows need uploading or user changed since last sync. */
 export function diaryNeedsCloudSync(userId: string): boolean {
   const local = loadDiaryEntries(userId);
   if (local.some((e) => isLocalOnlyDiaryId(e.id))) return true;
-  const meta = readSyncMeta();
+  const meta = readSyncMeta(userId);
   return meta?.userId !== userId;
 }
 
@@ -91,6 +91,9 @@ export async function syncDiaryWithCloud(
   return { entries: merged, pushedCount, flushedPending };
 }
 
-export function cacheDiaryEntriesLocally(entries: Parameters<typeof saveDiaryEntries>[0]) {
-  saveDiaryEntries(entries);
+export function cacheDiaryEntriesLocally(
+  entries: Parameters<typeof saveDiaryEntries>[0],
+  userId?: string | null,
+) {
+  saveDiaryEntries(entries, userId);
 }

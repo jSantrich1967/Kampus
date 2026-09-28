@@ -144,7 +144,7 @@ export function useDiaryEntries() {
           const next = [updated, ...entries.filter((e) => e.id !== editingId)].sort(
             (a, b) => b.entryDate.localeCompare(a.entryDate) || b.createdAt.localeCompare(a.createdAt),
           );
-          cacheDiaryEntriesLocally(next);
+          cacheDiaryEntriesLocally(next, authUserId);
           setEntries(next);
         } else if (editingId) {
           enqueueDiaryPendingOp({ kind: "update", entry: localEntry, queuedAt: now });
@@ -153,7 +153,7 @@ export function useDiaryEntries() {
           const next = [created, ...loadDiaryEntries().filter((e) => e.id !== localEntry.id)].sort(
             (a, b) => b.entryDate.localeCompare(a.entryDate) || b.createdAt.localeCompare(a.createdAt),
           );
-          cacheDiaryEntriesLocally(next);
+          cacheDiaryEntriesLocally(next, authUserId);
           setEntries(next);
         }
         notifyDiaryChanged();
@@ -210,7 +210,7 @@ export function useDiaryEntries() {
     try {
       const supabase = createSupabaseBrowserClient();
       const remote = await fetchDiaryEntriesRemote(supabase, authUserId!);
-      cacheDiaryEntriesLocally(remote);
+      cacheDiaryEntriesLocally(remote, authUserId);
       setEntries(remote);
     } catch {
       setEntries(loadDiaryEntries());

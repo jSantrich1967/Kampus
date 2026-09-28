@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Bell, BellOff, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,6 +16,7 @@ import {
 import { wellbeingCopy } from "@/lib/i18n/wellbeing";
 
 export function WellbeingNotificationToggle() {
+  const { authUserId } = useKampus();
   const t = wellbeingCopy.es;
   const [enabled, setEnabled] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">("default");
@@ -23,9 +25,9 @@ export function WellbeingNotificationToggle() {
 
   useEffect(() => {
     setHydrated(true);
-    setEnabled(loadBrowserNotifyEnabled());
+    setEnabled(loadBrowserNotifyEnabled(authUserId));
     setPermission(browserNotifySupported() ? Notification.permission : "unsupported");
-  }, []);
+  }, [authUserId]);
 
   const toggle = useCallback(async () => {
     if (!browserNotifySupported()) return;
@@ -35,16 +37,16 @@ export function WellbeingNotificationToggle() {
         const result = await requestBrowserNotifyPermission();
         setPermission(result);
         if (result !== "granted") return;
-        saveBrowserNotifyEnabled(true);
+        saveBrowserNotifyEnabled(true, authUserId);
         setEnabled(true);
       } else {
-        saveBrowserNotifyEnabled(false);
+        saveBrowserNotifyEnabled(false, authUserId);
         setEnabled(false);
       }
     } finally {
       setBusy(false);
     }
-  }, [enabled]);
+  }, [authUserId, enabled]);
 
   if (!hydrated || permission === "unsupported") return null;
 

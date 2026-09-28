@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { passModeCopy } from "@/lib/i18n/pass-mode";
@@ -17,13 +18,14 @@ type PassCloseCyclePanelProps = {
 };
 
 export function PassCloseCyclePanel({ onComplete }: PassCloseCyclePanelProps) {
+  const { authUserId } = useKampus();
   const t = passModeCopy.es;
-  const [state, setState] = useState<PassCloseCycleState>(() => loadPassCloseCycle());
+  const [state, setState] = useState<PassCloseCycleState>(() => loadPassCloseCycle(authUserId));
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    setState(loadPassCloseCycle());
-  }, []);
+    setState(loadPassCloseCycle(authUserId));
+  }, [authUserId]);
 
   const updateError = useCallback((index: number, value: string) => {
     setState((prev) => {
@@ -40,12 +42,12 @@ export function PassCloseCyclePanel({ onComplete }: PassCloseCyclePanelProps) {
   }, []);
 
   function handleSave() {
-    savePassCloseCycle(state);
+    savePassCloseCycle(state, authUserId);
     setSaved(true);
   }
 
   function handleComplete() {
-    savePassCloseCycle(state);
+    savePassCloseCycle(state, authUserId);
     setSaved(true);
     onComplete?.();
   }

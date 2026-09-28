@@ -15,11 +15,11 @@ export function useVirtualClassReminder(): void {
   const useCloud = Boolean(isSupabaseConfigured() && authUserId);
 
   const tick = useCallback(async () => {
-    if (!useCloud || !authUserId || !loadVirtualClassNotifyEnabled()) return;
+    if (!useCloud || !authUserId || !loadVirtualClassNotifyEnabled(authUserId)) return;
     try {
       const supabase = createSupabaseBrowserClient();
       const sessions = await fetchMyEnrolledVirtualClassSessions(supabase, authUserId);
-      await fireVirtualClassReminderNotification(sessions);
+      await fireVirtualClassReminderNotification(sessions, authUserId);
     } catch {
       /* ignore */
     }

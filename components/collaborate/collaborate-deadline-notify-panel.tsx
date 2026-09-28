@@ -46,18 +46,18 @@ export function CollaborateDeadlineNotifyPanel() {
 
   useEffect(() => {
     setHydrated(true);
-    setEnabled(loadCollaborateDeadlineNotifyEnabled());
-    setServerEnabled(loadCollaborateDeadlineServerPushEnabled());
-    setVirtualEnabled(loadVirtualClassNotifyEnabled());
+    setEnabled(loadCollaborateDeadlineNotifyEnabled(authUserId));
+    setServerEnabled(loadCollaborateDeadlineServerPushEnabled(authUserId));
+    setVirtualEnabled(loadVirtualClassNotifyEnabled(authUserId));
     void fetch("/api/wellbeing/push/vapid")
       .then((r) => r.json())
       .then((j: { configured?: boolean }) => setServerConfigured(Boolean(j.configured)))
       .catch(() => setServerConfigured(false));
-  }, []);
+  }, [authUserId]);
 
   const toggle = useCallback(async () => {
     if (enabled) {
-      saveCollaborateDeadlineNotifyEnabled(false);
+      saveCollaborateDeadlineNotifyEnabled(false, authUserId);
       setEnabled(false);
       return;
     }
@@ -66,19 +66,19 @@ export function CollaborateDeadlineNotifyPanel() {
       await registerWellbeingServiceWorker();
       const perm = await requestBrowserNotifyPermission();
       if (perm !== "granted") return;
-      saveBrowserNotifyEnabled(true);
-      saveCollaborateDeadlineNotifyEnabled(true);
+      saveBrowserNotifyEnabled(true, authUserId);
+      saveCollaborateDeadlineNotifyEnabled(true, authUserId);
       setEnabled(true);
     } finally {
       setBusy(false);
     }
-  }, [enabled]);
+  }, [authUserId, enabled]);
 
   const toggleServer = useCallback(async () => {
     if (serverEnabled) {
       setServerBusy(true);
       try {
-        await unregisterCollaborateDeadlineServerPush();
+        await unregisterCollaborateDeadlineServerPush(authUserId);
         setServerEnabled(false);
         setServerMessage(t.deadlineServerPushOffOk);
       } finally {
@@ -104,7 +104,7 @@ export function CollaborateDeadlineNotifyPanel() {
         setServerMessage(t.deadlineServerPushError);
         return;
       }
-      saveCollaborateDeadlineServerPushEnabled(true);
+      saveCollaborateDeadlineServerPushEnabled(true, authUserId);
       setServerEnabled(true);
       setServerMessage(t.deadlineServerPushOnOk);
     } finally {
@@ -122,7 +122,7 @@ export function CollaborateDeadlineNotifyPanel() {
 
   const toggleVirtual = useCallback(async () => {
     if (virtualEnabled) {
-      saveVirtualClassNotifyEnabled(false);
+      saveVirtualClassNotifyEnabled(false, authUserId);
       setVirtualEnabled(false);
       return;
     }
@@ -131,13 +131,13 @@ export function CollaborateDeadlineNotifyPanel() {
       await registerWellbeingServiceWorker();
       const perm = await requestBrowserNotifyPermission();
       if (perm !== "granted") return;
-      saveBrowserNotifyEnabled(true);
-      saveVirtualClassNotifyEnabled(true);
+      saveBrowserNotifyEnabled(true, authUserId);
+      saveVirtualClassNotifyEnabled(true, authUserId);
       setVirtualEnabled(true);
     } finally {
       setVirtualBusy(false);
     }
-  }, [virtualEnabled]);
+  }, [authUserId, virtualEnabled]);
 
   if (!hydrated) return null;
 

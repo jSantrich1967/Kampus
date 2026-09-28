@@ -94,11 +94,11 @@ export function VirtualClassroomHub() {
   useEffect(() => {
     const demo = isDemoModeClient() && !authUserId;
     setDemoMode(demo);
-    if (demo) setDemoSessions(loadDemoVcSessions().map(demoSessionToUi));
+    if (demo) setDemoSessions(loadDemoVcSessions(authUserId).map(demoSessionToUi));
   }, [authUserId]);
 
   function reloadDemoSessions() {
-    setDemoSessions(loadDemoVcSessions().map(demoSessionToUi));
+    setDemoSessions(loadDemoVcSessions(authUserId).map(demoSessionToUi));
   }
   const { data, error: loadError, isLoading, mutate } = useSupabaseSWR<UiSession[]>(
     authUserId ? `vc_sessions:${authUserId}` : null,
@@ -175,7 +175,7 @@ export function VirtualClassroomHub() {
 
   async function handleEnroll(sessionId: string) {
     if (demoMode) {
-      toggleDemoVcEnrollment(sessionId);
+      toggleDemoVcEnrollment(sessionId, authUserId);
       reloadDemoSessions();
       return;
     }

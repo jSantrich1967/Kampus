@@ -1,28 +1,15 @@
-const STORAGE_KEY = "kampus.authBypassBanner.dismissed.v1";
+import { readAccountFlag, removeAccountItem, writeAccountFlag } from "@/lib/storage/account-box";
 
-export function loadAuthBypassBannerDismissed(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    return window.localStorage.getItem(STORAGE_KEY) === "1";
-  } catch {
-    return false;
-  }
+const STORAGE_BASE = "kampus.authBypassBanner.dismissed.v1";
+
+export function loadAuthBypassBannerDismissed(userId?: string | null): boolean {
+  return readAccountFlag(STORAGE_BASE, userId);
 }
 
-export function saveAuthBypassBannerDismissed() {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, "1");
-  } catch {
-    /* ignore quota / private mode */
-  }
+export function saveAuthBypassBannerDismissed(userId?: string | null) {
+  writeAccountFlag(STORAGE_BASE, true, userId);
 }
 
-export function clearAuthBypassBannerDismissed() {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    /* ignore */
-  }
+export function clearAuthBypassBannerDismissed(userId?: string | null) {
+  removeAccountItem(STORAGE_BASE, userId);
 }
