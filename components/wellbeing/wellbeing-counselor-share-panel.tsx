@@ -131,11 +131,12 @@ export function WellbeingCounselorSharePanel() {
             {copied ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />}
             {copied ? t.counselorShareCopied : t.counselorShareCopy}
           </Button>
-          <a href={mailto}>
-            <Button type="button" size="sm" variant="secondary" className="gap-1.5">
-              <Mail className="h-3.5 w-3.5" aria-hidden />
-              {t.counselorShareEmail}
-            </Button>
+          <a
+            href={mailto}
+            className={buttonClasses({ variant: "secondary", size: "sm", className: "gap-1.5" })}
+          >
+            <Mail className="h-3.5 w-3.5" aria-hidden />
+            {t.counselorShareEmail}
           </a>
           <ShareLinkButton
             pathname="/wellbeing"

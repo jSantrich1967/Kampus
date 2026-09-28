@@ -2,7 +2,7 @@
 
 import { MessageCircle, Flame, CalendarDays, FileText, CheckCircle2, Star } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { weeklyReportText, weeklyReportWhatsappUrl, type WeeklyReport } from "@/lib/supabase/weekly-report-db";
 
@@ -42,11 +42,14 @@ export function WeeklyReportCard({ report }: { report: WeeklyReport }) {
           <p className="text-xs font-medium text-slate-400">Vista previa del mensaje</p>
           <pre className="mt-2 whitespace-pre-wrap text-sm text-slate-200">{weeklyReportText(report)}</pre>
         </div>
-        <a href={waUrl} target="_blank" rel="noreferrer">
-          <Button type="button" className="w-full gap-2 bg-emerald-600 hover:bg-emerald-500">
-            <MessageCircle className="h-4 w-4" />
-            Enviar a la familia por WhatsApp
-          </Button>
+        <a
+          href={waUrl}
+          target="_blank"
+          rel="noreferrer"
+          className={buttonClasses({ className: "w-full gap-2 bg-emerald-600 hover:bg-emerald-500" })}
+        >
+          <MessageCircle className="h-4 w-4" />
+          Enviar a la familia por WhatsApp
         </a>
         <p className="text-xs text-slate-500">
           Se abre WhatsApp con el mensaje listo. Elige el contacto del representante y envíalo.
