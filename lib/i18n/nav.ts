@@ -20,6 +20,7 @@ export const navCopy = {
     items: {
       today: "Hoy",
       tutor: "Tutor IA",
+      duelos: "Duelos",
       passMode: "Modo aprobar",
       rescue: "Kit de estudios",
       flashcards: "Tarjetas",
