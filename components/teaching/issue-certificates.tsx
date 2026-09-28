@@ -15,6 +15,7 @@ import {
   deleteCertificate,
   issueCertificate,
   listMyCertificates,
+  mayIssueInstitutionCertificate,
   whatsappShareUrl,
   type Certificate,
 } from "@/lib/supabase/certificates-db";
@@ -42,6 +43,7 @@ export function IssueCertificates() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [institutionReady, setInstitutionReady] = useState(false);
 
   const load = useCallback(async () => {
     if (!authUserId || !isSupabaseConfigured()) {
@@ -52,6 +54,7 @@ export function IssueCertificates() {
       const supabase = createSupabaseBrowserClient();
       const all = await listMyCertificates(supabase, authUserId);
       setCerts(all.filter((c) => c.issuerId === authUserId));
+      setInstitutionReady(await mayIssueInstitutionCertificate(supabase));
     } catch {
       setMessage({ ok: false, text: "No se pudieron cargar los certificados emitidos." });
     } finally {
@@ -92,7 +95,9 @@ export function IssueCertificates() {
       setDetail("");
       setMessage({
         ok: true,
-        text: `Acreditación guardada con código ${cert.code}. La página pública dirá que la emitió tu cuenta, no que una institución la verificó.`,
+        text: cert.issuerAccredited
+          ? `Certificado institucional de ${cert.institutionName || "tu institución"} guardado con código ${cert.code}.`
+          : `Reconocimiento guardado con código ${cert.code}. Tu cuenta aún no está acreditada, así que la página pública no lo llamará certificado institucional.`,
       });
     } catch {
       setMessage({ ok: false, text: "No se pudo emitir el certificado. Inténtalo de nuevo." });
@@ -142,7 +147,11 @@ export function IssueCertificates() {
       <PageHeader
         eyebrow="Docencia"
           title="Acreditar a un estudiante"
-          description="Tu cuenta queda como emisora. Quien abra el código verá que lo guardaste tú. Kampus no lo presenta como un sello de una institución."
+          description={
+            institutionReady
+              ? "Tu cuenta está acreditada. El código público dirá que es un certificado institucional."
+              : "Tu cuenta todavía no está acreditada por una institución. Puedes guardar un reconocimiento, pero no se ofrecerá como certificado institucional."
+          }
       />
 
       {message ? (
@@ -152,7 +161,11 @@ export function IssueCertificates() {
       <Card className="border-white/10">
         <CardHeader>
           <CardTitle className="text-base">Nueva acreditación</CardTitle>
-          <CardDescription>La emite tu cuenta. No se puede poner el identificador de otra persona como emisor.</CardDescription>
+          <CardDescription>
+            {institutionReady
+              ? "La emite tu cuenta acreditada. Quien abra el código verá el nombre de la institución."
+              : "La emite tu cuenta. Sin acreditación, no se puede presentar como certificado institucional."}
+          </CardDescription>
         </CardHeader>
         <div className="grid gap-4 px-6 pb-6 sm:grid-cols-3">
           <div>

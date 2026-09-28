@@ -9,6 +9,9 @@ export interface Certificate {
   title: string;
   detail: string;
   issuedAt: string;
+  /** True only when the database stamped an accredited teacher. The client cannot set this. */
+  issuerAccredited: boolean;
+  institutionName: string;
 }
 
 interface CertificateRow {
@@ -20,21 +23,39 @@ interface CertificateRow {
   title: string;
   detail: string;
   issued_at: string;
+  issuer_accredited?: boolean | null;
+  institution_name?: string | null;
 }
 
-export type CertificateKind = "self_declared" | "accredited";
+export type CertificateKind = "self_declared" | "peer" | "institutional";
 
-/** A credit from another account. The same person writing their own title is not accredited. */
-export function certificateKind(cert: Pick<Certificate, "ownerId" | "issuerId">): CertificateKind {
-  if (cert.issuerId && cert.issuerId !== cert.ownerId) return "accredited";
+/** Institutional only when the database says this issuer is an accredited teacher. */
+export function certificateKind(
+  cert: Pick<Certificate, "ownerId" | "issuerId" | "issuerAccredited">,
+): CertificateKind {
+  const otherAccount = Boolean(cert.issuerId) && cert.issuerId !== cert.ownerId;
+  if (otherAccount && cert.issuerAccredited) return "institutional";
+  if (otherAccount) return "peer";
   return "self_declared";
 }
 
-export function certificatePublicCopy(kind: CertificateKind): { title: string; body: string } {
-  if (kind === "accredited") {
+export function certificatePublicCopy(
+  kind: CertificateKind,
+  institutionName = "",
+): { title: string; body: string } {
+  if (kind === "institutional") {
+    const school = institutionName.trim();
+    return {
+      title: "Certificado institucional",
+      body: school
+        ? `Lo emitió un docente acreditado de ${school}. Kampus confirma esa acreditación, no el contenido del curso.`
+        : "Lo emitió un docente acreditado. Kampus confirma esa acreditación, no el contenido del curso.",
+    };
+  }
+  if (kind === "peer") {
     return {
       title: "Emitido por otra cuenta",
-      body: "Otra cuenta de Kampus guardó este código. Kampus no confirma que esa cuenta sea un docente de una institución ni el contenido del curso.",
+      body: "Otra cuenta de Kampus guardó este código. Esa cuenta no está acreditada como docente de una institución.",
     };
   }
   return {
@@ -79,7 +100,19 @@ function toCertificate(row: CertificateRow): Certificate {
     title: row.title,
     detail: row.detail,
     issuedAt: row.issued_at,
+    issuerAccredited: row.issuer_accredited === true,
+    institutionName: (row.institution_name ?? "").trim(),
   };
+}
+
+const CERTIFICATE_BASE_COLUMNS =
+  "id, code, owner_id, issuer_id, owner_name, title, detail, issued_at";
+const CERTIFICATE_COLUMNS = `${CERTIFICATE_BASE_COLUMNS}, issuer_accredited, institution_name`;
+
+function missingAccreditationColumn(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  const message = error.message ?? "";
+  return error.code === "42703" || error.code === "PGRST204" || /issuer_accredited|institution_name/.test(message);
 }
 
 const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -112,6 +145,8 @@ export async function issueCertificate(
     throw new Error("No puedes atribuir la emisión a otra cuenta.");
   }
 
+  let columns = CERTIFICATE_COLUMNS;
+  let usedBaseColumns = false;
   let lastError: unknown = null;
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const code = randomCode();
@@ -125,9 +160,14 @@ export async function issueCertificate(
         title: input.title.trim(),
         detail: (input.detail ?? "").trim(),
       })
-      .select("id, code, owner_id, issuer_id, owner_name, title, detail, issued_at")
+      .select(columns)
       .single();
-    if (!error) return toCertificate(data as CertificateRow);
+    if (!error) return toCertificate(data as unknown as CertificateRow);
+    if (!usedBaseColumns && missingAccreditationColumn(error)) {
+      usedBaseColumns = true;
+      columns = CERTIFICATE_BASE_COLUMNS;
+      continue;
+    }
     lastError = error;
     // 23505 = unique violation (código repetido): reintentar con otro código.
     if ((error as { code?: string }).code !== "23505") throw error;
@@ -139,14 +179,25 @@ export async function listMyCertificates(
   client: SupabaseClient,
   userId: string,
 ): Promise<Certificate[]> {
-  const { data, error } = await client
+  const full = await client
     .from("certificates")
-    .select("id, code, owner_id, issuer_id, owner_name, title, detail, issued_at")
+    .select(CERTIFICATE_COLUMNS)
     .or(`owner_id.eq.${userId},issuer_id.eq.${userId}`)
     .order("issued_at", { ascending: false })
     .limit(50);
-  if (error) throw error;
-  return ((data ?? []) as CertificateRow[]).map(toCertificate);
+  if (!full.error) {
+    return ((full.data ?? []) as unknown as CertificateRow[]).map(toCertificate);
+  }
+  if (!missingAccreditationColumn(full.error)) throw full.error;
+
+  const fallback = await client
+    .from("certificates")
+    .select(CERTIFICATE_BASE_COLUMNS)
+    .or(`owner_id.eq.${userId},issuer_id.eq.${userId}`)
+    .order("issued_at", { ascending: false })
+    .limit(50);
+  if (fallback.error) throw fallback.error;
+  return ((fallback.data ?? []) as unknown as CertificateRow[]).map(toCertificate);
 }
 
 export async function getCertificateByCode(
@@ -159,6 +210,12 @@ export async function getCertificateByCode(
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
   return row ? toCertificate(row as CertificateRow) : null;
+}
+
+export async function mayIssueInstitutionCertificate(client: SupabaseClient): Promise<boolean> {
+  const { data, error } = await client.rpc("caller_may_issue_institution_certificate");
+  if (error) return false;
+  return data === true;
 }
 
 export async function deleteCertificate(client: SupabaseClient, id: string): Promise<void> {
@@ -176,9 +233,11 @@ export function certificateVerifyUrl(origin: string, code: string): string {
 export function certificateShareText(origin: string, cert: Certificate): string {
   const kind = certificateKind(cert);
   const intro =
-    kind === "accredited"
-      ? "Otra cuenta de Kampus emitió este reconocimiento. No es una verificación de una institución."
-      : "Declaré este logro en Kampus. No es una acreditación de un docente.";
+    kind === "institutional"
+      ? `Certificado institucional${cert.institutionName ? ` de ${cert.institutionName}` : ""}. Lo emitió un docente acreditado.`
+      : kind === "peer"
+        ? "Otra cuenta de Kampus emitió este reconocimiento. Esa cuenta no está acreditada como docente."
+        : "Declaré este logro en Kampus. No es una acreditación de un docente.";
   return `${intro}\n${cert.title} — ${cert.ownerName}\nVer el código: ${certificateVerifyUrl(origin, cert.code)}`;
 }
 

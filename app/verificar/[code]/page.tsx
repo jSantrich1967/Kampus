@@ -36,21 +36,23 @@ export default async function VerifyCertificatePage({
     lookup = classifyCertificateLookup({ ok: false });
   }
 
-  const copy = certificate ? certificatePublicCopy(certificateKind(certificate)) : null;
-  const accredited = certificate ? certificateKind(certificate) === "accredited" : false;
+  const copy = certificate
+    ? certificatePublicCopy(certificateKind(certificate), certificate.institutionName)
+    : null;
+  const institutional = certificate ? certificateKind(certificate) === "institutional" : false;
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-xl flex-col items-center justify-center px-6 py-16">
       <div className="w-full rounded-3xl border border-white/10 bg-slate-950/70 p-8 text-center shadow-2xl">
         {lookup === "found" && certificate && copy ? (
           <>
-            {accredited ? (
+            {institutional ? (
               <BadgeCheck className="mx-auto h-12 w-12 text-sky-300" />
             ) : (
               <Award className="mx-auto h-12 w-12 text-amber-300" />
             )}
             <p
-              className={`mt-4 text-xs uppercase tracking-widest ${accredited ? "text-sky-300" : "text-amber-200"}`}
+              className={`mt-4 text-xs uppercase tracking-widest ${institutional ? "text-sky-300" : "text-amber-200"}`}
             >
               {copy.title}
             </p>

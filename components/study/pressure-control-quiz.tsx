@@ -422,6 +422,17 @@ export function PressureControlQuiz() {
                     <XCircle className="h-4 w-4" /> {t.incorrect}
                   </span>
                 )}
+                <p className="w-full text-sm text-slate-200">
+                  {selected === current.answerIndex
+                    ? t.whyCorrect
+                    : t.whyIncorrect(
+                        current.options[selected ?? 0] ?? "",
+                        current.options[current.answerIndex] ?? "",
+                      )}
+                </p>
+                {current.explanation ? (
+                  <p className="w-full text-sm text-slate-300">{current.explanation}</p>
+                ) : null}
                 {revealed && selected !== current.answerIndex ? (
                   <Link href={buildNotebookReviewHref(subject, current.sourceDocumentId, { openKit: true })}>
                     <Button variant="secondary" size="sm">
@@ -491,6 +502,13 @@ export function PressureControlQuiz() {
                       {q.sourceClassLabel ? (
                         <p className="mb-2 text-xs text-slate-400">{q.sourceClassLabel}</p>
                       ) : null}
+                      <p className="mb-2 text-slate-300">
+                        {t.whyIncorrect(
+                          q.options[answers[i] ?? 0] ?? "",
+                          q.options[q.answerIndex] ?? "",
+                        )}
+                      </p>
+                      {q.explanation ? <p className="mb-2 text-slate-300">{q.explanation}</p> : null}
                       <Link href={buildNotebookReviewHref(subject, q.sourceDocumentId, { openKit: true })}>
                         <Button variant="secondary" size="sm">
                           {t.reviewClass}

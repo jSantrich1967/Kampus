@@ -230,7 +230,7 @@ export function MyCertificates() {
                   <div>
                     <p className="font-semibold text-white">{cert.title}</p>
                     <p className="text-xs uppercase tracking-wide text-amber-200/90">
-                      {certificatePublicCopy(certificateKind(cert)).title}
+                      {certificatePublicCopy(certificateKind(cert), cert.institutionName).title}
                     </p>
                     <p className="text-sm text-slate-300">{cert.ownerName}</p>
                     {cert.detail ? <p className="text-xs text-slate-500">{cert.detail}</p> : null}

@@ -158,6 +158,41 @@ const LESSONS: SubjectLesson[] = [
   ]),
 ];
 
+const REASONS: Record<string, string> = {
+  "¿Cuál es la integral indefinida de 2x?":
+    "La derivada de x² es 2x, así que la integral de 2x vuelve a x². Se suma C porque las constantes desaparecen al derivar. 2x² derivaría a 4x, no a 2x.",
+  "¿Cuál es la derivada de x²?":
+    "La regla de la potencia baja el exponente: 2 · x¹ = 2x. Quedarse en x² no deriva, y 2 sería la derivada de 2x.",
+  "¿Qué relaciona el teorema fundamental del cálculo?":
+    "El teorema dice que derivar e integrar son operaciones inversas. No habla de media, matrices ni máximos.",
+  "¿Cuál es la integral indefinida de una constante k?":
+    "La derivada de kx es k, así que la integral de k es kx + C. k + C no crece con x, y k/x derivaría a otra función.",
+  "¿Qué necesita una función recursiva para no llamarse para siempre?":
+    "El caso base es el paso que ya no se llama a sí mismo. Sin eso, la función sigue llamándose y no termina.",
+  "¿Qué hace una función recursiva?":
+    "Se llama a sí misma con un caso más pequeño. No borra memoria ni se convierte en una tabla.",
+  "Si una recursión no tiene caso base, ¿qué suele ocurrir?":
+    "Cada llamada espera a la siguiente y se apilan. Al no haber caso base, la pila se llena. No se convierte sola en un ciclo for.",
+  "En factorial(n) = n × factorial(n − 1), ¿cuál es el caso base habitual?":
+    "factorial(0) = 1 detiene la cadena. factorial(1) = 0 daría 0 para cualquier factorial, y eso es falso porque 1! es 1.",
+  "¿Qué exige la primera forma normal (1FN)?":
+    "Cada celda debe guardar un solo valor. Una lista dentro de una celda no está en primera forma normal.",
+  "¿Qué identifica una clave primaria?":
+    "La clave primaria señala una fila y no se repite. No describe el color ni el número de columnas.",
+  "¿Qué evita la tercera forma normal (3FN)?":
+    "Evita que una columna que no es clave dependa de otra columna que tampoco es clave. No prohíbe los números ni el WHERE.",
+  "¿Qué hace una clave foránea?":
+    "Apunta a la clave de otra tabla para relacionar filas. No borra filas ni ordena por nombre.",
+  "En 1, 2, 2, 3 y 100, ¿qué medida se desplaza más por el 100?":
+    "La media suma todos los valores, así que el 100 la sube mucho. La mediana se queda en el valor del centro, que es 2.",
+  "¿Entre qué valores está una probabilidad?":
+    "Una probabilidad va de 0 (imposible) a 1 (seguro). No puede ser negativa ni mayor que 1.",
+  "¿Qué describe la desviación estándar?":
+    "Mide qué tan alejados están los datos de la media. La moda es el valor que más se repite, no la desviación.",
+  "¿Cuál es la diferencia entre población y muestra?":
+    "La población es el grupo completo y la muestra es una parte de ese grupo. No son el mismo conjunto.",
+};
+
 function normalizeSubject(subject: string): string {
   return subject
     .trim()
@@ -172,7 +207,11 @@ export function demoLessonForSubject(subject: string): { label: string; question
   if (!found) return null;
   return {
     label: found.label,
-    questions: found.questions.map((q) => ({ ...q, sourceClassLabel: `Lección de muestra · ${found.label}` })),
+    questions: found.questions.map((q) => ({
+      ...q,
+      explanation: REASONS[q.question],
+      sourceClassLabel: `Lección de muestra · ${found.label}`,
+    })),
   };
 }
 

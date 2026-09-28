@@ -29,6 +29,7 @@ describe("demo subject quiz", () => {
     for (const question of result.questions) {
       expect(question.answerIndex).toBeGreaterThanOrEqual(0);
       expect(question.answerIndex).toBeLessThan(question.options.length);
+      expect((question.explanation ?? "").length).toBeGreaterThan(40);
     }
   });
 

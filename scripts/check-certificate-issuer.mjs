@@ -97,4 +97,79 @@ if (accredited.error) {
 await student.supabase.from("certificates").delete().eq("id", declared.data.id);
 await other.supabase.from("certificates").delete().eq("id", accredited.data.id);
 
-console.log("Certificate issuer check passed on the test project.");
+const serviceKey = required("E2E_SUPABASE_SERVICE_ROLE_KEY");
+if (!serviceKey) {
+  throw new Error(
+    "E2E_SUPABASE_SERVICE_ROLE_KEY is missing. Two accounts signed in, but teacher accreditation was not checked.",
+  );
+}
+
+const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+
+const studentWrite = await student.supabase.from("institution_certificate_issuers").insert({
+  user_id: student.userId,
+  institution_key: "should-fail",
+  institution_name: "Should fail",
+});
+if (!studentWrite.error) {
+  await admin.from("institution_certificate_issuers").delete().eq("user_id", student.userId);
+  throw new Error("A test account could write the teacher accreditation table.");
+}
+
+const peer = await other.supabase
+  .from("certificates")
+  .insert({
+    code: `${code}P`,
+    owner_id: null,
+    issuer_id: other.userId,
+    owner_name: "Test student",
+    title: "Peer check",
+    detail: "",
+  })
+  .select("id, issuer_accredited, institution_name")
+  .single();
+
+if (peer.error) {
+  throw new Error(`Could not read accreditation columns. Apply the institution certificate migration on the test project. ${peer.error.message}`);
+}
+if (peer.data.issuer_accredited === true) {
+  await other.supabase.from("certificates").delete().eq("id", peer.data.id);
+  throw new Error("An unaccredited account was stamped as an institutional issuer.");
+}
+
+const grant = await admin.from("institution_certificate_issuers").upsert({
+  user_id: other.userId,
+  institution_key: "universidad-prueba",
+  institution_name: "Universidad de Prueba",
+});
+if (grant.error) {
+  await other.supabase.from("certificates").delete().eq("id", peer.data.id);
+  throw new Error(`Could not accredit the second test account: ${grant.error.message}`);
+}
+
+const institutional = await other.supabase
+  .from("certificates")
+  .insert({
+    code: `${code}I`,
+    owner_id: null,
+    issuer_id: other.userId,
+    owner_name: "Test student",
+    title: "Institution check",
+    detail: "",
+    issuer_accredited: false,
+    institution_name: "Nombre falso",
+  })
+  .select("id, issuer_accredited, institution_name")
+  .single();
+
+await other.supabase.from("certificates").delete().eq("id", peer.data.id);
+if (institutional.data?.id) {
+  await other.supabase.from("certificates").delete().eq("id", institutional.data.id);
+}
+await admin.from("institution_certificate_issuers").delete().eq("user_id", other.userId);
+
+if (institutional.error || institutional.data?.issuer_accredited !== true || institutional.data?.institution_name !== "Universidad de Prueba") {
+  throw new Error("An accredited test account did not receive an institutional stamp. The trigger ignored the fake name or did not run.");
+}
+
+console.log("Certificate issuer check passed on the test project, including teacher accreditation.");

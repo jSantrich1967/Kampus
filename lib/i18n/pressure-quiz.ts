@@ -23,6 +23,8 @@ export const pressureQuizCopy: Record<
     confirmAnswer: string;
     correct: string;
     incorrect: string;
+    whyCorrect: string;
+    whyIncorrect: (chosen: string, correct: string) => string;
     reviewClass: string;
     seeResults: string;
     nextQuestion: string;
@@ -65,6 +67,9 @@ export const pressureQuizCopy: Record<
     confirmAnswer: "Confirmar respuesta",
     correct: "Correcta",
     incorrect: "Incorrecta",
+    whyCorrect: "Es correcta porque:",
+    whyIncorrect: (chosen, correct) =>
+      `Elegiste «${chosen}». No es la respuesta. La correcta es «${correct}».`,
     reviewClass: "Repasar esta clase",
     seeResults: "Ver resultados",
     nextQuestion: "Siguiente",

@@ -297,7 +297,7 @@ export async function POST(req: Request) {
             "- keyIdeas: 4–6 bullets cortos.",
             "- probableExamQuestions: 4–6 preguntas tipo examen (enunciado).",
             "- flashcards: 4–6 tarjetas (front/back).",
-            "- quiz: 6–8 preguntas de opción múltiple con 4 opciones y answerIndex correcto (0-3).",
+            "- quiz: 6–8 preguntas de opción múltiple con 4 opciones, answerIndex correcto (0-3) y explanation (1-2 frases: por qué esa opción es correcta y por qué una opción frecuente no lo es).",
             "- studyChecklist: 4–6 pasos concretos.",
             "- fullSummary/deepExplanation/easyExplanation/technicalExplanation: cortos (1–3 párrafos).",
           ]
@@ -305,7 +305,7 @@ export async function POST(req: Request) {
             "- keyIdeas: 6–10 bullets cortos.",
             "- probableExamQuestions: 6–10 preguntas tipo examen (enunciado).",
             "- flashcards: 8–12 tarjetas (front/back).",
-            "- quiz: 12–15 preguntas de opción múltiple con 4 opciones y answerIndex correcto (0-3).",
+            "- quiz: 12–15 preguntas de opción múltiple con 4 opciones, answerIndex correcto (0-3) y explanation (1-2 frases: por qué esa opción es correcta y por qué una opción frecuente no lo es).",
             "- studyChecklist: 6–10 pasos concretos (con tiempos si aplica).",
           ]),
       "- mindMapOutline: un outline tipo mapa mental (texto con indentación).",

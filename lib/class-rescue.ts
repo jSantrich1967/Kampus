@@ -7,6 +7,8 @@ export type RescueQuizItem = {
   question: string;
   options: string[];
   answerIndex: number;
+  /** Why the correct option is right. Shown after the student answers. */
+  explanation?: string;
   /** Clase del calendario o apunte de origen (quiz de presión). */
   sourceClassLabel?: string;
   sourceClassDate?: string | null;
@@ -90,6 +92,8 @@ export function generateRescuePack(input: RescueInput): RescuePack {
         "Copiar diapositivas tal cual",
       ],
       answerIndex: 1,
+      explanation:
+        "Reconstruir un esquema de memoria obliga a recordar, no solo a reconocer. Mirar títulos, releer despacio o copiar diapositivas no comprueba si puedes explicarlo.",
     },
     {
       question: "¿Qué práctica rinde más antes de un examen?",
@@ -100,6 +104,8 @@ export function generateRescuePack(input: RescueInput): RescuePack {
         "Ordenar carpetas",
       ],
       answerIndex: 1,
+      explanation:
+        "La recuperación activa cronometrada practica el examen de verdad. Subrayar, ver la clase más rápido u ordenar carpetas no te pide producir la respuesta.",
     },
   ];
 
