@@ -137,6 +137,8 @@ export function VirtualClassroomHub() {
   const [enrollBusy, setEnrollBusy] = useState<string | null>(null);
   const [deleteBusy, setDeleteBusy] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
+  /** Confirmación inline (dos clics) en vez de window.confirm: funciona igual en automatización y móvil. */
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authUserId || !scheduleIdParam || !classDateParam) {
@@ -181,18 +183,18 @@ export function VirtualClassroomHub() {
   );
 
   async function handleDelete(session: UiSession) {
-    if (!window.confirm(c.virtualClassDeleteConfirm)) return;
     setDeleteError("");
     setDeleteBusy(session.id);
     try {
       if (session.demo || demoMode) {
         removeDemoVcSession(session.id, authUserId);
         reloadDemoSessions();
-        return;
+      } else {
+        const supabase = createSupabaseBrowserClient();
+        await deleteVirtualClassSession(supabase, session.id);
+        await mutate();
       }
-      const supabase = createSupabaseBrowserClient();
-      await deleteVirtualClassSession(supabase, session.id);
-      await mutate();
+      setConfirmDeleteId(null);
     } catch {
       setDeleteError(c.virtualClassDeleteError);
     } finally {
@@ -357,15 +359,38 @@ export function VirtualClassroomHub() {
                         {mailboxCopy.es.whatsappCta}
                       </a>
                       {s.demo || s.createdBy === authUserId ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          disabled={deleteBusy === s.id}
-                          onClick={() => void handleDelete(s)}
-                        >
-                          {deleteBusy === s.id ? c.virtualClassDeleting : c.virtualClassDelete}
-                        </Button>
+                        confirmDeleteId === s.id ? (
+                          <span className="inline-flex flex-wrap items-center gap-2 rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-100">
+                            {c.virtualClassDeleteConfirm}
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="danger"
+                              disabled={deleteBusy === s.id}
+                              onClick={() => void handleDelete(s)}
+                            >
+                              {deleteBusy === s.id ? c.virtualClassDeleting : c.virtualClassDeleteConfirmCta}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setConfirmDeleteId(null)}
+                            >
+                              {es ? "Cancelar" : "Cancel"}
+                            </Button>
+                          </span>
+                        ) : (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            disabled={deleteBusy === s.id}
+                            onClick={() => setConfirmDeleteId(s.id)}
+                          >
+                            {deleteBusy === s.id ? c.virtualClassDeleting : c.virtualClassDelete}
+                          </Button>
+                        )
                       ) : null}
                     </>
                   ) : full ? (

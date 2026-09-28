@@ -13,7 +13,7 @@ import { InstitutionWellbeingIntegrationPanel } from "@/components/institution/i
 import { InstitutionWellbeingPulsePanel } from "@/components/institution/institution-wellbeing-pulse-panel";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatBlock } from "@/components/ui/stat-block";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -39,6 +39,64 @@ function retentionLabel(level: "low" | "medium" | "high"): string {
   return "Bajo";
 }
 
+/** Datos de ejemplo para que el demo se sienta vivo (solo estado local, no se guardan). */
+const DEMO_KPIS = {
+  activeStudents: 1240,
+  coursesMonitored: 18,
+  atRiskStudents: 96,
+  avgEngagement: 72,
+  gradingConsistency: 81,
+  retentionRisk: "medium" as const,
+};
+
+const DEMO_COURSES = [
+  {
+    courseCode: "MAT-201",
+    courseName: "Cálculo II",
+    students: 84,
+    atRiskPct: 22,
+    avgScore: 7.4,
+    engagementIndex: 68,
+    hardestTopic: "Integrales impropias",
+    intervention: "Tutoría grupal semanal",
+  },
+  {
+    courseCode: "FIS-101",
+    courseName: "Física I",
+    students: 96,
+    atRiskPct: 18,
+    avgScore: 7.8,
+    engagementIndex: 74,
+    hardestTopic: "Dinámica rotacional",
+    intervention: "Micro-quizzes de repaso",
+  },
+  {
+    courseCode: "PRG-110",
+    courseName: "Programación I",
+    students: 72,
+    atRiskPct: 12,
+    avgScore: 8.2,
+    engagementIndex: 81,
+    hardestTopic: "Recursividad",
+    intervention: "Programación en parejas",
+  },
+];
+
+function downloadCsv(filename: string, rows: (string | number)[][]) {
+  const csv = rows
+    .map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function InstitutionConsole() {
   const { profile, locale, authUserId } = useKampus();
   const es = locale === "es";
@@ -46,6 +104,8 @@ export function InstitutionConsole() {
 
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [demoSignalsLoaded, setDemoSignalsLoaded] = useState(false);
   const [kpis, setKpis] = useState<{
     activeStudents: number;
     coursesMonitored: number;
@@ -195,8 +255,8 @@ export function InstitutionConsole() {
             <CardTitle>{es ? "Acceso restringido" : "Restricted access"}</CardTitle>
             <CardDescription>{es ? "Evita confundir a estudiantes con métricas B2B." : "Avoid showing B2B metrics to students by mistake."}</CardDescription>
           </CardHeader>
-          <Link href="/settings">
-            <Button variant="secondary">{es ? "Ir a ajustes" : "Go to settings"}</Button>
+          <Link href="/settings" className={buttonClasses({ variant: "secondary" })}>
+            {es ? "Ir a ajustes" : "Go to settings"}
           </Link>
         </Card>
       </div>
@@ -205,6 +265,55 @@ export function InstitutionConsole() {
 
   const retentionTone =
     kpis?.retentionRisk === "high" ? "danger" : kpis?.retentionRisk === "medium" ? "warning" : "success";
+
+  function handleLoadDemoSignals() {
+    setKpis({ ...DEMO_KPIS });
+    setCourses(DEMO_COURSES.map((c) => ({ ...c })));
+    setDemoSignalsLoaded(true);
+  }
+
+  async function handleCopyPanelLink() {
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = url;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+    }
+    setCopiedLink(true);
+    window.setTimeout(() => setCopiedLink(false), 2000);
+  }
+
+  function handleExportCsv() {
+    const head: (string | number)[][] = [
+      ["Informe institucional — Kampus", new Date().toLocaleDateString("es")],
+      [],
+      ["Métrica", "Valor"],
+      ["Estudiantes activos (30d)", kpis?.activeStudents ?? 0],
+      ["Cursos monitoreados", kpis?.coursesMonitored ?? 0],
+      ["Estudiantes en riesgo", kpis?.atRiskStudents ?? 0],
+      ["Participación promedio (%)", kpis?.avgEngagement ?? 0],
+      ["Consistencia de calificación (/100)", kpis?.gradingConsistency ?? 0],
+      ["Riesgo de retención", retentionLabel(kpis?.retentionRisk ?? "low")],
+      [],
+      ["Curso", "Código", "Alumnos", "Riesgo %", "Nota prom.", "Participación", "Tema duro", "Intervención"],
+      ...courses.map((c) => [
+        c.courseName,
+        c.courseCode,
+        c.students,
+        c.atRiskPct,
+        c.avgScore,
+        c.engagementIndex,
+        c.hardestTopic,
+        c.intervention,
+      ]),
+    ];
+    downloadCsv("informe-institucional.csv", head);
+  }
 
   return (
     <div className="space-y-10">
@@ -217,9 +326,29 @@ export function InstitutionConsole() {
             : "Credible intervention signals: risk, engagement, difficult topics, and grading consistency (demo data)."
         }
         actions={
-          <Badge tone={retentionTone}>
-            {es ? "Riesgo retención" : "Retention risk"}: {retentionLabel(kpis?.retentionRisk ?? "low")}
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" size="sm" variant="secondary" onClick={() => void handleCopyPanelLink()}>
+              {copiedLink
+                ? es
+                  ? "¡Copiado!"
+                  : "Copied!"
+                : es
+                  ? "Copiar enlace del panel"
+                  : "Copy console link"}
+            </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={handleLoadDemoSignals}>
+              {es ? "Cargar señales demo" : "Load demo signals"}
+            </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={handleExportCsv}>
+              {es ? "Exportar informe (CSV)" : "Export report (CSV)"}
+            </Button>
+            <Badge tone={retentionTone}>
+              {es ? "Riesgo retención" : "Retention risk"}: {retentionLabel(kpis?.retentionRisk ?? "low")}
+            </Badge>
+            {demoSignalsLoaded ? (
+              <Badge tone="accent">{es ? "Datos demo" : "Demo data"}</Badge>
+            ) : null}
+          </div>
         }
       />
 
@@ -384,10 +513,8 @@ export function InstitutionConsole() {
               <li>{es ? "Picos de calificaciones tardías correlacionan con caída de engagement." : "Late grading spikes correlate with engagement drops."}</li>
               <li>{es ? "Micro-quizzes reducen preguntas repetidas en foros." : "Micro-quizzes reduce repeated forum questions."}</li>
             </ul>
-            <Link href="/risk">
-              <Button variant="secondary" size="sm">
-                {es ? "Ver radar académico" : "Open academic radar"}
-              </Button>
+            <Link href="/risk" className={buttonClasses({ variant: "secondary", size: "sm" })}>
+              {es ? "Ver radar académico" : "Open academic radar"}
             </Link>
           </div>
         </Card>

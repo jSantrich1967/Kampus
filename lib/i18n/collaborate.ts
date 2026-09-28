@@ -106,6 +106,7 @@ export const collaborateCopy: Record<
     virtualClassDelete: string;
     virtualClassDeleting: string;
     virtualClassDeleteConfirm: string;
+    virtualClassDeleteConfirmCta: string;
     virtualClassDeleteError: string;
     virtualClassNoSeats: string;
     virtualClassEmptyHint: string;
@@ -458,6 +459,7 @@ export const collaborateCopy: Record<
     virtualClassDelete: "Eliminar sesión",
     virtualClassDeleting: "Eliminando…",
     virtualClassDeleteConfirm: "¿Eliminar esta sesión? Quien esté inscrito dejará de verla.",
+    virtualClassDeleteConfirmCta: "Sí, eliminar",
     virtualClassDeleteError: "No se pudo eliminar. Solo quien creó la sesión puede borrarla.",
     virtualClassNoSeats: "Sin cupo",
     virtualClassEmptyHint:
