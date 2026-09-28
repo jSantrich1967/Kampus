@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { onboardingCopy } from "@/lib/i18n/onboarding";
+import { anchorCanContinue, anchorForProfile } from "@/lib/onboarding/anchor-step";
 import { defaultProfile, profileSchema, type UserRole } from "@/lib/schemas/profile";
 import { cn } from "@/lib/cn";
 
@@ -76,7 +77,9 @@ export function OnboardingFlow() {
 
   const canContinue = useMemo(() => {
     if (step === 0) return true;
-    if (step === 1) return major.trim().length > 1 && semester.trim().length > 0;
+    if (step === 1) {
+      return anchorCanContinue(role, { displayName, university, major, semester });
+    }
     if (step === 2) return subjects.length > 0;
     if (step === 3) {
       return exams.every((e) => (e.subject.trim() === "" && e.date === "") || (e.subject.trim() && e.date));
@@ -95,6 +98,7 @@ export function OnboardingFlow() {
   }, [
     step,
     role,
+    university,
     major,
     semester,
     subjects.length,
@@ -106,11 +110,15 @@ export function OnboardingFlow() {
   ]);
 
   const goNext = useCallback(() => {
+    if (step === 1 && role === "teacher" && major.trim().length > 1) {
+      const subject = major.trim();
+      setSubjects((prev) => (prev.length > 0 ? prev : [subject]));
+    }
     setStep((s) => {
       if (s === 3 && skipsStudentCentricSteps(role)) return 6;
       return Math.min(TOTAL_STEPS - 1, s + 1);
     });
-  }, [role]);
+  }, [role, step, major]);
 
   const goPrev = useCallback(() => {
     setStep((s) => {
@@ -134,6 +142,7 @@ export function OnboardingFlow() {
   }
 
   function finish() {
+    const anchor = anchorForProfile(role, { displayName, university, major, semester });
     const nextProfile = profileSchema.parse({
       ...defaultProfile,
       ...profile,
@@ -141,9 +150,9 @@ export function OnboardingFlow() {
       plan: profile.plan,
       role,
       displayName: displayName.trim(),
-      university: university.trim(),
-      major: major.trim(),
-      semester: semester.trim(),
+      university: anchor.university,
+      major: anchor.major,
+      semester: anchor.semester,
       subjects,
       upcomingExams: exams.filter((e) => e.subject.trim() && e.date).map((e) => ({ subject: e.subject.trim(), date: e.date })),
       weakTopics: skipsStudentCentricSteps(role) ? [] : weakTopics,
@@ -226,7 +235,7 @@ export function OnboardingFlow() {
             </>
           ) : null}
 
-          {step === 1 ? (
+          {step === 1 && (role === "student" || role === "learner") ? (
             <>
               <CardHeader>
                 <CardTitle>Ancla académica</CardTitle>
@@ -268,6 +277,77 @@ export function OnboardingFlow() {
                     value={semester}
                     onChange={(e) => setSemester(e.target.value)}
                     placeholder="Ej. 2026-1"
+                  />
+                </label>
+              </div>
+            </>
+          ) : null}
+
+          {step === 1 && role === "teacher" ? (
+            <>
+              <CardHeader>
+                <CardTitle>Tu espacio docente</CardTitle>
+                <CardDescription>
+                  Cuéntanos qué enseñas. Escribir un colegio aquí no te agrega a esa institución.
+                </CardDescription>
+              </CardHeader>
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="space-y-2 text-sm">
+                  <span className="text-slate-300">{t.fields.name}</span>
+                  <input
+                    className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 outline-none ring-indigo-400/40 focus:ring"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Ej.: Ana, Carlos…"
+                  />
+                </label>
+                <label className="space-y-2 text-sm">
+                  <span className="text-slate-300">Dónde enseñas (opcional)</span>
+                  <input
+                    className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 outline-none ring-indigo-400/40 focus:ring"
+                    value={university}
+                    onChange={(e) => setUniversity(e.target.value)}
+                    placeholder="Ej.: tu academia o colegio"
+                  />
+                </label>
+                <label className="space-y-2 text-sm md:col-span-2">
+                  <span className="text-slate-300">Materia principal</span>
+                  <input
+                    className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 outline-none ring-indigo-400/40 focus:ring"
+                    value={major}
+                    onChange={(e) => setMajor(e.target.value)}
+                    placeholder="Ej.: Cálculo, Biología, Inglés…"
+                  />
+                </label>
+              </div>
+            </>
+          ) : null}
+
+          {step === 1 && role === "institution" ? (
+            <>
+              <CardHeader>
+                <CardTitle>Tu institución</CardTitle>
+                <CardDescription>
+                  Este nombre queda en tu perfil. No abre el panel de otra organización ni crea licencias.
+                </CardDescription>
+              </CardHeader>
+              <div className="grid gap-4">
+                <label className="space-y-2 text-sm">
+                  <span className="text-slate-300">{t.fields.name}</span>
+                  <input
+                    className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 outline-none ring-indigo-400/40 focus:ring"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Ej.: nombre de quien administra la cuenta"
+                  />
+                </label>
+                <label className="space-y-2 text-sm">
+                  <span className="text-slate-300">Nombre del colegio o universidad</span>
+                  <input
+                    className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 outline-none ring-indigo-400/40 focus:ring"
+                    value={university}
+                    onChange={(e) => setUniversity(e.target.value)}
+                    placeholder="Ej.: Colegio Central"
                   />
                 </label>
               </div>
@@ -499,9 +579,17 @@ export function OnboardingFlow() {
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm">
                   <div className="text-xs uppercase tracking-wide text-slate-400">{t.roles[role]}</div>
                   <div className="mt-2 font-semibold text-white">
-                    {university} · {major}
+                    {role === "teacher"
+                      ? `Enseña ${major.trim()}`
+                      : role === "institution"
+                        ? university.trim()
+                        : `${university} · ${major}`}
                   </div>
-                  <div className="text-slate-300">{semester}</div>
+                  {role === "student" || role === "learner" ? (
+                    <div className="text-slate-300">{semester}</div>
+                  ) : role === "teacher" && university.trim() ? (
+                    <div className="text-slate-300">{university.trim()}</div>
+                  ) : null}
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm">
                   <div className="text-xs uppercase tracking-wide text-slate-400">{t.fields.subjects}</div>
