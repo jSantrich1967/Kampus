@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { planLimitMessage } from "@/lib/ai/ai-budget";
 import { buildFallbackClassPresentation } from "@/lib/class-presentation/build-fallback-presentation";
 import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
 import { extractTextFromOpenAIResponses, parseJsonFromModelText } from "@/lib/openai/parse-json-response";
@@ -133,6 +134,10 @@ export async function POST(req: Request) {
       });
 
       if (!res.ok) {
+        const planLimit = await planLimitMessage(res);
+        if (planLimit) {
+          return NextResponse.json({ error: planLimit }, { status: 429 });
+        }
         const errText = await res.text().catch(() => "");
         return NextResponse.json({
           presentation: fallback(),

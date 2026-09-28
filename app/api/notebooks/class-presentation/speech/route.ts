@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { planLimitMessage } from "@/lib/ai/ai-budget";
 import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
 import { classPresentationSpeechRateLimits } from "@/lib/rate-limit/openai-defaults";
@@ -60,6 +61,10 @@ export async function POST(req: Request) {
     });
 
     if (!res.ok) {
+      const planLimit = await planLimitMessage(res);
+      if (planLimit) {
+        return NextResponse.json({ error: planLimit }, { status: 429 });
+      }
       const err = await res.text().catch(() => "");
       await refundDailyUserQuotaForCurrentUser("class_presentation_speech");
       return NextResponse.json({ error: err.slice(0, 200) || "No se pudo generar el audio." }, { status: 502 });

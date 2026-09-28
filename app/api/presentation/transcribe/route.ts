@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { planLimitMessage } from "@/lib/ai/ai-budget";
 import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
 import { presentationTranscribeRateLimits } from "@/lib/rate-limit/openai-defaults";
@@ -78,6 +79,10 @@ export async function POST(req: Request) {
           message = json.error?.message ?? "";
         } catch {
           message = (await res.text()).slice(0, 400);
+        }
+        const planLimit = await planLimitMessage(res);
+        if (planLimit) {
+          return NextResponse.json({ error: planLimit }, { status: 429 });
         }
         if (res.status === 429) {
           return NextResponse.json(

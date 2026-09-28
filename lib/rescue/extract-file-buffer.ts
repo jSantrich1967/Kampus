@@ -1,3 +1,4 @@
+import { planLimitMessage } from "@/lib/ai/ai-budget";
 import { fetchOpenAi } from "@/lib/observability/openai-sentry";
 import { stripOpenAiResponseLeakage } from "@/lib/notebooks/openai-extract-cleanup";
 import { repairSpuriousAmpersandOcrText } from "@/lib/notebooks/ocr-text-repair";
@@ -176,6 +177,8 @@ async function ocrDataUrlWithOpenAI(dataUrl: string): Promise<string> {
       message = (await res.text()).slice(0, 240);
     }
 
+    const planLimit = await planLimitMessage(res);
+    if (planLimit) return planLimit;
     if (res.status === 429) {
       return (
         "OCR no disponible ahora: tu cuenta de OpenAI se quedó sin cuota/saldo (HTTP 429). " +

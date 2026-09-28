@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { planLimitMessage } from "@/lib/ai/ai-budget";
 import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
 import { classPresentationIllustrationRateLimits } from "@/lib/rate-limit/openai-defaults";
@@ -169,6 +170,9 @@ async function generateIllustrationBase64(
       lastError = "Respuesta de imagen vacía.";
       continue;
     }
+
+    const planLimit = await planLimitMessage(res);
+    if (planLimit) return { error: planLimit };
 
     const errText = await res.text().catch(() => "");
     lastError = parseOpenAiError(errText);
