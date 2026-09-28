@@ -14,6 +14,14 @@ const requestSchema = z.object({
   subject: z.string().trim().min(2).max(120),
   topic: z.string().trim().max(200).default(""),
   playerName: z.string().trim().max(60).default(""),
+  materialImage: z
+    .string()
+    .trim()
+    .max(4_500_000)
+    .refine((v) => v === "" || /^data:image\/(png|jpe?g|webp|gif);base64,/.test(v), {
+      message: "Imagen no válida.",
+    })
+    .default(""),
 });
 
 const duelQuestionSchema = z.object({
@@ -46,18 +54,37 @@ function extractFirstBalancedJsonObject(input: string): string | null {
   return null;
 }
 
-async function generateDuelQuestions(subject: string, topic: string): Promise<DuelQuestion[]> {
+async function generateDuelQuestions(
+  subject: string,
+  topic: string,
+  materialImage: string,
+): Promise<DuelQuestion[]> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   const model = process.env.OPENAI_MODEL?.trim() || "gpt-4.1-mini";
   if (!apiKey) throw new Error("missing_api_key");
 
-  const topicLine = topic ? `Tema específico: ${topic}.` : "Cubre los conceptos esenciales de la materia.";
+  const hasImage = materialImage.length > 0;
+  const topicLine = hasImage
+    ? "Basa TODAS las preguntas en el contenido de la foto del material de estudio (lee con cuidado, incluida letra manuscrita). Si la foto no es legible o no es material de estudio, genera preguntas del tema de la materia de todos modos."
+    : topic
+      ? `Tema específico: ${topic}.`
+      : "Cubre los conceptos esenciales de la materia.";
   const prompt = `Genera ${DUEL_QUESTION_COUNT} preguntas de opción múltiple para un duelo de quiz entre estudiantes.
 Materia: ${subject}. ${topicLine}
 Nivel: bachillerato/universidad básico. Preguntas claras, sin ambigüedad, con 4 opciones donde solo una es correcta.
 Responde ÚNICAMENTE con un objeto JSON válido con esta forma exacta:
 {"questions":[{"question":"...","options":["...","...","...","..."],"answerIndex":0}]}
 Sin texto antes ni después del JSON.`;
+
+  const userParts: Array<Record<string, unknown>> = [];
+  if (hasImage) {
+    userParts.push({
+      type: "input_text",
+      text: "--- Foto del material de estudio (léela con cuidado, incluida la letra manuscrita) ---",
+    });
+    userParts.push({ type: "input_image", image_url: materialImage, detail: "high" });
+  }
+  userParts.push({ type: "input_text", text: prompt });
 
   const res = await fetchOpenAi(
     "duel_create",
@@ -67,7 +94,7 @@ Sin texto antes ni después del JSON.`;
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
-        input: [{ role: "user", content: [{ type: "input_text", text: prompt }] }],
+        input: [{ role: "user", content: userParts }],
         temperature: 0.8,
         max_output_tokens: 2500,
       }),
@@ -109,7 +136,7 @@ export async function POST(req: Request) {
 
       let questions: DuelQuestion[];
       try {
-        questions = await generateDuelQuestions(body.subject, body.topic);
+        questions = await generateDuelQuestions(body.subject, body.topic, body.materialImage);
       } catch (e) {
         const msg = e instanceof Error ? e.message : "unknown";
         if (msg === "missing_api_key") {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Plus, Swords, Ticket } from "lucide-react";
+import { Camera, Loader2, Plus, Swords, Ticket } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -10,6 +10,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { PageHeader } from "@/components/layout/page-header";
 import { duelsCopy } from "@/lib/i18n/duels";
 import { normalizeDuelCode } from "@/lib/duels/types";
+import { cn } from "@/lib/cn";
 
 export function DuelHub() {
   const router = useRouter();
@@ -21,11 +22,66 @@ export function DuelHub() {
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [photoName, setPhotoName] = useState("");
+  const [photoCreating, setPhotoCreating] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
 
   const [code, setCode] = useState("");
   const [joinError, setJoinError] = useState<string | null>(null);
 
   const loggedIn = Boolean(authUserId);
+
+  async function onPickPhoto(files: FileList | null) {
+    setPhotoError(null);
+    if (!files || files.length === 0) return;
+    const f = files[0];
+    if (!f.type.startsWith("image/")) {
+      setPhotoError(t.photoTypeError);
+      return;
+    }
+    if (f.size > 3 * 1024 * 1024) {
+      setPhotoError(t.photoSizeError);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const url = String(reader.result ?? "");
+      if (!url.startsWith("data:image/")) {
+        setPhotoError(t.photoReadError);
+        return;
+      }
+      setPhotoUrl(url);
+      setPhotoName(f.name);
+    };
+    reader.onerror = () => setPhotoError(t.photoReadError);
+    reader.readAsDataURL(f);
+  }
+
+  async function createDuelFromPhoto() {
+    if (photoCreating || !photoUrl || subject.trim().length < 2) return;
+    setPhotoCreating(true);
+    setPhotoError(null);
+    try {
+      const res = await fetch("/api/duels/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject: subject.trim(),
+          topic: topic.trim(),
+          playerName: name.trim(),
+          materialImage: photoUrl,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { duel?: { code: string }; error?: string };
+      if (!res.ok || !data.duel) throw new Error(data.error || t.errorMessage);
+      router.push(`/duelos/${data.duel.code}`);
+    } catch (e) {
+      setPhotoError(e instanceof Error ? e.message : t.errorMessage);
+    } finally {
+      setPhotoCreating(false);
+    }
+  }
 
   async function createDuel() {
     if (creating || subject.trim().length < 2) return;
@@ -61,7 +117,7 @@ export function DuelHub() {
     <div className="space-y-6">
       <PageHeader eyebrow={t.eyebrow} title={t.title} description={t.description} />
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card className="border-amber-400/20 bg-amber-500/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -128,6 +184,79 @@ export function DuelHub() {
                 <Swords className="h-4 w-4" aria-hidden />
               )}
               {creating ? t.creatingLabel : t.createCta}
+            </Button>
+          </div>
+        </Card>
+
+        <Card className="border-emerald-400/20 bg-emerald-500/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Camera className="h-4 w-4 text-emerald-300" aria-hidden />
+              {t.photoTitle}
+            </CardTitle>
+            <CardDescription>{t.photoHint}</CardDescription>
+          </CardHeader>
+          <div className="space-y-3 px-6 pb-6">
+            <label
+              className={cn(
+                "flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-emerald-300/30 bg-white/5 px-4 py-6 text-sm text-slate-300 transition hover:border-emerald-300/60 hover:bg-white/10",
+                !loggedIn && "cursor-not-allowed opacity-60",
+              )}
+            >
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="sr-only"
+                disabled={!loggedIn}
+                onChange={(e) => onPickPhoto(e.target.files)}
+              />
+              {photoUrl ? (
+                <img src={photoUrl} alt={photoName} className="max-h-40 rounded-lg object-contain" />
+              ) : (
+                <span className="flex items-center gap-2">
+                  <Camera className="h-5 w-5" aria-hidden />
+                  {t.photoCta}
+                </span>
+              )}
+            </label>
+            {photoUrl && (
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span className="truncate">{photoName}</span>
+                <button
+                  type="button"
+                  className="shrink-0 underline hover:text-slate-200"
+                  onClick={() => {
+                    setPhotoUrl("");
+                    setPhotoName("");
+                  }}
+                >
+                  {t.photoChange}
+                </button>
+              </div>
+            )}
+            {photoError && (
+              <p role="alert" className="text-xs font-medium text-red-300">
+                {photoError}
+              </p>
+            )}
+            {!loggedIn && <p className="text-xs text-slate-400">{t.photoLoginNote}</p>}
+            <Button
+              onClick={createDuelFromPhoto}
+              disabled={photoCreating || !loggedIn || !photoUrl || subject.trim().length < 2}
+              className="w-full"
+            >
+              {photoCreating ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  {t.photoGenerating}
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <Swords className="h-4 w-4" aria-hidden />
+                  {t.photoCreateCta}
+                </span>
+              )}
             </Button>
           </div>
         </Card>

@@ -16,6 +16,16 @@ export const duelsCopy: Record<
     namePlaceholder: string;
     createCta: string;
     creatingLabel: string;
+    photoTitle: string;
+    photoHint: string;
+    photoCta: string;
+    photoChange: string;
+    photoLoginNote: string;
+    photoCreateCta: string;
+    photoGenerating: string;
+    photoTypeError: string;
+    photoSizeError: string;
+    photoReadError: string;
     joinTitle: string;
     joinHint: string;
     codeLabel: string;
@@ -68,6 +78,16 @@ export const duelsCopy: Record<
     namePlaceholder: "Ej.: Joreg",
     createCta: "Crear duelo y jugar",
     creatingLabel: "Generando preguntas…",
+    photoTitle: "Duelo desde una foto",
+    photoHint: "Toma una foto de tu guía o cuaderno: las 8 preguntas salen de tu material.",
+    photoCta: "Tomar o subir foto",
+    photoChange: "Cambiar foto",
+    photoLoginNote: "Inicia sesión para crear duelos desde fotos.",
+    photoCreateCta: "Crear duelo con esta foto",
+    photoGenerating: "Leyendo tu foto…",
+    photoTypeError: "El archivo debe ser una imagen.",
+    photoSizeError: "La foto es muy pesada (máximo 3 MB).",
+    photoReadError: "No se pudo leer la foto.",
     joinTitle: "Unirse con código",
     joinHint: "¿Te retaron? Pega el código y juega el mismo quiz.",
     codeLabel: "Código del duelo",
