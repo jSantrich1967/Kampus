@@ -45,6 +45,7 @@ export const navCopy = {
       reviewWorks: "Revisar trabajos",
       examGenerator: "Generador de exámenes",
       autoGrader: "Corrección automática",
+      cramMode: "Modo examen",
       issueCertificates: "Acreditar logros",
       myCertificates: "Mis logros",
       familyReport: "Reporte familiar",

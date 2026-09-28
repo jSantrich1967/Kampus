@@ -30,6 +30,7 @@ import {
   Award,
   Bot,
   Swords,
+  AlarmClock,
 } from "lucide-react";
 
 import type { UserRole } from "@/lib/schemas/profile";
@@ -63,6 +64,7 @@ export const navigationGroups: NavGroup[] = [
     items: [
       { href: "/tutor", key: "tutor", icon: Bot, roles: ["student", "learner"] },
       { href: "/duelos", key: "duelos", icon: Swords, roles: ["student", "learner"] },
+      { href: "/modo-examen", key: "cramMode", icon: AlarmClock, roles: ["student", "learner"] },
       { href: "/study/library", key: "library", icon: Library, roles: ["student", "teacher", "learner"] },
       { href: "/study/convertir", key: "convertir", icon: FileUp, roles: ["student", "learner"] },
       { href: "/study/plan", key: "studyPlan", icon: CalendarCheck, roles: ["student", "learner"] },
@@ -135,7 +137,7 @@ export const navigationGroups: NavGroup[] = [
  */
 const studentNavStructure: Array<{ id: NavGroup["id"]; keys: NavItemKey[] }> = [
   { id: "command", keys: ["today"] },
-  { id: "learn", keys: ["tutor", "duelos", "library", "convertir", "studyPlan", "myWorks", "studentNotices", "flashcards", "myCertificates", "familyReport"] },
+  { id: "learn", keys: ["tutor", "duelos", "cramMode", "library", "convertir", "studyPlan", "myWorks", "studentNotices", "flashcards", "myCertificates", "familyReport"] },
   { id: "evaluate", keys: ["exams", "agendaCalendar"] },
   { id: "classes", keys: ["collaborate"] },
   { id: "social", keys: ["community"] },
