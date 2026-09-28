@@ -148,7 +148,7 @@ export function ResearchWorksHub() {
         const workList = await fetchStudentWorksRemote(supabase, authUserId!);
         setWorks(workList);
       } else {
-        setWorks(loadStudentWorks());
+        setWorks(loadStudentWorks(authUserId));
       }
     } catch (e) {
       setLoadError(formatAgendaCloudError(e instanceof Error ? e.message : "No se pudo cargar."));
@@ -180,7 +180,7 @@ export function ResearchWorksHub() {
         const supabase = createSupabaseBrowserClient();
         await insertStudentWorkRemote(supabase, authUserId!, row);
       } else {
-        addStudentWork(row);
+        addStudentWork(row, authUserId);
       }
       setWorkTitle("");
       setWorkDue("");
@@ -198,7 +198,7 @@ export function ResearchWorksHub() {
         const supabase = createSupabaseBrowserClient();
         await deleteStudentWorkRemote(supabase, authUserId!, id);
       } else {
-        removeStudentWork(id);
+        removeStudentWork(id, authUserId);
       }
       refresh();
       notifyStudentWorksChanged();
@@ -213,7 +213,7 @@ export function ResearchWorksHub() {
         const supabase = createSupabaseBrowserClient();
         await updateStudentWorkCompletedRemote(supabase, authUserId!, id, completed);
       } else {
-        setStudentWorkCompleted(id, completed);
+        setStudentWorkCompleted(id, completed, authUserId);
       }
       refresh();
       notifyStudentWorksChanged();

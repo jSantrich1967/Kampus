@@ -529,7 +529,7 @@ export function AcademicCalendarHub() {
       } else {
         seedDemoExamsIfEmpty(profile.subjects[0]);
         setExams(loadExams());
-        setWorks(loadStudentWorks());
+        setWorks(loadStudentWorks(authUserId));
         setClasses(loadClassSchedule());
         setCancellations(loadClassCancellations());
         const loc = loadPresentation(authUserId);
@@ -756,7 +756,7 @@ export function AcademicCalendarHub() {
             const supabase = createSupabaseBrowserClient();
             await updateStudentWorkDueDateRemote(supabase, authUserId!, ref.entityId, newDateIso);
           }
-          updateStudentWorkDueDate(ref.entityId, newDateIso);
+          updateStudentWorkDueDate(ref.entityId, newDateIso, authUserId);
           notifyStudentWorksChanged();
         } else if (ref.kind === "presentation") {
           if (ref.entityId === LOCAL_ONLY_PRESENTATION_ID) {
@@ -846,7 +846,7 @@ export function AcademicCalendarHub() {
         const supabase = createSupabaseBrowserClient();
         await insertStudentWorkRemote(supabase, authUserId!, row);
       } else {
-        addStudentWork(row);
+        addStudentWork(row, authUserId);
       }
       setWorkTitle("");
       setWorkDue("");
@@ -864,7 +864,7 @@ export function AcademicCalendarHub() {
         const supabase = createSupabaseBrowserClient();
         await deleteStudentWorkRemote(supabase, authUserId!, id);
       } else {
-        removeStudentWork(id);
+        removeStudentWork(id, authUserId);
       }
       refresh();
       notifyStudentWorksChanged();
@@ -879,7 +879,7 @@ export function AcademicCalendarHub() {
         const supabase = createSupabaseBrowserClient();
         await updateStudentWorkCompletedRemote(supabase, authUserId!, id, completed);
       } else {
-        setStudentWorkCompleted(id, completed);
+        setStudentWorkCompleted(id, completed, authUserId);
       }
       refresh();
       notifyStudentWorksChanged();

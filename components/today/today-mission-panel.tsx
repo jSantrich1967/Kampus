@@ -22,25 +22,25 @@ type TodayMissionPanelProps = {
 };
 
 export function TodayMissionPanel({ plan, onProgressChange }: TodayMissionPanelProps) {
-  const { setProfile } = useKampus();
+  const { authUserId, setProfile } = useKampus();
   const [completedIds, setCompletedIds] = useState<string[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const mission = loadTodayMission();
+    const mission = loadTodayMission(authUserId);
     setCompletedIds(mission.completedBlockIds);
     if (mission.completedBlockIds.length > 0) {
-      recordStudyActivity();
-      setProfile((prev) => syncProfileStudyStreak(prev));
+      recordStudyActivity(undefined, authUserId);
+      setProfile((prev) => syncProfileStudyStreak(prev, authUserId));
     }
     setHydrated(true);
-  }, [setProfile]);
+  }, [authUserId, setProfile]);
 
   const bumpStudyProgress = useCallback(() => {
-    recordStudyActivity();
-    setProfile((prev) => syncProfileStudyStreak(prev));
+    recordStudyActivity(undefined, authUserId);
+    setProfile((prev) => syncProfileStudyStreak(prev, authUserId));
     onProgressChange?.();
-  }, [setProfile, onProgressChange]);
+  }, [authUserId, setProfile, onProgressChange]);
 
   const blocks = plan.sequence;
   const completedSet = useMemo(() => new Set(completedIds), [completedIds]);
@@ -56,11 +56,11 @@ export function TodayMissionPanel({ plan, onProgressChange }: TodayMissionPanelP
 
   const toggleBlock = useCallback((blockId: string) => {
     const done = !completedSet.has(blockId);
-    const next = toggleTodayBlock(blockId, done);
+    const next = toggleTodayBlock(blockId, done, authUserId);
     setCompletedIds(next.completedBlockIds);
     if (done) bumpStudyProgress();
     else onProgressChange?.();
-  }, [completedSet, bumpStudyProgress, onProgressChange]);
+  }, [authUserId, completedSet, bumpStudyProgress, onProgressChange]);
 
   if (!hydrated || !firstOpen) return null;
 

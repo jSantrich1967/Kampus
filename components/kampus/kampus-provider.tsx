@@ -39,7 +39,22 @@ import {
   setPresentationStorageOwner,
 } from "@/lib/storage/presentation-storage";
 import { applyScreenRole, loadScreenRole, setScreenRoleOwner } from "@/lib/storage/screen-role-storage";
+import {
+  clearStudentWorks,
+  discardLegacyStudentWorks,
+  setStudentWorkOwner,
+} from "@/lib/storage/student-work-storage";
 import { clearStudyPlan, discardLegacyStudyPlan, setStudyPlanOwner } from "@/lib/storage/study-plan-storage";
+import {
+  clearTodayMission,
+  discardLegacyTodayMission,
+  setTodayMissionOwner,
+} from "@/lib/storage/today-mission-storage";
+import {
+  clearStudyStreak,
+  discardLegacyStudyStreak,
+  setStudyStreakOwner,
+} from "@/lib/storage/study-streak-storage";
 import {
   clearCounselorAlertStorage,
   discardLegacyCounselorAlert,
@@ -111,6 +126,9 @@ export function KampusProvider({ children }: { children: ReactNode }) {
   setCounselorAlertOwner(authUserId);
   setInstitutionOptInOwner(authUserId);
   setScreenRoleOwner(authUserId);
+  setStudentWorkOwner(authUserId);
+  setTodayMissionOwner(authUserId);
+  setStudyStreakOwner(authUserId);
 
   useEffect(() => {
     discardLegacyPsychologistChat();
@@ -125,6 +143,9 @@ export function KampusProvider({ children }: { children: ReactNode }) {
     discardLegacyStudyRooms();
     discardLegacyCounselorAlert();
     discardLegacyInstitutionOptIn();
+    discardLegacyStudentWorks();
+    discardLegacyTodayMission();
+    discardLegacyStudyStreak();
     const stored = loadProfile();
     setProfileState(stored);
     // Render immediately from local storage; Supabase sync runs in the background.
@@ -163,6 +184,10 @@ export function KampusProvider({ children }: { children: ReactNode }) {
       setStudyRoomOwner(userId);
       setCounselorAlertOwner(userId);
       setInstitutionOptInOwner(userId);
+      setScreenRoleOwner(userId);
+      setStudentWorkOwner(userId);
+      setTodayMissionOwner(userId);
+      setStudyStreakOwner(userId);
       const local = loadProfile(userId);
 
       try {
@@ -247,6 +272,18 @@ export function KampusProvider({ children }: { children: ReactNode }) {
         clearInstitutionOptIn(null);
         discardLegacyInstitutionOptIn();
         setInstitutionOptInOwner(null);
+        clearStudentWorks(authUserIdRef.current);
+        clearStudentWorks(null);
+        discardLegacyStudentWorks();
+        setStudentWorkOwner(null);
+        clearTodayMission(authUserIdRef.current);
+        clearTodayMission(null);
+        discardLegacyTodayMission();
+        setTodayMissionOwner(null);
+        clearStudyStreak(authUserIdRef.current);
+        clearStudyStreak(null);
+        discardLegacyStudyStreak();
+        setStudyStreakOwner(null);
         accountRoleRef.current = null;
       }
       authUserIdRef.current = nextId;

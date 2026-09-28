@@ -37,7 +37,7 @@ import { cn } from "@/lib/cn";
 
 export function PassModePanel() {
   const searchParams = useSearchParams();
-  const { profile, setProfile } = useKampus();
+  const { authUserId, profile, setProfile } = useKampus();
   const t = passModeCopy.es;
   const { plan, intensity, setIntensity, hydrated: planHydrated, overloaded, autoMinimalApplied } = usePassModePlan();
   const prioritySubjects = useMemo(
@@ -50,10 +50,10 @@ export function PassModePanel() {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const mission = loadTodayMission();
+    const mission = loadTodayMission(authUserId);
     setCompletedIds(mission.completedBlockIds);
     setHydrated(true);
-  }, []);
+  }, [authUserId]);
 
   const subjectFromUrl = searchParams.get("subject")?.trim();
   const fromKit = searchParams.get("from") === "kit" || searchParams.get("from") === "rescue";
@@ -72,12 +72,12 @@ export function PassModePanel() {
 
   const markBlockDone = useCallback(
     (blockId: string) => {
-      const next = toggleTodayBlock(blockId, true);
+      const next = toggleTodayBlock(blockId, true, authUserId);
       setCompletedIds(next.completedBlockIds);
-      recordStudyActivity();
-      setProfile((prev) => syncProfileStudyStreak(prev));
+      recordStudyActivity(undefined, authUserId);
+      setProfile((prev) => syncProfileStudyStreak(prev, authUserId));
     },
-    [setProfile],
+    [authUserId, setProfile],
   );
 
   const highlightedSubject = useMemo(() => {

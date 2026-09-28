@@ -207,18 +207,18 @@ export function PressureControlQuiz() {
 
   useEffect(() => {
     if (phase !== "finished" || quizMissionMarked) return;
-    completeTodayBlock("quiz");
-    recordStudyActivity();
-    setProfile((prev) => syncProfileStudyStreak(prev));
+    completeTodayBlock("quiz", authUserId);
+    recordStudyActivity(undefined, authUserId);
+    setProfile((prev) => syncProfileStudyStreak(prev, authUserId));
     setQuizMissionMarked(true);
-  }, [phase, quizMissionMarked, setProfile]);
+  }, [authUserId, phase, quizMissionMarked, setProfile]);
 
   const nextBlockAfterQuiz = useMemo(() => {
     if (phase !== "finished") return null;
-    const mission = loadTodayMission();
+    const mission = loadTodayMission(authUserId);
     const next = getFirstOpenBlock(plan, mission.completedBlockIds);
     return next?.id === "quiz" ? null : next;
-  }, [plan, phase, quizMissionMarked]);
+  }, [authUserId, plan, phase, quizMissionMarked]);
 
   function startQuiz() {
     setPhase("running");

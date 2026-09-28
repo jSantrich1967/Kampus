@@ -31,7 +31,7 @@ export function usePendingStudentWorksCount(): number {
     try {
       const works = useCloud
         ? await fetchStudentWorksRemote(createSupabaseBrowserClient(), authUserId!)
-        : loadStudentWorks();
+        : loadStudentWorks(authUserId);
       setCount(works.filter((w) => !isStudentWorkCompleted(w)).length);
     } catch {
       setCount(0);

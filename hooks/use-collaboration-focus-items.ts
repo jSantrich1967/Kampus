@@ -27,7 +27,7 @@ async function loadFocusItems(useCloud: boolean, authUserId: string | null): Pro
     ]);
     return [...buildFocusItemsFromWorks(works), ...buildFocusItemsFromPresentations(presentations)];
   }
-  return [...buildFocusItemsFromWorks(loadStudentWorks()), ...buildFocusItemsFromLocalPresentation()];
+  return [...buildFocusItemsFromWorks(loadStudentWorks(authUserId)), ...buildFocusItemsFromLocalPresentation()];
 }
 
 export function useCollaborationFocusItems(): {

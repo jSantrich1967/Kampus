@@ -42,7 +42,7 @@ function weekdayLabel(iso: string): string {
 }
 
 export function TodayMomentumPanel({ plan, missionTick = 0 }: TodayMomentumPanelProps) {
-  const { profile, setProfile } = useKampus();
+  const { authUserId, profile, setProfile } = useKampus();
   const t = todayCopy.es;
   const prioritySubjects = useMemo(
     () => [...new Set(plan.sequence.map((b) => b.subject))],
@@ -55,16 +55,16 @@ export function TodayMomentumPanel({ plan, missionTick = 0 }: TodayMomentumPanel
   const [weekActivity, setWeekActivity] = useState<boolean[]>([]);
 
   useEffect(() => {
-    const mission = loadTodayMission();
-    const state = loadStudyStreakState();
+    const mission = loadTodayMission(authUserId);
+    const state = loadStudyStreakState(authUserId);
     setMissionDone(mission.completedBlockIds.length);
-    setStreakDays(getStudyStreakDays());
+    setStreakDays(getStudyStreakDays(authUserId));
     setWeekActivity(last7DayActivity(state.activeDates));
-    setProfile((prev) => syncProfileStudyStreak(prev));
-  }, [missionTick, setProfile]);
+    setProfile((prev) => syncProfileStudyStreak(prev, authUserId));
+  }, [authUserId, missionTick, setProfile]);
 
   const missionTotal = plan.sequence.length;
-  const studiedToday = studiedOnDate(localIsoDate());
+  const studiedToday = studiedOnDate(localIsoDate(), authUserId);
 
   const message = useMemo(
     () =>

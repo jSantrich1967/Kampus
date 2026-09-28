@@ -50,7 +50,7 @@ export function useAcademicRadarData(): {
           if (!cancelled) setWorks(workList);
         } else {
           const { loadStudentWorks } = await import("@/lib/storage/student-work-storage");
-          if (!cancelled) setWorks(loadStudentWorks());
+          if (!cancelled) setWorks(loadStudentWorks(authUserId));
         }
       } catch {
         if (!cancelled) setWorks([]);
@@ -91,7 +91,7 @@ export async function bootstrapRadarDemoSignals(
     examsSeeded = !hadExams && loadExams().length > 0;
 
     const { loadStudentWorks, addStudentWork } = await import("@/lib/storage/student-work-storage");
-    const hasDemo = loadStudentWorks().some((w) => w.title.startsWith("Kampus ·"));
+    const hasDemo = loadStudentWorks(authUserId).some((w) => w.title.startsWith("Kampus ·"));
     if (!hasDemo) {
       const pad = (n: number) => String(n).padStart(2, "0");
       const due = (days: number) => {
@@ -104,7 +104,7 @@ export async function bootstrapRadarDemoSignals(
         subject: subjectHint || "General",
         dueDate: due(3),
         notes: "Demo local para el radar.",
-      });
+      }, authUserId);
       researchInserted = 1;
     }
   }

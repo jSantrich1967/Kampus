@@ -28,7 +28,7 @@ function parseMinutes(raw: string | null, fallback: number): number {
 export function PlanFlashcardsSession() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { profile, setProfile } = useKampus();
+  const { authUserId, profile, setProfile } = useKampus();
   const { plan } = usePassModePlan();
   const t = passModeCopy.es;
 
@@ -67,21 +67,21 @@ export function PlanFlashcardsSession() {
   const finishSession = useCallback(() => {
     setFinished(true);
     if (!isDemo) {
-      completeTodayBlock("flashcards");
-      recordStudyActivity();
-      setProfile((prev) => syncProfileStudyStreak(prev));
+      completeTodayBlock("flashcards", authUserId);
+      recordStudyActivity(undefined, authUserId);
+      setProfile((prev) => syncProfileStudyStreak(prev, authUserId));
     }
-  }, [isDemo, setProfile]);
+  }, [authUserId, isDemo, setProfile]);
 
   const current = cards[index];
   const progress = cards.length ? Math.round(((index + (finished ? 1 : 0)) / cards.length) * 100) : 0;
 
   const nextBlock = useMemo(() => {
     if (!finished) return null;
-    const mission = loadTodayMission();
+    const mission = loadTodayMission(authUserId);
     const next = getFirstOpenBlock(plan, mission.completedBlockIds);
     return next?.id === "flashcards" ? null : next;
-  }, [finished, plan]);
+  }, [authUserId, finished, plan]);
 
   const timerLabel = `${String(Math.floor(secondsLeft / 60)).padStart(2, "0")}:${String(secondsLeft % 60).padStart(2, "0")}`;
 

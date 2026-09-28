@@ -38,7 +38,7 @@ const FEATURES = [
   { icon: Microscope, key: "researchFeatureFilters" as const },
 ];
 
-function localDemoWorks() {
+function localDemoWorks(userId: string | null) {
   const pad = (n: number) => String(n).padStart(2, "0");
   const due = (days: number) => {
     const d = new Date();
@@ -50,13 +50,13 @@ function localDemoWorks() {
     subject: "Metodología",
     dueDate: due(5),
     notes: "Demo local — inicia sesión para sincronizar con la nube.",
-  });
+  }, userId);
   addStudentWork({
     title: "Kampus · Borrador monografía",
     subject: "Investigación I",
     dueDate: due(12),
     notes: "Demo local en este navegador.",
-  });
+  }, userId);
 }
 
 export function ResearchOnboardingPanel({ useCloud, workCount, onDemoLoaded }: Props) {
@@ -80,7 +80,7 @@ export function ResearchOnboardingPanel({ useCloud, workCount, onDemoLoaded }: P
           result.alreadyExists ? t.researchDemoExistsOk : t.researchDemoCreatedOk(result.inserted),
         );
       } else {
-        localDemoWorks();
+        localDemoWorks(authUserId);
         setMessage(t.researchDemoLocalOk);
       }
       onDemoLoaded?.();

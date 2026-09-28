@@ -1,6 +1,22 @@
 import { addDaysLocalIso, localIsoDate } from "@/lib/calendar/local-iso-date";
 
-const STORAGE_KEY = "kampus.studyStreak.v1";
+/** Old builds used one box for every account. Never read it into a user. */
+const LEGACY_KEY = "kampus.studyStreak.v1";
+
+let ownerId: string | null = null;
+
+export function setStudyStreakOwner(userId: string | null) {
+  ownerId = userId;
+}
+
+export function studyStreakStorageKey(userId: string | null = ownerId): string {
+  if (!userId) return "kampus.studyStreak.v1.anonymous";
+  return `kampus.studyStreak.v1.${userId}`;
+}
+
+function resolveOwner(userId?: string | null): string | null {
+  return userId === undefined ? ownerId : userId;
+}
 
 export type StudyStreakState = {
   /** YYYY-MM-DD dates when the student completed at least one mission block */
@@ -18,10 +34,10 @@ function dateFromLocalIso(iso: string): Date {
   return x;
 }
 
-export function loadStudyStreakState(): StudyStreakState {
+export function loadStudyStreakState(userId?: string | null): StudyStreakState {
   if (typeof window === "undefined") return emptyState();
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(studyStreakStorageKey(resolveOwner(userId)));
     if (!raw) return emptyState();
     const parsed = JSON.parse(raw) as StudyStreakState;
     const dates = Array.isArray(parsed.activeDates)
@@ -34,18 +50,19 @@ export function loadStudyStreakState(): StudyStreakState {
   }
 }
 
-function saveStudyStreakState(state: StudyStreakState) {
+function saveStudyStreakState(state: StudyStreakState, userId?: string | null) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  window.localStorage.setItem(studyStreakStorageKey(resolveOwner(userId)), JSON.stringify(state));
 }
 
 /** Marks today (or given date) as an active study day. Idempotent. */
-export function recordStudyActivity(date: string = localIsoDate()): StudyStreakState {
-  const current = loadStudyStreakState();
+export function recordStudyActivity(date?: string, userId?: string | null): StudyStreakState {
+  const day = date ?? localIsoDate();
+  const current = loadStudyStreakState(userId);
   const set = new Set(current.activeDates);
-  set.add(date);
+  set.add(day);
   const next = { activeDates: [...set].sort() };
-  saveStudyStreakState(next);
+  saveStudyStreakState(next, userId);
   return next;
 }
 
@@ -75,8 +92,8 @@ export function computeStudyStreakDays(activeDates: string[], today: string = lo
   return streak;
 }
 
-export function getStudyStreakDays(): number {
-  return computeStudyStreakDays(loadStudyStreakState().activeDates);
+export function getStudyStreakDays(userId?: string | null): number {
+  return computeStudyStreakDays(loadStudyStreakState(userId).activeDates);
 }
 
 /** Last 7 calendar days ending today — true if student studied that day. */
@@ -89,6 +106,16 @@ export function last7DayActivity(activeDates: string[], today: string = localIso
   return out;
 }
 
-export function studiedOnDate(iso: string): boolean {
-  return loadStudyStreakState().activeDates.includes(iso);
+export function studiedOnDate(iso: string, userId?: string | null): boolean {
+  return loadStudyStreakState(userId).activeDates.includes(iso);
+}
+
+export function clearStudyStreak(userId?: string | null) {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(studyStreakStorageKey(resolveOwner(userId)));
+}
+
+export function discardLegacyStudyStreak() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(LEGACY_KEY);
 }
