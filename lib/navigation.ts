@@ -131,7 +131,7 @@ export const navigationGroups: NavGroup[] = [
  */
 const studentNavStructure: Array<{ id: NavGroup["id"]; keys: NavItemKey[] }> = [
   { id: "command", keys: ["today"] },
-  { id: "learn", keys: ["library", "convertir", "studyPlan", "myWorks", "studentNotices", "flashcards", "myCertificates", "familyReport"] },
+  { id: "learn", keys: ["tutor", "library", "convertir", "studyPlan", "myWorks", "studentNotices", "flashcards", "myCertificates", "familyReport"] },
   { id: "evaluate", keys: ["exams", "agendaCalendar"] },
   { id: "classes", keys: ["collaborate"] },
   { id: "social", keys: ["community"] },
