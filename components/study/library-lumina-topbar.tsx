@@ -9,10 +9,17 @@ type LibraryLuminaTopBarProps = {
   onSearchChange: (value: string) => void;
 };
 
+function roleChipLabel(role: string): string {
+  if (role === "teacher") return "Docente";
+  if (role === "learner") return "Autodidacta";
+  if (role === "institution") return "Institución";
+  return "Estudiante";
+}
+
 export function LibraryLuminaTopBar({ search, onSearchChange }: LibraryLuminaTopBarProps) {
   const { profile } = useKampus();
-  const displayName = profile.displayName.trim() || "Estudiante";
-  const planLabel = profile.plan === "premium" ? "Estudiante Pro" : "Estudiante";
+  const roleLabel = roleChipLabel(profile.role);
+  const displayName = profile.displayName.trim() || roleLabel;
 
   return (
     <header className="mb-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -40,7 +47,7 @@ export function LibraryLuminaTopBar({ search, onSearchChange }: LibraryLuminaTop
         <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
           <div className="hidden text-right sm:block">
             <p className="text-xs font-bold text-white">{displayName}</p>
-            <p className="text-[10px] font-black uppercase text-purple-400">{planLabel}</p>
+            <p className="text-[10px] font-black uppercase text-purple-400">{roleLabel}</p>
           </div>
           <div className="flex h-8 w-8 items-center justify-center rounded-full border border-purple-500/50 bg-gradient-to-br from-purple-500 to-purple-700 text-xs font-bold text-white">
             {displayName.charAt(0).toUpperCase()}

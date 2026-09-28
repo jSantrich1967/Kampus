@@ -33,6 +33,12 @@ function BarRow({ label, value }: { label: string; value: number }) {
   );
 }
 
+function retentionLabel(level: "low" | "medium" | "high"): string {
+  if (level === "high") return "Alto";
+  if (level === "medium") return "Medio";
+  return "Bajo";
+}
+
 export function InstitutionConsole() {
   const { profile, locale, authUserId } = useKampus();
   const es = locale === "es";
@@ -64,11 +70,11 @@ export function InstitutionConsole() {
   const series = useMemo(() => {
     // Placeholder real: once you store time-series, replace this with a Supabase query.
     return [
-      { label: "W-4", value: 0 },
-      { label: "W-3", value: 0 },
-      { label: "W-2", value: 0 },
-      { label: "W-1", value: 0 },
-      { label: "Now", value: 0 },
+      { label: "Hace 4 sem.", value: 0 },
+      { label: "Hace 3 sem.", value: 0 },
+      { label: "Hace 2 sem.", value: 0 },
+      { label: "Semana pasada", value: 0 },
+      { label: "Ahora", value: 0 },
     ];
   }, []);
 
@@ -212,7 +218,7 @@ export function InstitutionConsole() {
         }
         actions={
           <Badge tone={retentionTone}>
-            {es ? "Riesgo retención" : "Retention risk"}: {kpis?.retentionRisk ?? "low"}
+            {es ? "Riesgo retención" : "Retention risk"}: {retentionLabel(kpis?.retentionRisk ?? "low")}
           </Badge>
         }
       />
@@ -273,7 +279,7 @@ export function InstitutionConsole() {
           hint={es ? "Heurística multi-señal (demo)." : "Multi-signal heuristic (demo)."}
         />
         <StatBlock
-          label={es ? "Engagement promedio" : "Avg engagement"}
+          label={es ? "Participación promedio" : "Avg engagement"}
           value={`${kpis?.avgEngagement ?? 0}%`}
           hint={es ? "Basado en sesiones + entregas." : "Based on sessions + submissions."}
         />
@@ -293,7 +299,7 @@ export function InstitutionConsole() {
                   <th className="pb-3 pr-3">{es ? "Alumnos" : "Students"}</th>
                   <th className="pb-3 pr-3">{es ? "Riesgo" : "At-risk"}</th>
                   <th className="pb-3 pr-3">{es ? "Nota ~" : "Avg score"}</th>
-                  <th className="pb-3 pr-3">{es ? "Engage" : "Engage"}</th>
+                  <th className="pb-3 pr-3">{es ? "Participación" : "Engage"}</th>
                   <th className="pb-3 pr-3">{es ? "Tema duro" : "Hard topic"}</th>
                   <th className="pb-3">{es ? "Intervención" : "Intervention"}</th>
                 </tr>
@@ -320,7 +326,7 @@ export function InstitutionConsole() {
 
         <Card>
           <CardHeader>
-            <CardTitle>{es ? "Engagement (serie)" : "Engagement (series)"}</CardTitle>
+            <CardTitle>{es ? "Participación por semana" : "Engagement (series)"}</CardTitle>
             <CardDescription>{es ? "Vista semanal agregada (demo)." : "Weekly aggregate view (demo)."}</CardDescription>
           </CardHeader>
           <div className="space-y-3">
@@ -360,7 +366,7 @@ export function InstitutionConsole() {
         <Card>
           <CardHeader>
             <CardTitle>{es ? "Patrones de calificación" : "Grading patterns"}</CardTitle>
-            <CardDescription>{es ? "Consistencia y fairness (demo)." : "Consistency and fairness (demo)."}</CardDescription>
+            <CardDescription>{es ? "Consistencia y equidad (vista previa)." : "Consistency and fairness (demo)."}</CardDescription>
           </CardHeader>
           <div className="space-y-4 text-sm text-slate-200">
             <div>

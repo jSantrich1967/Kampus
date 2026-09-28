@@ -20,10 +20,11 @@ import { mailboxCopy, buildVcWhatsappMessage, vcWhatsappShareUrl } from "@/lib/i
 import { navCopy } from "@/lib/i18n/nav";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { enrollVirtualClassSession, fetchMyVirtualClassSessionIds } from "@/lib/supabase/virtual-class-db";
+import { enrollVirtualClassSession, deleteVirtualClassSession, fetchMyVirtualClassSessionIds } from "@/lib/supabase/virtual-class-db";
 import {
   isDemoModeClient,
   loadDemoVcSessions,
+  removeDemoVcSession,
   toggleDemoVcEnrollment,
   type DemoVcSession,
 } from "@/lib/storage/virtual-class-demo-storage";
@@ -33,6 +34,7 @@ import { useSupabaseSWR } from "@/lib/hooks/use-supabase-swr";
 
 type SessionRow = {
   id: string;
+  created_by: string;
   course: string;
   professor_name: string;
   topic: string;
@@ -46,6 +48,7 @@ type SessionRow = {
 
 type UiSession = {
   id: string;
+  createdBy: string | null;
   course: string;
   professor: string;
   topic: string;
@@ -63,6 +66,7 @@ type UiSession = {
 function demoSessionToUi(s: DemoVcSession): UiSession {
   return {
     id: s.id,
+    createdBy: null,
     course: s.course,
     professor: s.professor,
     topic: s.topic,
@@ -107,13 +111,14 @@ export function VirtualClassroomHub() {
       const { data, error } = await supabase
         .from("virtual_class_sessions")
         .select(
-          "id,course,professor_name,topic,capacity,starts_at,room_label,join_url,embed_video_url,virtual_class_roster(count)",
+          "id,created_by,course,professor_name,topic,capacity,starts_at,room_label,join_url,embed_video_url,virtual_class_roster(count)",
         )
         .order("starts_at", { ascending: true })
         .limit(30);
       if (error) throw error;
       const mapped = ((data as SessionRow[]) ?? []).map((row) => ({
         id: row.id,
+        createdBy: row.created_by,
         course: row.course,
         professor: row.professor_name,
         topic: row.topic,
@@ -130,6 +135,8 @@ export function VirtualClassroomHub() {
   );
 
   const [enrollBusy, setEnrollBusy] = useState<string | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
     if (!authUserId || !scheduleIdParam || !classDateParam) {
@@ -173,6 +180,26 @@ export function VirtualClassroomHub() {
     [demoMode, demoSessions, data],
   );
 
+  async function handleDelete(session: UiSession) {
+    if (!window.confirm(c.virtualClassDeleteConfirm)) return;
+    setDeleteError("");
+    setDeleteBusy(session.id);
+    try {
+      if (session.demo || demoMode) {
+        removeDemoVcSession(session.id, authUserId);
+        reloadDemoSessions();
+        return;
+      }
+      const supabase = createSupabaseBrowserClient();
+      await deleteVirtualClassSession(supabase, session.id);
+      await mutate();
+    } catch {
+      setDeleteError(c.virtualClassDeleteError);
+    } finally {
+      setDeleteBusy(null);
+    }
+  }
+
   async function handleEnroll(sessionId: string) {
     if (demoMode) {
       toggleDemoVcEnrollment(sessionId, authUserId);
@@ -203,7 +230,7 @@ export function VirtualClassroomHub() {
         description={
           isTeacher
             ? es
-              ? "Crea sesiones en vivo para tus materias: comparte el enlace con tu alumnado, gestiona el roster y revisa grabaciones y asistencia."
+              ? "Crea sesiones en vivo para tus materias: comparte el enlace con tu alumnado, lleva la lista de alumnos y revisa grabaciones y asistencia."
               : "Create live sessions for your courses: share the link with your students, manage the roster, and review recordings and attendance."
             : c.classroomPageDescription
         }
@@ -253,6 +280,8 @@ export function VirtualClassroomHub() {
         }}
         schedulePrefill={schedulePrefill}
       />
+
+      {deleteError ? <p className="text-sm text-rose-300">{deleteError}</p> : null}
 
       <div className="grid gap-4 md:grid-cols-2">
         {!isLoading && sessions.length === 0 && (authUserId || demoMode) ? (
@@ -327,6 +356,17 @@ export function VirtualClassroomHub() {
                         <MessageCircle className="h-4 w-4" />
                         {mailboxCopy.es.whatsappCta}
                       </a>
+                      {s.demo || s.createdBy === authUserId ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          disabled={deleteBusy === s.id}
+                          onClick={() => void handleDelete(s)}
+                        >
+                          {deleteBusy === s.id ? c.virtualClassDeleting : c.virtualClassDelete}
+                        </Button>
+                      ) : null}
                     </>
                   ) : full ? (
                     <Button type="button" size="sm" disabled>

@@ -29,6 +29,9 @@ export const radarCopy: Record<
     examsCta: string;
     passModeCta: string;
     emptySubjects: string;
+    riskHigh: string;
+    riskMedium: string;
+    riskLow: string;
   }
 > = {
   es: {
@@ -64,5 +67,8 @@ export const radarCopy: Record<
     examsCta: "Mis exámenes",
     passModeCta: "Modo aprobar",
     emptySubjects: "Añade materias en Ajustes u onboarding para ver tarjetas por asignatura.",
+    riskHigh: "Alto",
+    riskMedium: "Medio",
+    riskLow: "Bajo",
   },
 };

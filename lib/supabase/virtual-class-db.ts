@@ -40,6 +40,16 @@ export type CreateVirtualClassInput = {
   recordingUrl?: string | null;
 };
 
+export async function deleteVirtualClassSession(client: SupabaseClient, sessionId: string): Promise<void> {
+  const { data, error } = await client
+    .from("virtual_class_sessions")
+    .delete()
+    .eq("id", sessionId)
+    .select("id");
+  if (error) throw error;
+  if (!data?.length) throw new Error("not_deleted");
+}
+
 export async function createVirtualClassSession(
   client: SupabaseClient,
   userId: string,

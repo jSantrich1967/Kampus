@@ -187,7 +187,9 @@ export function AppGuideHub() {
                 </div>
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    {t.labels.benefits}
+                    {section.roles.length === 1 && section.roles[0] === "institution"
+                      ? t.labels.benefitsInstitution
+                      : t.labels.benefits}
                   </div>
                   <ul className="mt-2 list-disc space-y-1 pl-5 text-slate-300">
                     {section.benefits.map((b) => (

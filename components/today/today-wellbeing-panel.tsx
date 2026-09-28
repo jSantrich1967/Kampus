@@ -7,7 +7,7 @@ import { useMemo } from "react";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { useDiaryCheckInStatus } from "@/hooks/use-diary-check-in-status";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { buildDiaryTodayHref } from "@/lib/wellbeing/diary-path";
 import { WellbeingCheckInReminder } from "@/components/wellbeing/wellbeing-check-in-reminder";
@@ -63,11 +63,10 @@ export function TodayWellbeingPanel() {
                   subject: nearestExam.subject,
                   days: nearestExam.days!,
                 })}
+                className={buttonClasses({ size: "sm", variant: "secondary", className: "gap-1.5" })}
               >
-                <Button size="sm" variant="secondary" className="gap-1.5">
-                  <MessageCircle className="h-4 w-4" aria-hidden />
-                  {t.todayStressCta}
-                </Button>
+                <MessageCircle className="h-4 w-4" aria-hidden />
+                {t.todayStressCta}
               </Link>
             </div>
           </div>
@@ -100,15 +99,14 @@ export function TodayWellbeingPanel() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Link href={hasCheckedInToday ? buildDiaryTodayHref(todayEntryId ?? undefined) : "/wellbeing/diary"}>
-              <Button size="sm" variant={hasCheckedInToday ? "secondary" : "primary"}>
-                {hasCheckedInToday ? t.todayCheckedInCta : t.todayCheckInCta}
-              </Button>
+            <Link
+              href={hasCheckedInToday ? buildDiaryTodayHref(todayEntryId ?? undefined) : "/wellbeing/diary"}
+              className={buttonClasses({ size: "sm", variant: hasCheckedInToday ? "secondary" : "primary" })}
+            >
+              {hasCheckedInToday ? t.todayCheckedInCta : t.todayCheckInCta}
             </Link>
-            <Link href="/wellbeing">
-              <Button size="sm" variant="ghost">
-                {t.todayOpenWellbeingCta}
-              </Button>
+            <Link href="/wellbeing" className={buttonClasses({ size: "sm", variant: "ghost" })}>
+              {t.todayOpenWellbeingCta}
             </Link>
           </div>
         </div>

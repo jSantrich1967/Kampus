@@ -43,6 +43,7 @@ export const guideCopy: Record<
       objective: string;
       howItWorks: string;
       benefits: string;
+      benefitsInstitution: string;
       tip: string;
       openSection: string;
       premium: string;
@@ -63,6 +64,7 @@ export const guideCopy: Record<
       objective: "Objetivo",
       howItWorks: "Cómo funciona",
       benefits: "Bondades para el estudiante",
+      benefitsInstitution: "Bondades para la institución",
       tip: "Consejo",
       openSection: "Ir a la sección",
       premium: "Incluye funciones Premium",

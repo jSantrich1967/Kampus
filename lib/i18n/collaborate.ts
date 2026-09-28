@@ -103,6 +103,10 @@ export const collaborateCopy: Record<
     virtualClassEnroll: string;
     virtualClassEnrolling: string;
     virtualClassEnter: string;
+    virtualClassDelete: string;
+    virtualClassDeleting: string;
+    virtualClassDeleteConfirm: string;
+    virtualClassDeleteError: string;
     virtualClassNoSeats: string;
     virtualClassEmptyHint: string;
     studyRoomPresenceConnected: (count: number) => string;
@@ -342,10 +346,10 @@ export const collaborateCopy: Record<
     hubDescription:
       "Exposiciones con ensayo, investigaciones con fecha límite y aula virtual — conectado a tu calendario académico.",
     presentationsTitle: "Mis exposiciones",
-    presentationsHint: "Varios decks, guiones, ensayo con cronómetro y tutor IA.",
+    presentationsHint: "Varias presentaciones, guiones, ensayo con cronómetro y tutor IA.",
     presentationsCta: "Abrir exposiciones",
     researchTitle: "Mis investigaciones",
-    researchHint: "Trabajos y entregas ordenados por fecha — sync con calendario.",
+    researchHint: "Trabajos y entregas ordenados por fecha — sincronizados con el calendario.",
     researchCta: "Abrir investigaciones",
     classroomTitle: "Aula virtual",
     classroomHint: "Sesiones en vivo con tu grupo (según tu institución).",
@@ -359,10 +363,10 @@ export const collaborateCopy: Record<
       "Registra monografías, informes y entregas con fecha límite — sincronizadas con Mi calendario, filtros de urgencia y recordatorios de Colaboración.",
     classroomPageTitle: "Aula virtual",
     classroomPageDescription:
-      "Sesiones en vivo con vídeo, roster, salas breakout, grabación, transcripción, LMS y participación en tiempo real.",
+      "Sesiones en vivo con vídeo, lista de alumnos, salas en grupos, grabación, transcripción y participación en tiempo real.",
     presentationsPageTitle: "Mis exposiciones",
     presentationsPageDescription:
-      "Varios decks en la nube, equipo con código de convocatoria, guiones, teleprompter, ensayo con cámara, transcripción y tutor IA — enlazado al calendario y al aula virtual.",
+      "Varias presentaciones en la nube, equipo con código de convocatoria, guiones, teleprompter, ensayo con cámara, transcripción y tutor IA — enlazado al calendario y al aula virtual.",
     calendarCta: "Mi calendario",
     examsCta: "Mis exámenes",
     todayPanelTitle: "Colaboración esta semana",
@@ -419,7 +423,7 @@ export const collaborateCopy: Record<
       count === 1 ? "1 clase virtual en las próximas 24 h" : `${count} clases virtuales en las próximas 24 h`,
     roadmapTitle: "Próximamente en colaboración",
     roadmapHint:
-      "Moderación de chat en sala, roles de co-docente y exportación SCORM de materiales de clase.",
+      "Moderación de chat en sala, roles de co-docente y exportación de materiales de clase.",
     deadlineNotifyTitle: "Recordatorio de entregas",
     deadlineNotifyHint: "Aviso del navegador cuando una investigación o exposición vence hoy o mañana.",
     deadlineNotifyOn: "Activar recordatorio",
@@ -451,9 +455,13 @@ export const collaborateCopy: Record<
     virtualClassEnroll: "Inscribirme",
     virtualClassEnrolling: "Inscribiendo…",
     virtualClassEnter: "Entrar al aula",
+    virtualClassDelete: "Eliminar sesión",
+    virtualClassDeleting: "Eliminando…",
+    virtualClassDeleteConfirm: "¿Eliminar esta sesión? Quien esté inscrito dejará de verla.",
+    virtualClassDeleteError: "No se pudo eliminar. Solo quien creó la sesión puede borrarla.",
     virtualClassNoSeats: "Sin cupo",
     virtualClassEmptyHint:
-      "Explora sesiones con inscripción abierta o pide al docente que te agregue al roster.",
+      "Explora sesiones con inscripción abierta o pide al docente que te agregue a la lista.",
     studyRoomPresenceConnected: (count) =>
       count === 1 ? "1 persona conectada en la sala" : `${count} personas conectadas en la sala`,
     studyRoomPresenceAlone: "Estás solo en la sala — comparte el enlace para que se unan.",
@@ -644,17 +652,17 @@ export const collaborateCopy: Record<
     hubFeatureParticipationLive: "Participación live",
     classroomOnboardingTitle: "Tu aula virtual en Kampus",
     classroomOnboardingHint:
-      "Aquí publicas clases, los alumnos se inscriben y dentro de cada sesión tienes vídeo, breakout, roster y más.",
+      "Aquí publicas clases, los alumnos se inscriben y dentro de cada sesión tienes vídeo, salas en grupos y la lista de alumnos.",
     classroomFeatureVideo: "Vídeo embebido (YouTube/Vimeo)",
-    classroomFeatureRoster: "Roster e inscripción abierta",
-    classroomFeatureBreakout: "Salas breakout con vídeo",
+    classroomFeatureRoster: "Lista de alumnos e inscripción abierta",
+    classroomFeatureBreakout: "Salas en grupos con vídeo",
     classroomFeatureRecording: "Grabación y transcripción",
     classroomFeatureParticipation: "Participación en vivo",
-    classroomFeatureLms: "Enlace al LMS",
+    classroomFeatureLms: "Enlace a la plataforma de la institución",
     classroomTeacherSteps:
-      "1) Crea una sesión (o usa la demo) · 2) Comparte el enlace · 3) Entra y prueba vídeo, breakout y roster.",
+      "1) Crea una sesión (o usa la demo) · 2) Comparte el enlace · 3) Entra y prueba vídeo, salas en grupos y la lista de alumnos.",
     classroomStudentSteps:
-      "Inscríbete en una sesión con cupo libre y pulsa «Entrar al aula» para ver el vídeo, materiales y breakout.",
+      "Inscríbete en una sesión con cupo libre y pulsa «Entrar al aula» para ver el vídeo, los materiales y las salas en grupos.",
     classroomStudentEmptyHint:
       "Si no ves sesiones, pide a tu docente que publique una clase o que active la inscripción abierta.",
     classroomDemoCta: "Crear clase demo",

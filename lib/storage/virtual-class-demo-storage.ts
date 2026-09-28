@@ -77,6 +77,16 @@ export function saveDemoVcSession(
   return { ...row, isEnrolled: false };
 }
 
+export function removeDemoVcSession(sessionId: string, userId?: string | null): void {
+  writeJson(
+    SESSIONS_BASE,
+    loadDemoVcSessionRows(userId).filter((row) => row.id !== sessionId),
+    userId,
+  );
+  const enrolled = loadDemoVcEnrolledIds(userId).filter((id) => id !== sessionId);
+  writeJson(ENROLLED_BASE, enrolled, userId);
+}
+
 export function loadDemoVcEnrolledIds(userId?: string | null): string[] {
   const json = readJson(ENROLLED_BASE, userId);
   return Array.isArray(json) ? json.filter((v): v is string => typeof v === "string") : [];

@@ -170,8 +170,7 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle>Rol (demo)</CardTitle>
           <CardDescription>
-            Cambia las pantallas de esta computadora: “Hoy”, el menú y rutas como{" "}
-            <span className="font-mono text-slate-400">/teaching</span>. No da permiso para generar exámenes ni para ver datos de otras personas.
+            Cambia las pantallas de esta computadora: “Hoy”, el menú y rutas como <span className="font-mono text-slate-400">/teaching</span>. No da permiso para generar exámenes ni para ver datos de otras personas.
           </CardDescription>
         </CardHeader>
         <div className="flex flex-wrap gap-2">

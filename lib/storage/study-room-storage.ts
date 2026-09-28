@@ -34,12 +34,33 @@ export type StudyRoomState = {
 };
 
 export const defaultStudyRoomState: StudyRoomState = {
-  title: "Night session",
-  agenda: ["Review definitions", "20 flashcards", "1 practice exam set"],
-  sharedGoal: "Pass the Friday quiz without pulling an all-nighter.",
+  title: "Sesión de noche",
+  agenda: ["Repasar definiciones", "20 tarjetas", "1 set de práctica"],
+  sharedGoal: "Aprobar el quiz del viernes sin desvelarse.",
   notes: "",
   focusSeconds: 0,
 };
+
+/** Demo text from older builds. Shown in Spanish until the person edits the room. */
+const legacyEnglishDemo = {
+  title: "Night session",
+  agenda: ["Review definitions", "20 flashcards", "1 practice exam set"],
+  sharedGoalPrefix: "Pass the Friday quiz",
+};
+
+export function withSpanishDemo(state: StudyRoomState): StudyRoomState {
+  const agendaIsLegacy =
+    state.agenda.length === legacyEnglishDemo.agenda.length &&
+    state.agenda.every((item, index) => item === legacyEnglishDemo.agenda[index]);
+  return {
+    ...state,
+    title: state.title === legacyEnglishDemo.title ? defaultStudyRoomState.title : state.title,
+    sharedGoal: state.sharedGoal.startsWith(legacyEnglishDemo.sharedGoalPrefix)
+      ? defaultStudyRoomState.sharedGoal
+      : state.sharedGoal,
+    agenda: agendaIsLegacy ? defaultStudyRoomState.agenda : state.agenda,
+  };
+}
 
 export const STUDY_ROOM_CHANGED_EVENT = "kampus:study-room-changed";
 
@@ -60,7 +81,7 @@ export function loadStudyRoom(roomCode = "default", userId?: string | null): Stu
     if (!raw) return defaultStudyRoomState;
     const parsed = JSON.parse(raw) as StudyRoomState;
     if (!parsed || typeof parsed !== "object") return defaultStudyRoomState;
-    return { ...defaultStudyRoomState, ...parsed };
+    return withSpanishDemo({ ...defaultStudyRoomState, ...parsed });
   } catch {
     return defaultStudyRoomState;
   }

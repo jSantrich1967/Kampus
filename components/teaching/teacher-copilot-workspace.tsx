@@ -128,7 +128,7 @@ export function TeacherCopilotWorkspace() {
         <Card>
           <CardHeader>
             <CardTitle>Respuesta del alumno (demo)</CardTitle>
-            <CardDescription>Pega texto real cuando conectes LMS.</CardDescription>
+            <CardDescription>Pega un texto real cuando conectes la plataforma de tu institución.</CardDescription>
           </CardHeader>
           <textarea
             className="mx-5 mb-5 min-h-32 w-[calc(100%-2.5rem)] rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm"

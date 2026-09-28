@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { todayCopy } from "@/lib/i18n/today";
 import { cn } from "@/lib/cn";
@@ -128,16 +128,12 @@ export function TodayMomentumPanel({ plan, missionTick = 0 }: TodayMomentumPanel
 
         {message.ctaLabel && message.ctaHref ? (
           message.ctaHref.startsWith("#") ? (
-            <a href={message.ctaHref}>
-              <Button size="sm" variant="secondary">
-                {message.ctaLabel}
-              </Button>
+            <a href={message.ctaHref} className={buttonClasses({ size: "sm", variant: "secondary" })}>
+              {message.ctaLabel}
             </a>
           ) : (
-            <Link href={message.ctaHref}>
-              <Button size="sm" variant="secondary">
-                {message.ctaLabel}
-              </Button>
+            <Link href={message.ctaHref} className={buttonClasses({ size: "sm", variant: "secondary" })}>
+              {message.ctaLabel}
             </Link>
           )
         ) : null}

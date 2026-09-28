@@ -81,9 +81,7 @@ export function OnboardingFlow() {
       return anchorCanContinue(role, { displayName, university, major, semester });
     }
     if (step === 2) return subjects.length > 0;
-    if (step === 3) {
-      return exams.every((e) => (e.subject.trim() === "" && e.date === "") || (e.subject.trim() && e.date));
-    }
+    if (step === 3) return true;
     if (step === WEAK_TOPICS_STEP) {
       if (skipsStudentCentricSteps(role)) return true;
       return weakTopics.length > 0;
@@ -102,7 +100,6 @@ export function OnboardingFlow() {
     major,
     semester,
     subjects.length,
-    exams,
     weakTopics.length,
     weeklyAvailabilityHours,
     missedClassesApprox,
@@ -533,15 +530,10 @@ export function OnboardingFlow() {
               <CardHeader>
                 <CardTitle>Preferencias y meta</CardTitle>
                 <CardDescription>
-                  Esto define idioma, comunidad y el tono de tus recomendaciones.
+                  Kampus está en español. Aquí eliges la comunidad y la meta que marca el tono.
                 </CardDescription>
               </CardHeader>
               <div className="space-y-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm text-slate-300">{t.fields.language}</span>
-                  <div className="text-sm text-slate-300">ES</div>
-                </div>
-
                 <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm">
                   <span className="text-slate-200">{t.fields.community}</span>
                   <input
@@ -605,6 +597,25 @@ export function OnboardingFlow() {
                   <div className="text-xs uppercase tracking-wide text-slate-400">{t.fields.goals}</div>
                   <div className="mt-2 text-slate-100">{learningGoals}</div>
                 </div>
+                {role === "student" || role === "learner" ? (
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm md:col-span-2">
+                    <div className="text-xs uppercase tracking-wide text-slate-400">{t.fields.weakTopics}</div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {weakTopics.length > 0 ? (
+                        weakTopics.map((topic) => (
+                          <Badge key={topic} tone="accent">
+                            {topic}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-slate-400">Ninguno</span>
+                      )}
+                    </div>
+                    <p className="mt-3 text-slate-300">
+                      {missedClassesApprox} clases perdidas · {weeklyAvailabilityHours} h por semana
+                    </p>
+                  </div>
+                ) : null}
               </div>
             </>
           ) : null}

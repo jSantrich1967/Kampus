@@ -496,10 +496,11 @@ export const wellbeingCopy: Record<
     fhirExportError: "No se pudo generar el JSON FHIR.",
     fhirExportPrivacyHint: "Por defecto solo ánimo y energía como Observation — no sube a la nube.",
     institutionIntegrationTitle: "Integración institucional",
-    institutionIntegrationHint: "Exporta pulse semanal o conecta webhook IT para eventos wellbeing.counselor_alert.",
-    institutionIntegrationWebhookTitle: "Webhook (servidor Kampus)",
+    institutionIntegrationHint:
+      "Descarga el pulso de la semana, o pide a tu equipo técnico un aviso cuando un estudiante pida ayuda.",
+    institutionIntegrationWebhookTitle: "Aviso para el equipo técnico",
     institutionIntegrationWebhookHint:
-      "Configura WELLBEING_INSTITUTION_WEBHOOK_URL en el despliegue. Recibirás JSON cuando un estudiante opt-in envíe alerta.",
+      "Kampus puede avisar a tu institución cuando un estudiante acepta compartir que necesita ayuda. Eso se configura al publicar la app.",
     institutionIntegrationCsvCta: "Descargar pulse semanal (CSV)",
     institutionIntegrationCsvOk: "CSV descargado en este dispositivo.",
     institutionIntegrationCsvEmpty: "No hay semanas con datos para exportar.",

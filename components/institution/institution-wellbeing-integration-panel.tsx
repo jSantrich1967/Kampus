@@ -58,7 +58,6 @@ export function InstitutionWellbeingIntegrationPanel() {
         <div className="rounded-xl border border-white/10 bg-slate-950/50 p-4 text-xs text-slate-400">
           <p className="font-medium text-slate-300">{t.institutionIntegrationWebhookTitle}</p>
           <p className="mt-2">{t.institutionIntegrationWebhookHint}</p>
-          <code className="mt-2 block break-all text-teal-200/90">wellbeing.counselor_alert</code>
         </div>
         <Button type="button" size="sm" variant="secondary" disabled={busy || !authUserId} onClick={() => void exportCsv()} className="gap-1.5">
           <Download className="h-3.5 w-3.5" aria-hidden />

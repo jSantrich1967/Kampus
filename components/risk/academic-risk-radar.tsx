@@ -28,6 +28,12 @@ function tone(risk: "low" | "medium" | "high") {
   return "success" as const;
 }
 
+function riskLabel(risk: "low" | "medium" | "high", labels: { high: string; medium: string; low: string }) {
+  if (risk === "high") return labels.high;
+  if (risk === "medium") return labels.medium;
+  return labels.low;
+}
+
 export function AcademicRiskRadar() {
   const { profile, authUserId } = useKampus();
   const t = radarCopy.es;
@@ -91,7 +97,9 @@ export function AcademicRiskRadar() {
               <CardHeader>
                 <div className="flex items-center justify-between gap-2">
                   <CardTitle>{r.subject}</CardTitle>
-                  <Badge tone={tone(r.risk)}>{r.risk}</Badge>
+                  <Badge tone={tone(r.risk)}>
+                    {riskLabel(r.risk, { high: t.riskHigh, medium: t.riskMedium, low: t.riskLow })}
+                  </Badge>
                 </div>
                 <CardDescription>{r.nextAction}</CardDescription>
               </CardHeader>

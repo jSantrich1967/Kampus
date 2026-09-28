@@ -4,7 +4,7 @@ import { AlertTriangle, BookOpen, CalendarDays, Clock, MapPin, Upload } from "lu
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTodayContext } from "@/components/today/use-today-context";
 import { todayCopy } from "@/lib/i18n/today";
@@ -47,10 +47,8 @@ export function TodayContextPanel({ prioritySubjects = [] }: TodayContextPanelPr
           ) : showEmptySchedule ? (
             <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-4">
               <p className="text-sm text-slate-300">{t.noClassSchedule}</p>
-              <Link href="/exams/calendar" className="mt-3 inline-block">
-                <Button size="sm" variant="secondary">
-                  {t.addClassScheduleCta}
-                </Button>
+              <Link href="/exams/calendar" className={buttonClasses({ size: "sm", variant: "secondary", className: "mt-3" })}>
+                {t.addClassScheduleCta}
               </Link>
             </div>
           ) : (
@@ -74,10 +72,8 @@ export function TodayContextPanel({ prioritySubjects = [] }: TodayContextPanelPr
           ) : (
             <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-4">
               <p className="text-sm text-emerald-100">{t.materialAllGood}</p>
-              <Link href="/study/library" className="mt-3 inline-block">
-                <Button size="sm" variant="ghost">
-                  {t.openNotebooksCta}
-                </Button>
+              <Link href="/study/library" className={buttonClasses({ size: "sm", variant: "ghost", className: "mt-3" })}>
+                {t.openNotebooksCta}
               </Link>
             </div>
           )}
@@ -125,24 +121,18 @@ function TodayClassRow({ slot, t }: { slot: TodayClassSlot; t: (typeof todayCopy
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         {slot.hasNotesForToday ? (
-          <Link href={slot.reviewHref}>
-            <Button size="sm" variant="secondary" className="gap-1.5">
-              <BookOpen className="h-3.5 w-3.5" aria-hidden />
-              {t.reviewClassNotesCta}
-            </Button>
+          <Link href={slot.reviewHref} className={buttonClasses({ size: "sm", variant: "secondary", className: "gap-1.5" })}>
+            <BookOpen className="h-3.5 w-3.5" aria-hidden />
+            {t.reviewClassNotesCta}
           </Link>
         ) : (
-          <Link href={slot.uploadHref}>
-            <Button size="sm" variant="secondary" className="gap-1.5">
-              <Upload className="h-3.5 w-3.5" aria-hidden />
-              {slot.status === "past" ? t.uploadAfterClassCta : t.prepareNotebookCta}
-            </Button>
+          <Link href={slot.uploadHref} className={buttonClasses({ size: "sm", variant: "secondary", className: "gap-1.5" })}>
+            <Upload className="h-3.5 w-3.5" aria-hidden />
+            {slot.status === "past" ? t.uploadAfterClassCta : t.prepareNotebookCta}
           </Link>
         )}
-        <Link href="/exams/calendar">
-          <Button size="sm" variant="ghost">
-            {t.openCalendarCta}
-          </Button>
+        <Link href="/exams/calendar" className={buttonClasses({ size: "sm", variant: "ghost" })}>
+          {t.openCalendarCta}
         </Link>
       </div>
     </div>
@@ -161,14 +151,12 @@ function MaterialAlertRow({ alert }: { alert: NotebookHealthAlert }) {
     <div className={cn("rounded-xl border px-4 py-3", toneClass)}>
       <p className="text-sm font-medium text-white">{alert.title}</p>
       <p className="mt-1 text-xs text-slate-300">{alert.description}</p>
-      <Link href={alert.href} className="mt-2 inline-block">
-        <Button size="sm" variant="ghost">
-          {alert.kind === "empty"
-            ? "Subir apuntes"
-            : alert.kind === "unlinked"
-              ? "Ir al calendario"
-              : "Preparar material"}
-        </Button>
+      <Link href={alert.href} className={buttonClasses({ size: "sm", variant: "ghost", className: "mt-2" })}>
+        {alert.kind === "empty"
+          ? "Subir apuntes"
+          : alert.kind === "unlinked"
+            ? "Ir al calendario"
+            : "Preparar material"}
       </Link>
     </div>
   );

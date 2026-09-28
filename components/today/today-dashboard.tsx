@@ -8,7 +8,7 @@ import { ShareLinkButton } from "@/components/growth/share-link-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonClasses } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { todayCopy } from "@/lib/i18n/today";
@@ -84,19 +84,18 @@ function StudentDeadlinesCard({ deadlines }: { deadlines: DeadlineItem[] }) {
             {profile.interestedInCommunity !== false && deadlines[0] && (deadlines[0].days ?? 99) <= 7 ? (
               <div className="rounded-2xl border border-indigo-400/25 bg-indigo-500/10 px-4 py-3">
                 <p className="text-sm text-slate-200">{t.communityDeadlineHint}</p>
-                <Link href={buildCommunityExamHref(deadlines[0].subject, deadlines[0].date)} className="mt-2 inline-block">
-                  <Button size="sm" variant="secondary">
-                    {t.communityDeadlineCta(deadlines[0].subject)}
-                  </Button>
+                <Link
+                  href={buildCommunityExamHref(deadlines[0].subject, deadlines[0].date)}
+                  className={buttonClasses({ size: "sm", variant: "secondary", className: "mt-2" })}
+                >
+                  {t.communityDeadlineCta(deadlines[0].subject)}
                 </Link>
               </div>
             ) : null}
           </>
         ) : (
-          <Link href="/exams/calendar">
-            <Button variant="secondary" size="sm">
-              {t.addDeadlinesCta}
-            </Button>
+          <Link href="/exams/calendar" className={buttonClasses({ variant: "secondary", size: "sm" })}>
+            {t.addDeadlinesCta}
           </Link>
         )}
       </div>
@@ -121,10 +120,8 @@ function StudentRiskCard({ risks }: { risks: { subject: string; risk: "low" | "m
             </div>
           </div>
         ))}
-        <Link href="/risk">
-          <Button variant="ghost" size="sm" className="w-full">
-            Ver radar completo
-          </Button>
+        <Link href="/risk" className={buttonClasses({ variant: "ghost", size: "sm", className: "w-full" })}>
+          Ver radar completo
         </Link>
       </div>
     </Card>
@@ -311,15 +308,12 @@ export function TodayDashboard() {
                       pressureQuizBlock?.subject ?? profile.subjects[0] ?? "General",
                       pressureQuizBlock?.minutes,
                     )}
+                    className={buttonClasses({ size: "sm", variant: "secondary" })}
                   >
-                    <Button size="sm" variant="secondary">
-                      {t.quickQuiz}
-                    </Button>
+                    {t.quickQuiz}
                   </Link>
-                  <Link href="/risk">
-                    <Button size="sm" variant="ghost">
-                      {t.radar}
-                    </Button>
+                  <Link href="/risk" className={buttonClasses({ size: "sm", variant: "ghost" })}>
+                    {t.radar}
                   </Link>
                 </div>
               </div>
@@ -409,10 +403,11 @@ export function TodayDashboard() {
                 <CardDescription>{isTeacher ? t.teacherContinueBody : t.continueBody}</CardDescription>
               </CardHeader>
               <div className="px-6 pb-6">
-                <Link href={isTeacher ? "/collaborate/exposiciones" : "/study/library"}>
-                  <Button variant="secondary" className="w-full">
-                    {isTeacher ? t.teacherContinueCta : "Ir a mis cuadernos"}
-                  </Button>
+                <Link
+                  href={isTeacher ? "/collaborate/exposiciones" : "/study/library"}
+                  className={buttonClasses({ variant: "secondary", className: "w-full" })}
+                >
+                  {isTeacher ? t.teacherContinueCta : "Ir a mis cuadernos"}
                 </Link>
               </div>
             </Card>
@@ -447,13 +442,11 @@ export function TodayDashboard() {
             <CardDescription>{t.institutionBody}</CardDescription>
           </CardHeader>
           <div className="flex flex-wrap gap-2 px-6 pb-6">
-            <Link href="/institution">
-              <Button size="sm">Ver panel</Button>
+            <Link href="/institution" className={buttonClasses({ size: "sm" })}>
+              Ver panel
             </Link>
-            <Link href="/risk">
-              <Button size="sm" variant="secondary">
-                {t.radar}
-              </Button>
+            <Link href="/risk" className={buttonClasses({ size: "sm", variant: "secondary" })}>
+              {t.radar}
             </Link>
           </div>
         </Card>

@@ -8,7 +8,7 @@ import { usePendingStudentWorksCount } from "@/hooks/use-pending-student-works-c
 import { useUpcomingPresentationsCount } from "@/hooks/use-upcoming-presentations-count";
 import { useUpcomingVirtualSessions } from "@/hooks/use-upcoming-virtual-sessions";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { collaborateCopy } from "@/lib/i18n/collaborate";
 
@@ -65,8 +65,8 @@ export function TodayCollaboratePanel() {
                   </div>
                 </div>
               </div>
-              <Link href={next.href}>
-                <Button size="sm">{t.nextFocusCta}</Button>
+              <Link href={next.href} className={buttonClasses({ size: "sm" })}>
+                {t.nextFocusCta}
               </Link>
             </div>
           </div>
@@ -87,10 +87,8 @@ export function TodayCollaboratePanel() {
                   </div>
                 </div>
               </div>
-              <Link href={virtualSession.href}>
-                <Button size="sm" variant="secondary">
-                  {t.todayVirtualSessionCta}
-                </Button>
+              <Link href={virtualSession.href} className={buttonClasses({ size: "sm", variant: "secondary" })}>
+                {t.todayVirtualSessionCta}
               </Link>
             </div>
           </div>
@@ -114,21 +112,17 @@ export function TodayCollaboratePanel() {
             </ul>
 
             <div className="flex flex-wrap gap-2">
-              <Link href="/collaborate">
-                <Button size="sm">{t.todayOpenHubCta}</Button>
+              <Link href="/collaborate" className={buttonClasses({ size: "sm" })}>
+                {t.todayOpenHubCta}
               </Link>
               {pendingWorks > 0 ? (
-                <Link href="/collaborate/investigaciones">
-                  <Button size="sm" variant="secondary">
-                    {t.todayWorksCta}
-                  </Button>
+                <Link href="/collaborate/investigaciones" className={buttonClasses({ size: "sm", variant: "secondary" })}>
+                  {t.todayWorksCta}
                 </Link>
               ) : null}
               {upcomingPresentations > 0 ? (
-                <Link href="/collaborate/exposiciones">
-                  <Button size="sm" variant="ghost">
-                    {t.todayPresentationsCta}
-                  </Button>
+                <Link href="/collaborate/exposiciones" className={buttonClasses({ size: "sm", variant: "ghost" })}>
+                  {t.todayPresentationsCta}
                 </Link>
               ) : null}
             </div>
