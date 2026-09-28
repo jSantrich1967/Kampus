@@ -28,16 +28,14 @@ const DIFFICULTY_LABELS: Record<string, string> = {
   dificil: "difícil (evaluar y crear, problemas no triviales)",
 };
 
-async function callerIsTeacher(): Promise<boolean> {
+async function callerMayGenerateExam(): Promise<boolean> {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return false;
-  const { data } = await supabase.from("profiles").select("body").eq("id", user.id).maybeSingle();
-  const body = data?.body;
-  if (!body || typeof body !== "object") return false;
-  return (body as { role?: unknown }).role === "teacher";
+  const { data, error } = await supabase.rpc("may_generate_teaching_exam");
+  return !error && data === true;
 }
 
 export async function POST(req: Request) {
@@ -68,10 +66,10 @@ export async function POST(req: Request) {
     );
   }
 
-  const teacher = await callerIsTeacher();
-  if (!teacher) {
+  const allowed = await callerMayGenerateExam();
+  if (!allowed) {
     return NextResponse.json(
-      { error: "Solo una cuenta docente puede generar este examen." },
+      { error: "Esta cuenta no tiene permiso para generar exámenes." },
       { status: 403 },
     );
   }

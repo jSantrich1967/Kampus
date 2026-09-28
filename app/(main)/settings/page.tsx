@@ -15,6 +15,7 @@ import { onboardingCopy } from "@/lib/i18n/onboarding";
 import type { UserRole } from "@/lib/schemas/profile";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured, shouldShowAuthBypassWarning } from "@/lib/supabase/env";
+import { saveScreenRole } from "@/lib/storage/screen-role-storage";
 import {
   clearAuthBypassBannerDismissed,
   loadAuthBypassBannerDismissed,
@@ -166,8 +167,8 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle>Rol (demo)</CardTitle>
           <CardDescription>
-            Prueba la app como docente u otros perfiles sin repetir el onboarding. Afecta “Hoy”, el menú y rutas como{" "}
-            <span className="font-mono text-slate-400">/teaching</span>. No abre las clases ni el pulso de otras personas.
+            Cambia las pantallas de esta computadora: “Hoy”, el menú y rutas como{" "}
+            <span className="font-mono text-slate-400">/teaching</span>. No da permiso para generar exámenes ni para ver datos de otras personas.
           </CardDescription>
         </CardHeader>
         <div className="flex flex-wrap gap-2">
@@ -177,7 +178,10 @@ export default function SettingsPage() {
               type="button"
               size="sm"
               variant={profile.role === value ? "secondary" : "ghost"}
-              onClick={() => setProfile({ ...profile, role: value })}
+              onClick={() => {
+                saveScreenRole(value, authUserId);
+                setProfile({ ...profile, role: value });
+              }}
             >
               {label}
             </Button>

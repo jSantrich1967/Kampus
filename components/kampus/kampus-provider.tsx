@@ -12,13 +12,14 @@ import {
 } from "react";
 
 import type { Locale } from "@/lib/i18n/nav";
-import { defaultProfile, type UserProfile } from "@/lib/schemas/profile";
+import { defaultProfile, type UserProfile, type UserRole } from "@/lib/schemas/profile";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   fetchProfileForUser,
   isMeaningfulProfile,
   resolveProfileMerge,
+  profileWithAccountRole,
   upsertProfileForUser,
 } from "@/lib/supabase/profile-sync";
 import {
@@ -37,6 +38,7 @@ import {
   discardLegacyPresentationStorage,
   setPresentationStorageOwner,
 } from "@/lib/storage/presentation-storage";
+import { applyScreenRole, loadScreenRole, setScreenRoleOwner } from "@/lib/storage/screen-role-storage";
 import { clearStudyPlan, discardLegacyStudyPlan, setStudyPlanOwner } from "@/lib/storage/study-plan-storage";
 import {
   clearCounselorAlertStorage,
@@ -97,6 +99,7 @@ export function KampusProvider({ children }: { children: ReactNode }) {
   const lastPushedJson = useRef<string>("");
   const authUserIdRef = useRef<string | null>(null);
   const profileOwnerRef = useRef<string | null>(authUserId);
+  const accountRoleRef = useRef<UserRole | null>(null);
   setDiaryStorageOwner(authUserId);
   setProfileStorageOwner(authUserId);
   setClassScheduleOwner(authUserId);
@@ -107,6 +110,7 @@ export function KampusProvider({ children }: { children: ReactNode }) {
   setStudyRoomOwner(authUserId);
   setCounselorAlertOwner(authUserId);
   setInstitutionOptInOwner(authUserId);
+  setScreenRoleOwner(authUserId);
 
   useEffect(() => {
     discardLegacyPsychologistChat();
@@ -166,12 +170,16 @@ export function KampusProvider({ children }: { children: ReactNode }) {
         const remote = remoteRaw ?? defaultProfile;
         const remoteMeaningful = isMeaningfulProfile(remote);
         const merged = resolveProfileMerge(local, remote);
-        lastPushedJson.current = JSON.stringify(merged);
+        const accountRole = remoteRaw ? remote.role : merged.role;
+        accountRoleRef.current = accountRole;
+        const cloud = profileWithAccountRole(merged, accountRole);
+        const display = applyScreenRole(cloud, userId);
+        lastPushedJson.current = JSON.stringify(cloud);
         if (cancelled) return;
-        setProfileState(merged);
-        saveProfile(merged, userId);
-        if (!remoteMeaningful && isMeaningfulProfile(local)) {
-          await upsertProfileForUser(supabase, userId, merged);
+        setProfileState(display);
+        saveProfile(cloud, userId);
+        if (!remoteMeaningful && isMeaningfulProfile(cloud)) {
+          await upsertProfileForUser(supabase, userId, cloud);
         }
       } catch (e) {
         console.error(e);
@@ -239,6 +247,7 @@ export function KampusProvider({ children }: { children: ReactNode }) {
         clearInstitutionOptIn(null);
         discardLegacyInstitutionOptIn();
         setInstitutionOptInOwner(null);
+        accountRoleRef.current = null;
       }
       authUserIdRef.current = nextId;
       schedule(nextId);
@@ -262,16 +271,21 @@ export function KampusProvider({ children }: { children: ReactNode }) {
       profileOwnerRef.current = authUserId;
       return;
     }
-    saveProfile(profile, authUserId);
+    saveProfile(
+      accountRoleRef.current ? profileWithAccountRole(profile, accountRoleRef.current) : profile,
+      authUserId,
+    );
   }, [hydrated, profile, authUserId]);
 
   useEffect(() => {
     if (!hydrated || !authUserId || !isSupabaseConfigured()) return;
-    const json = JSON.stringify(profile);
+    if (loadScreenRole(authUserId) && !accountRoleRef.current) return;
+    const cloud = accountRoleRef.current ? profileWithAccountRole(profile, accountRoleRef.current) : profile;
+    const json = JSON.stringify(cloud);
     if (json === lastPushedJson.current) return;
     const tm = setTimeout(() => {
       const supabase = createSupabaseBrowserClient();
-      void upsertProfileForUser(supabase, authUserId, profile)
+      void upsertProfileForUser(supabase, authUserId, cloud)
         .then(() => {
           lastPushedJson.current = json;
         })

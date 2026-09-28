@@ -30,6 +30,12 @@ export function resolveProfileMerge(local: UserProfile, remote: UserProfile): Us
   return remote;
 }
 
+/** The role stored in the account. A local screen choice must not replace it. */
+export function profileWithAccountRole(profile: UserProfile, accountRole: UserProfile["role"]): UserProfile {
+  if (profile.role === accountRole) return profile;
+  return { ...profile, role: accountRole };
+}
+
 export function profileToJsonBody(profile: UserProfile): Record<string, unknown> {
   return JSON.parse(JSON.stringify(profile)) as Record<string, unknown>;
 }
