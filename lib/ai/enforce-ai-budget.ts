@@ -1,5 +1,12 @@
-import { aiBudgetDecision, aiBudgetExceededResponse, type UsageTotals } from "@/lib/ai/ai-budget";
-import { readStoredContext, type ContextMembership } from "@/lib/context/active-context";
+import {
+  aiBudgetDecision,
+  aiBudgetExceededResponse,
+  aiBudgetUnavailableResponse,
+  type PlanLimits,
+  type UsageTotals,
+} from "@/lib/ai/ai-budget";
+import { licenseCoversMember, type LicenseStatus } from "@/lib/ai/organization-license";
+import { readStoredContext, type ActiveContext, type ContextMembership } from "@/lib/context/active-context";
 import { resolveUserEntitlements, type PlanSnapshot } from "@/lib/context/entitlements";
 import { listMyOrganizations } from "@/lib/supabase/organizations-db";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -20,16 +27,18 @@ type TotalsRow = {
   monthly_tokens: number;
 };
 
-/** Returns a 429 response when the signed-in user is over the database plan. Missing tables do not block. */
+/**
+ * Returns a response when the signed-in user cannot call the model.
+ * A lookup error blocks the call. It does not turn the cap off.
+ */
 export async function aiBudgetBlockResponse(): Promise<Response | null> {
   const admin = createSupabaseAdminClient();
-  if (!admin) return null;
+  if (!admin) return aiBudgetUnavailableResponse();
 
-  let userId: string | null = null;
   try {
     const supabase = await createSupabaseServerClient();
     const { data } = await supabase.auth.getUser();
-    userId = data.user?.id ?? null;
+    const userId = data.user?.id ?? null;
     if (!userId) {
       return aiBudgetExceededResponse("Inicia sesión para usar la IA.");
     }
@@ -41,22 +50,27 @@ export async function aiBudgetBlockResponse(): Promise<Response | null> {
       p_day_start: dayStart,
       p_month_start: monthStart,
     });
-    if (totalsError) return null;
+    if (totalsError) return aiBudgetUnavailableResponse();
 
     const personalPlan = await loadPersonalPlan(admin, userId);
+    if (!personalPlan.ok) return aiBudgetUnavailableResponse();
+
     const context = await loadAcceptedContext(supabase, userId);
+    const organizationLicense = await loadOrganizationLicense(admin, userId, context, now);
+    if (!organizationLicense.ok) return aiBudgetUnavailableResponse();
+
     const entitlements = resolveUserEntitlements({
       context,
-      personalPlan,
-      organizationLicense: null,
+      personalPlan: personalPlan.value,
+      organizationLicense: organizationLicense.value,
     });
-    if (!entitlements) return null;
+    if (!entitlements) return aiBudgetUnavailableResponse();
 
     const decision = aiBudgetDecision(readTotals(totals), entitlements.limits);
     if (decision.ok) return null;
     return aiBudgetExceededResponse(decision.message);
   } catch {
-    return null;
+    return aiBudgetUnavailableResponse();
   }
 }
 
@@ -76,33 +90,93 @@ async function loadAcceptedContext(supabase: SupabaseClient, userId: string) {
 async function loadPersonalPlan(
   admin: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
   userId: string,
-): Promise<PlanSnapshot | null> {
+): Promise<{ ok: true; value: PlanSnapshot } | { ok: false }> {
   const { data: assignment, error: assignmentError } = await admin
     .from("user_plans")
     .select("plan_id")
     .eq("user_id", userId)
     .maybeSingle();
-  if (assignmentError) return null;
+  if (assignmentError) return { ok: false };
 
   const planId = typeof assignment?.plan_id === "string" ? assignment.plan_id : "free";
+  const limits = await loadPlanLimits(admin, planId);
+  if (!limits.ok || !limits.value) return { ok: false };
+  return { ok: true, value: { planId, limits: limits.value } };
+}
+
+async function loadOrganizationLicense(
+  admin: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+  userId: string,
+  context: ActiveContext,
+  now: Date,
+): Promise<{ ok: true; value: PlanSnapshot | null } | { ok: false }> {
+  if (context.kind !== "organization") return { ok: true, value: null };
+
+  const { data: seat, error: seatError } = await admin
+    .from("organization_license_seats")
+    .select("license_id, status")
+    .eq("organization_id", context.organizationId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (seatError) return { ok: false };
+  if (seat?.status !== "active" || typeof seat.license_id !== "string") {
+    return { ok: true, value: null };
+  }
+
+  const { data: license, error: licenseError } = await admin
+    .from("organization_licenses")
+    .select("plan_id, status, starts_at, ends_at")
+    .eq("id", seat.license_id)
+    .eq("organization_id", context.organizationId)
+    .maybeSingle();
+  if (licenseError) return { ok: false };
+
+  const status = licenseStatus(license?.status);
+  const planId = typeof license?.plan_id === "string" ? license.plan_id : null;
+  const covers = licenseCoversMember({
+    license:
+      status && typeof license?.starts_at === "string"
+        ? { status, startsAt: license.starts_at, endsAt: typeof license.ends_at === "string" ? license.ends_at : null }
+        : null,
+    seatActive: true,
+    now,
+  });
+  if (!covers || !planId) return { ok: true, value: null };
+
+  const limits = await loadPlanLimits(admin, planId);
+  if (!limits.ok) return { ok: false };
+  if (!limits.value) return { ok: true, value: null };
+  return { ok: true, value: { planId, limits: limits.value } };
+}
+
+async function loadPlanLimits(
+  admin: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+  planId: string,
+): Promise<{ ok: true; value: PlanLimits | null } | { ok: false }> {
   const { data: plan, error: planError } = await admin
     .from("plans")
     .select("daily_ai_requests, monthly_ai_requests, daily_token_limit, monthly_token_limit")
     .eq("id", planId)
     .eq("active", true)
     .maybeSingle();
-  if (planError || !plan) return null;
+  if (planError) return { ok: false };
+  if (!plan) return { ok: true, value: null };
 
   const row = plan as PlanRow;
   return {
-    planId,
-    limits: {
+    ok: true,
+    value: {
       dailyAiRequests: row.daily_ai_requests,
       monthlyAiRequests: row.monthly_ai_requests,
       dailyTokenLimit: row.daily_token_limit,
       monthlyTokenLimit: row.monthly_token_limit,
     },
   };
+}
+
+function licenseStatus(value: unknown): LicenseStatus | null {
+  if (value === "active" || value === "expired" || value === "suspended") return value;
+  return null;
 }
 
 function readTotals(data: unknown): UsageTotals {

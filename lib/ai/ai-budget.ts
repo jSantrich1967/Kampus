@@ -33,18 +33,31 @@ export function aiBudgetDecision(
 
 export const AI_BUDGET_HEADER = "x-kampus-ai-budget";
 
+export const AI_BUDGET_UNAVAILABLE_MESSAGE =
+  "No pudimos comprobar tu cupo de IA. Inténtalo de nuevo en un momento.";
+
 export function aiBudgetExceededResponse(message: string): Response {
+  return budgetResponse(message, 429, "exceeded");
+}
+
+/** Keeps the cap on when the plan or usage cannot be read. The call does not reach OpenAI. */
+export function aiBudgetUnavailableResponse(): Response {
+  return budgetResponse(AI_BUDGET_UNAVAILABLE_MESSAGE, 503, "unavailable");
+}
+
+function budgetResponse(message: string, status: number, mark: "exceeded" | "unavailable"): Response {
   return new Response(JSON.stringify({ error: { message } }), {
-    status: 429,
+    status,
     headers: {
       "content-type": "application/json",
-      [AI_BUDGET_HEADER]: "exceeded",
+      [AI_BUDGET_HEADER]: mark,
     },
   });
 }
 
 export function isAiBudgetResponse(response: Response): boolean {
-  return response.headers.get(AI_BUDGET_HEADER) === "exceeded";
+  const mark = response.headers.get(AI_BUDGET_HEADER);
+  return mark === "exceeded" || mark === "unavailable";
 }
 
 export async function planLimitMessage(response: Response): Promise<string | null> {

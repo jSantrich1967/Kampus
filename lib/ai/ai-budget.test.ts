@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { aiBudgetDecision, isAiBudgetResponse, aiBudgetExceededResponse } from "@/lib/ai/ai-budget";
+import {
+  aiBudgetDecision,
+  aiBudgetExceededResponse,
+  aiBudgetUnavailableResponse,
+  isAiBudgetResponse,
+} from "@/lib/ai/ai-budget";
 
 const limits = {
   dailyAiRequests: 2,
@@ -42,6 +47,12 @@ describe("ai budget response", () => {
   it("marks a Kampus limit so it is not confused with an OpenAI billing error", () => {
     const response = aiBudgetExceededResponse("límite");
     expect(response.status).toBe(429);
+    expect(isAiBudgetResponse(response)).toBe(true);
+  });
+
+  it("keeps the cap on when the budget cannot be read", () => {
+    const response = aiBudgetUnavailableResponse();
+    expect(response.status).toBe(503);
     expect(isAiBudgetResponse(response)).toBe(true);
   });
 });
