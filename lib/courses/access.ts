@@ -59,3 +59,9 @@ export function joinCourseDecision(input: {
   if (input.enrollmentStatus === "active") return "already";
   return "join";
 }
+
+/** The name saved on the seat. An empty profile becomes Estudiante. */
+export function enrollmentDisplayName(value: string | null | undefined): string {
+  const trimmed = value?.trim() ?? "";
+  return trimmed.length > 0 ? trimmed.slice(0, 80) : "Estudiante";
+}

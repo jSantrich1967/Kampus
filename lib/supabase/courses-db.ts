@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { canAttachCourseToOrganization, normalizeCourseCode } from "@/lib/courses/access";
+import { canAttachCourseToOrganization, enrollmentDisplayName, normalizeCourseCode } from "@/lib/courses/access";
 import { listMyOrganizations } from "@/lib/supabase/organizations-db";
 
 export type TaughtCourse = {
@@ -160,4 +160,53 @@ export async function joinCourseByCode(
     status: row?.already ? "already" : "joined",
     name: row?.course_name ?? "",
   };
+}
+
+export type CourseSeat = {
+  courseId: string;
+  userId: string;
+  displayName: string;
+  status: "active" | "suspended";
+};
+
+type SeatRow = {
+  course_id: string;
+  user_id: string;
+  display_name: string | null;
+  status: string;
+};
+
+/** Names on the courses this account teaches. Students do not see one another. */
+export async function listCourseSeats(client: SupabaseClient, courseIds: string[]): Promise<CourseSeat[]> {
+  if (courseIds.length === 0) return [];
+  const { data, error } = await client
+    .from("course_enrollments")
+    .select("course_id, user_id, display_name, status")
+    .in("course_id", courseIds);
+
+  if (error) {
+    if (missingCoursesTable(error)) return [];
+    throw error;
+  }
+
+  return ((data ?? []) as SeatRow[]).map((row) => ({
+    courseId: String(row.course_id),
+    userId: String(row.user_id),
+    displayName: enrollmentDisplayName(row.display_name),
+    status: row.status === "suspended" ? "suspended" : "active",
+  }));
+}
+
+export async function setCourseSeatStatus(
+  client: SupabaseClient,
+  courseId: string,
+  userId: string,
+  status: "active" | "suspended",
+): Promise<void> {
+  const { error } = await client
+    .from("course_enrollments")
+    .update({ status })
+    .eq("course_id", courseId)
+    .eq("user_id", userId);
+  if (error) throw error;
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { canAttachCourseToOrganization, courseVisibleTo, joinCourseDecision, normalizeCourseCode } from "@/lib/courses/access";
+import { canAttachCourseToOrganization, courseVisibleTo, enrollmentDisplayName, joinCourseDecision, normalizeCourseCode } from "@/lib/courses/access";
 
 describe("courseVisibleTo", () => {
   it("lets the teacher see an archived course", () => {
@@ -150,5 +150,13 @@ describe("joinCourseDecision", () => {
         enrollmentStatus: null,
       }),
     ).toBe("rejected");
+  });
+});
+
+describe("enrollmentDisplayName", () => {
+  it("keeps a real name and falls back when the profile is empty", () => {
+    expect(enrollmentDisplayName("  Ana Pérez  ")).toBe("Ana Pérez");
+    expect(enrollmentDisplayName("   ")).toBe("Estudiante");
+    expect(enrollmentDisplayName(null)).toBe("Estudiante");
   });
 });

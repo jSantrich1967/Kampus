@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { createTaughtCourse, listTaughtCourses, type TaughtCourse } from "@/lib/supabase/courses-db";
+import { createTaughtCourse, listCourseSeats, listTaughtCourses, setCourseSeatStatus, type CourseSeat, type TaughtCourse } from "@/lib/supabase/courses-db";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { listMyOrganizations } from "@/lib/supabase/organizations-db";
 import { canAttachCourseToOrganization } from "@/lib/courses/access";
@@ -20,6 +20,7 @@ const inputClass =
 export function CourseList() {
   const { authUserId, profile, hydrated } = useKampus();
   const [courses, setCourses] = useState<TaughtCourse[]>([]);
+  const [seats, setSeats] = useState<CourseSeat[]>([]);
   const [organizations, setOrganizations] = useState<Array<{ id: string; name: string }>>([]);
   const [name, setName] = useState("");
   const [organizationId, setOrganizationId] = useState("");
@@ -32,8 +33,9 @@ export function CourseList() {
     const supabase = createSupabaseBrowserClient();
     setLoading(true);
     Promise.all([listTaughtCourses(supabase, authUserId), listMyOrganizations(supabase, authUserId)])
-      .then(([rows, memberships]) => {
+      .then(async ([rows, memberships]) => {
         setCourses(rows);
+        setSeats(await listCourseSeats(supabase, rows.map((course) => course.id)));
         setOrganizations(
           memberships
             .filter((membership) =>
@@ -91,11 +93,32 @@ export function CourseList() {
       });
       setName("");
       setOrganizationId("");
-      setCourses(await listTaughtCourses(supabase, authUserId!));
+      const rows = await listTaughtCourses(supabase, authUserId!);
+      setCourses(rows);
+      setSeats(await listCourseSeats(supabase, rows.map((course) => course.id)));
     } catch {
       setError("No se pudo crear el curso. Si acabas de agregar las tablas, recarga e inténtalo de nuevo.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function changeSeat(seat: CourseSeat) {
+    const next = seat.status === "active" ? "suspended" : "active";
+    if (next === "suspended" && !window.confirm(`¿Suspender a ${seat.displayName}? El código ya no le servirá.`)) {
+      return;
+    }
+    setError("");
+    try {
+      const supabase = createSupabaseBrowserClient();
+      await setCourseSeatStatus(supabase, seat.courseId, seat.userId, next);
+      setSeats((current) =>
+        current.map((item) =>
+          item.courseId === seat.courseId && item.userId === seat.userId ? { ...item, status: next } : item,
+        ),
+      );
+    } catch {
+      setError("No se pudo cambiar el asiento.");
     }
   }
 
@@ -155,7 +178,10 @@ export function CourseList() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {courses.map((course) => (
+          {courses.map((course) => {
+            const courseSeats = seats.filter((seat) => seat.courseId === course.id);
+            const activeCount = courseSeats.filter((seat) => seat.status === "active").length;
+            return (
             <Card key={course.id}>
               <CardHeader>
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -165,13 +191,33 @@ export function CourseList() {
                   </Badge>
                 </div>
                 <CardDescription>
-                  {course.organizationName ?? "Sin institución"} · {course.enrolledCount}{" "}
-                  {course.enrolledCount === 1 ? "inscrito" : "inscritos"}
+                  {course.organizationName ?? "Sin institución"} · {activeCount}{" "}
+                  {activeCount === 1 ? "inscrito" : "inscritos"}
                   {course.status === "active" && course.joinCode ? ` · Código ${course.joinCode}` : ""}
                 </CardDescription>
               </CardHeader>
+              <div className="space-y-2">
+                {courseSeats.length === 0 ? (
+                  <p className="text-sm text-slate-400">Nadie ha entrado con el código.</p>
+                ) : (
+                  courseSeats.map((seat) => (
+                    <div key={seat.userId} className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-sm text-slate-200">{seat.displayName}</span>
+                      <div className="flex items-center gap-2">
+                        <Badge tone={seat.status === "active" ? "success" : "warning"}>
+                          {seat.status === "active" ? "Activo" : "Suspendido"}
+                        </Badge>
+                        <Button type="button" size="sm" variant="secondary" onClick={() => void changeSeat(seat)}>
+                          {seat.status === "active" ? "Suspender" : "Devolver"}
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
