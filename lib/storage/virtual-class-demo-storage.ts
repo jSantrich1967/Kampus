@@ -105,3 +105,9 @@ export function isDemoModeClient(): boolean {
   if (typeof document === "undefined") return false;
   return document.cookie.split(";").some((part) => part.trim() === "kampus_demo=1");
 }
+
+/** Sale del modo demo (al crear cuenta o iniciar sesión de verdad). */
+export function clearDemoModeClient(): void {
+  if (typeof document === "undefined") return;
+  document.cookie = "kampus_demo=; path=/; max-age=0; SameSite=Lax";
+}
