@@ -8,16 +8,18 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { SubmissionDelivery } from "@/components/study/submission-delivery";
+import { canArchiveCourse, canAttachCourseToOrganization } from "@/lib/courses/access";
+import { parseCourseGrade } from "@/lib/study/course-grade";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { archiveTaughtCourse, createTaughtCourse, listCourseSeats, listTaughtCourses, setCourseSeatStatus, type CourseSeat, type TaughtCourse } from "@/lib/supabase/courses-db";
-import { listCourseSubmissions, type CourseSubmission } from "@/lib/supabase/teacher-student-db";
+import { listCourseSubmissions, reviewStudentWork, type CourseSubmission } from "@/lib/supabase/teacher-student-db";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { listMyOrganizations } from "@/lib/supabase/organizations-db";
-import { canArchiveCourse, canAttachCourseToOrganization } from "@/lib/courses/access";
 
 const inputClass =
   "w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm placeholder:text-slate-500 focus:border-indigo-400/60 focus:outline-none";
+const areaClass = `${inputClass} min-h-24`;
 
 export function CourseList() {
   const { authUserId, profile, hydrated } = useKampus();
@@ -30,6 +32,9 @@ export function CourseList() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [archivingId, setArchivingId] = useState<string | null>(null);
+  const [openReviewId, setOpenReviewId] = useState<string | null>(null);
+  const [reviewDrafts, setReviewDrafts] = useState<Record<string, { feedback: string; grade: string }>>({});
+  const [savingReviewId, setSavingReviewId] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -148,6 +153,46 @@ export function CourseList() {
     }
   }
 
+  function openReview(item: CourseSubmission) {
+    setError("");
+    setOpenReviewId((current) => (current === item.id ? null : item.id));
+    setReviewDrafts((current) =>
+      current[item.id]
+        ? current
+        : {
+            ...current,
+            [item.id]: {
+              feedback: item.feedback,
+              grade: item.grade === null ? "" : String(item.grade),
+            },
+          },
+    );
+  }
+
+  async function saveReview(item: CourseSubmission) {
+    const draft = reviewDrafts[item.id] ?? { feedback: item.feedback, grade: item.grade === null ? "" : String(item.grade) };
+    const parsed = parseCourseGrade(draft.grade);
+    if (!parsed.ok) return;
+    setError("");
+    setSavingReviewId(item.id);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      await reviewStudentWork(supabase, item.id, { feedback: draft.feedback, grade: parsed.grade });
+      setSubmissions((current) =>
+        current.map((row) =>
+          row.id === item.id
+            ? { ...row, status: "reviewed", feedback: draft.feedback.trim(), grade: parsed.grade }
+            : row,
+        ),
+      );
+      setOpenReviewId(null);
+    } catch {
+      setError("No se pudo guardar la corrección.");
+    } finally {
+      setSavingReviewId(null);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -261,7 +306,14 @@ export function CourseList() {
                 {courseSubmissions.length === 0 ? (
                   <p className="text-sm text-slate-400">Nadie ha enviado un informe a este curso.</p>
                 ) : (
-                  courseSubmissions.map((item) => (
+                  courseSubmissions.map((item) => {
+                    const draft = reviewDrafts[item.id] ?? {
+                      feedback: item.feedback,
+                      grade: item.grade === null ? "" : String(item.grade),
+                    };
+                    const gradeInvalid = !parseCourseGrade(draft.grade).ok;
+                    const isOpen = openReviewId === item.id;
+                    return (
                     <div key={item.id} className="space-y-2">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="text-sm text-slate-200">
@@ -276,8 +328,66 @@ export function CourseList() {
                         attachmentPath={item.attachmentPath}
                         attachmentName={item.attachmentName}
                       />
+                      {item.status === "reviewed" && !isOpen ? (
+                        <p className="text-sm text-slate-300">
+                          {item.feedback || "Todavía sin texto de corrección."}
+                          {item.grade !== null ? ` · Nota ${item.grade}/20` : ""}
+                        </p>
+                      ) : null}
+                      {isOpen ? (
+                        <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+                          <label className="block text-xs font-medium text-slate-400">
+                            Corrección
+                            <textarea
+                              className={`${areaClass} mt-1`}
+                              value={draft.feedback}
+                              onChange={(event) =>
+                                setReviewDrafts((current) => ({
+                                  ...current,
+                                  [item.id]: { ...draft, feedback: event.target.value },
+                                }))
+                              }
+                              placeholder="Qué estuvo bien y qué puede mejorar"
+                            />
+                          </label>
+                          <label className="block text-xs font-medium text-slate-400">
+                            Nota (0–20, opcional)
+                            <input
+                              className={`${inputClass} mt-1`}
+                              inputMode="decimal"
+                              value={draft.grade}
+                              onChange={(event) =>
+                                setReviewDrafts((current) => ({
+                                  ...current,
+                                  [item.id]: { ...draft, grade: event.target.value },
+                                }))
+                              }
+                              placeholder="Ej. 18"
+                            />
+                          </label>
+                          {gradeInvalid ? <p className="text-xs text-rose-300">La nota debe estar entre 0 y 20.</p> : null}
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => void saveReview(item)}
+                              disabled={savingReviewId === item.id || gradeInvalid}
+                            >
+                              {savingReviewId === item.id ? "Guardando…" : "Guardar corrección"}
+                            </Button>
+                            <Button type="button" size="sm" variant="secondary" onClick={() => setOpenReviewId(null)}>
+                              Cerrar
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Button type="button" size="sm" variant="secondary" onClick={() => openReview(item)}>
+                          {item.status === "reviewed" ? "Editar corrección" : "Corregir"}
+                        </Button>
+                      )}
                     </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </Card>

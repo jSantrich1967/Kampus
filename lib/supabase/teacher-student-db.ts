@@ -246,6 +246,8 @@ export type CourseSubmission = {
   attachmentPath: string | null;
   attachmentName: string | null;
   status: "sent" | "reviewed";
+  feedback: string;
+  grade: number | null;
 };
 
 type CourseSubmissionRow = {
@@ -257,6 +259,8 @@ type CourseSubmissionRow = {
   attachment_path: string | null;
   attachment_name: string | null;
   status: string;
+  feedback: string | null;
+  grade: number | string | null;
 };
 
 function missingCourseSubmissionColumn(error: { code?: string; message?: string } | null): boolean {
@@ -273,7 +277,7 @@ export async function listCourseSubmissions(
   if (courseIds.length === 0) return [];
   const { data, error } = await client
     .from("student_submissions")
-    .select("id, course_id, title, body, student_display_name, attachment_path, attachment_name, status")
+    .select("id, course_id, title, body, student_display_name, attachment_path, attachment_name, status, feedback, grade")
     .in("course_id", courseIds)
     .order("created_at", { ascending: false });
 
@@ -293,6 +297,8 @@ export async function listCourseSubmissions(
       attachmentPath: row.attachment_path ? String(row.attachment_path) : null,
       attachmentName: row.attachment_name ? String(row.attachment_name) : null,
       status: row.status === "reviewed" ? "reviewed" : "sent",
+      feedback: row.feedback ?? "",
+      grade: row.grade === null || row.grade === undefined || row.grade === "" ? null : Number(row.grade),
     }));
 }
 
