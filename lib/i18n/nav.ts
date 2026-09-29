@@ -42,6 +42,7 @@ export const navCopy = {
       diary: "Mi Diario",
       wellbeing: "Inicio bienestar",
       teaching: "Copiloto docente",
+      courses: "Cursos",
       reviewWorks: "Revisar trabajos",
       examGenerator: "Generador de exámenes",
       autoGrader: "Corrección automática",

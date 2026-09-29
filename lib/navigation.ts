@@ -108,6 +108,7 @@ export const navigationGroups: NavGroup[] = [
     id: "teach",
     items: [
       { href: "/teaching", key: "teaching", icon: School, roles: ["teacher"] },
+      { href: "/teaching/cursos", key: "courses", icon: GraduationCap, roles: ["teacher"] },
       { href: "/teaching/examenes", key: "examGenerator", icon: FileUp, roles: ["teacher"] },
       { href: "/teaching/corregir", key: "autoGrader", icon: BadgeCheck, roles: ["teacher"] },
       { href: "/teaching/trabajos", key: "reviewWorks", icon: ClipboardCheck, roles: ["teacher"] },
@@ -151,7 +152,7 @@ const studentNavStructure: Array<{ id: NavGroup["id"]; keys: NavItemKey[] }> = [
  */
 const teacherNavStructure: Array<{ id: NavGroup["id"]; keys: NavItemKey[] }> = [
   { id: "command", keys: ["today"] },
-  { id: "teach", keys: ["library", "classes", "reviewWorks", "teacherNotices"] },
+  { id: "teach", keys: ["library", "courses", "classes", "reviewWorks", "teacherNotices"] },
   { id: "evaluate", keys: ["exams", "examGenerator", "autoGrader", "risk"] },
   { id: "followup", keys: ["teacherAlerts", "teacherReports", "issueCertificates"] },
   { id: "social", keys: ["community"] },
