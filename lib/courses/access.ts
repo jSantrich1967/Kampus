@@ -33,3 +33,29 @@ export function canAttachCourseToOrganization(input: {
     input.membershipRole === "teacher"
   );
 }
+
+const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+/** Turns a typed class code into the stored shape. Empty when it cannot be a code. */
+export function normalizeCourseCode(input: string): string | null {
+  const code = input.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (code.length !== 8) return null;
+  if ([...code].some((character) => !CODE_ALPHABET.includes(character))) return null;
+  return code;
+}
+
+/**
+ * A matching active course enrolls the student. An unknown code, an archived
+ * course, a suspended seat, or the teacher of that course does not.
+ */
+export function joinCourseDecision(input: {
+  codeMatches: boolean;
+  courseStatus: CourseStatus;
+  viewerIsTeacher: boolean;
+  enrollmentStatus: EnrollmentStatus | null;
+}): "join" | "already" | "rejected" {
+  if (!input.codeMatches || input.courseStatus !== "active") return "rejected";
+  if (input.viewerIsTeacher || input.enrollmentStatus === "suspended") return "rejected";
+  if (input.enrollmentStatus === "active") return "already";
+  return "join";
+}

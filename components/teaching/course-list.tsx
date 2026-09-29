@@ -110,7 +110,7 @@ export function CourseList() {
       <Card>
         <CardHeader>
           <CardTitle>Nuevo curso</CardTitle>
-          <CardDescription>Aquí verás cuántos alumnos están inscritos. Todavía no entran con un código.</CardDescription>
+          <CardDescription>Comparte el código del curso. El alumno lo escribe para quedar inscrito.</CardDescription>
         </CardHeader>
         <div className="space-y-3">
           <input
@@ -167,6 +167,7 @@ export function CourseList() {
                 <CardDescription>
                   {course.organizationName ?? "Sin institución"} · {course.enrolledCount}{" "}
                   {course.enrolledCount === 1 ? "inscrito" : "inscritos"}
+                  {course.status === "active" && course.joinCode ? ` · Código ${course.joinCode}` : ""}
                 </CardDescription>
               </CardHeader>
             </Card>

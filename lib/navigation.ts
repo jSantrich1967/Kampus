@@ -69,6 +69,7 @@ export const navigationGroups: NavGroup[] = [
       { href: "/study/convertir", key: "convertir", icon: FileUp, roles: ["student", "learner"] },
       { href: "/study/plan", key: "studyPlan", icon: CalendarCheck, roles: ["student", "learner"] },
       { href: "/study/trabajos", key: "myWorks", icon: Send, roles: ["student", "learner"] },
+      { href: "/study/cursos", key: "myCourses", icon: BookOpen, roles: ["student", "learner"] },
       { href: "/study/certificados", key: "myCertificates", icon: Award, roles: ["student", "learner"] },
       { href: "/study/avisos", key: "studentNotices", icon: Bell, roles: ["student", "learner"] },
       { href: "/study/familia", key: "familyReport", icon: Users, roles: ["student", "learner"] },
@@ -138,7 +139,7 @@ export const navigationGroups: NavGroup[] = [
  */
 const studentNavStructure: Array<{ id: NavGroup["id"]; keys: NavItemKey[] }> = [
   { id: "command", keys: ["today"] },
-  { id: "learn", keys: ["tutor", "duelos", "cramMode", "library", "convertir", "studyPlan", "myWorks", "studentNotices", "flashcards", "myCertificates", "familyReport"] },
+  { id: "learn", keys: ["tutor", "duelos", "cramMode", "library", "convertir", "studyPlan", "myWorks", "myCourses", "studentNotices", "flashcards", "myCertificates", "familyReport"] },
   { id: "evaluate", keys: ["exams", "agendaCalendar"] },
   { id: "classes", keys: ["collaborate"] },
   { id: "social", keys: ["community"] },

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { canAttachCourseToOrganization, courseVisibleTo } from "@/lib/courses/access";
+import { canAttachCourseToOrganization, courseVisibleTo, joinCourseDecision, normalizeCourseCode } from "@/lib/courses/access";
 
 describe("courseVisibleTo", () => {
   it("lets the teacher see an archived course", () => {
@@ -88,5 +88,67 @@ describe("canAttachCourseToOrganization", () => {
         organizationStatus: "suspended",
       }),
     ).toBe(false);
+  });
+});
+
+describe("normalizeCourseCode", () => {
+  it("accepts a code with spaces or a dash", () => {
+    expect(normalizeCourseCode("ab23-cd45")).toBe("AB23CD45");
+  });
+
+  it("rejects a short code and an ambiguous letter", () => {
+    expect(normalizeCourseCode("AB23")).toBeNull();
+    expect(normalizeCourseCode("AB23CD4O")).toBeNull();
+  });
+});
+
+describe("joinCourseDecision", () => {
+  it("enrolls a new student in an open course", () => {
+    expect(
+      joinCourseDecision({
+        codeMatches: true,
+        courseStatus: "active",
+        viewerIsTeacher: false,
+        enrollmentStatus: null,
+      }),
+    ).toBe("join");
+  });
+
+  it("keeps a student who is already enrolled", () => {
+    expect(
+      joinCourseDecision({
+        codeMatches: true,
+        courseStatus: "active",
+        viewerIsTeacher: false,
+        enrollmentStatus: "active",
+      }),
+    ).toBe("already");
+  });
+
+  it("rejects an archived course, the teacher, and a suspended seat", () => {
+    expect(
+      joinCourseDecision({
+        codeMatches: true,
+        courseStatus: "archived",
+        viewerIsTeacher: false,
+        enrollmentStatus: null,
+      }),
+    ).toBe("rejected");
+    expect(
+      joinCourseDecision({
+        codeMatches: true,
+        courseStatus: "active",
+        viewerIsTeacher: true,
+        enrollmentStatus: null,
+      }),
+    ).toBe("rejected");
+    expect(
+      joinCourseDecision({
+        codeMatches: false,
+        courseStatus: "active",
+        viewerIsTeacher: false,
+        enrollmentStatus: null,
+      }),
+    ).toBe("rejected");
   });
 });

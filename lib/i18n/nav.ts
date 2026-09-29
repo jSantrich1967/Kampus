@@ -28,6 +28,7 @@ export const navCopy = {
       convertir: "Convertir material",
       studyPlan: "Mi plan",
       myWorks: "Mis trabajos",
+      myCourses: "Mis cursos",
       studentNotices: "Avisos",
       exams: "Exámenes",
       agendaCalendar: "Calendario",
