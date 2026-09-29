@@ -36,5 +36,8 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login?error=auth`);
   }
 
-  return NextResponse.redirect(`${origin}${next}`);
+  const success = NextResponse.redirect(`${origin}${next}`);
+  // Al entrar con sesión real se sale del modo demo.
+  success.cookies.set("kampus_demo", "", { path: "/", maxAge: 0, sameSite: "lax" });
+  return success;
 }

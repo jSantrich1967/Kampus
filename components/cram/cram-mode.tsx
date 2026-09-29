@@ -159,6 +159,11 @@ export function CramMode() {
       if (!res.ok || !data.plan) throw new Error(data.error || "No se pudo armar el plan.");
       setPlan(data.plan);
       setChecked({});
+      try {
+        localStorage.removeItem(planStorageKey(subject.trim(), daysLeft));
+      } catch {
+        /* ignore */
+      }
       setStep("plan");
     } catch (e) {
       setPlanError(e instanceof Error ? e.message : "No se pudo armar el plan.");

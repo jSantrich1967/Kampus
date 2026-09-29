@@ -12,7 +12,7 @@ import { authCopy } from "@/lib/i18n/auth";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSafeInternalRedirect } from "@/lib/supabase/safe-redirect";
-import { isDemoModeClient } from "@/lib/storage/virtual-class-demo-storage";
+import { clearDemoModeClient } from "@/lib/storage/virtual-class-demo-storage";
 
 const inputClassName =
   "w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition-all focus:ring-2 focus:ring-purple-500/80";
@@ -34,20 +34,16 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
   const [error, setError] = useState<string | null>(null);
   /** After sign-up without immediate session (email confirmation flow). */
   const [pendingEmailVerification, setPendingEmailVerification] = useState(false);
-  /** Navegador en modo demo (cookie kampus_demo=1): entra como invitado sin sesión de Supabase. */
-  const [demoMode, setDemoMode] = useState(false);
-
-  useEffect(() => {
-    setDemoMode(isDemoModeClient());
-  }, []);
 
   const urlError = searchParams.get("error");
   const nextPath = getSafeInternalRedirect(searchParams.get("next"));
 
   useEffect(() => {
     if (!hydrated) return;
-    if (authUserId || demoMode) router.replace(nextPath);
-  }, [hydrated, authUserId, demoMode, router, nextPath]);
+    // Solo una sesión real rebota de /login y /register.
+    // El modo demo NO es sesión: el usuario demo debe poder ver el formulario y registrarse.
+    if (authUserId) router.replace(nextPath);
+  }, [hydrated, authUserId, router, nextPath]);
 
   useEffect(() => {
     if (urlError === "auth") {
@@ -99,6 +95,7 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
           setError(formatSupabaseAuthErrorMessage(signErr.message));
           return;
         }
+        clearDemoModeClient();
         router.replace(nextPath);
         router.refresh();
         return;
@@ -120,6 +117,7 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
       if (data.session) {
         setMessage(t.registerSuccess);
         setPendingEmailVerification(false);
+        clearDemoModeClient();
         router.replace(nextPath);
         router.refresh();
         return;
