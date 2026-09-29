@@ -5,7 +5,6 @@ import { Suspense, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { PageHeader } from "@/components/layout/page-header";
-import { SectionProntoBanner } from "@/components/layout/section-pronto-banner";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PresentationPlanner } from "@/components/collaborate/presentation-planner";
@@ -37,8 +36,6 @@ export function ExposicionesEntry() {
           </div>
         }
       />
-
-      <SectionProntoBanner kind="teacher" />
 
       <div className="grid gap-5 md:grid-cols-2">
         <Card>

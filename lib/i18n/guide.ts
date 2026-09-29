@@ -37,12 +37,17 @@ export const guideCopy: Record<
     eyebrow: string;
     title: string;
     description: string;
+    descriptionTeacher: string;
+    descriptionInstitution: string;
     introTitle: string;
     introBody: string;
+    introBodyTeacher: string;
+    introBodyInstitution: string;
     labels: {
       objective: string;
       howItWorks: string;
       benefits: string;
+      benefitsTeacher: string;
       benefitsInstitution: string;
       tip: string;
       openSection: string;
@@ -57,13 +62,22 @@ export const guideCopy: Record<
     title: "Guía de Kampus",
     description:
       "Qué hace cada parte de la app, para qué sirve y cómo te ayuda a estudiar mejor — sin tecnicismos.",
+    descriptionTeacher:
+      "Qué hace cada parte de la app y cómo te ayuda con tu clase — sin tecnicismos.",
+    descriptionInstitution:
+      "Qué hace cada parte de la app y cómo ayuda a tu institución — sin tecnicismos.",
     introTitle: "¿Cómo usar esta guía?",
     introBody:
       "Cada tarjeta describe una sección del menú: su objetivo, cómo funciona paso a paso, las bondades para tu aprendizaje y un consejo práctico. Pulsa «Ir a la sección» cuando quieras probarla.",
+    introBodyTeacher:
+      "Cada tarjeta describe una sección del menú: su objetivo, cómo funciona, qué aporta a tu clase y un consejo práctico. Pulsa «Ir a la sección» cuando quieras probarla.",
+    introBodyInstitution:
+      "Cada tarjeta describe una sección del menú: su objetivo, cómo funciona, qué aporta a la institución y un consejo práctico. Pulsa «Ir a la sección» cuando quieras abrirla.",
     labels: {
       objective: "Objetivo",
       howItWorks: "Cómo funciona",
       benefits: "Bondades para el estudiante",
+      benefitsTeacher: "Bondades para el docente",
       benefitsInstitution: "Bondades para la institución",
       tip: "Consejo",
       openSection: "Ir a la sección",

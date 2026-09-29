@@ -130,6 +130,7 @@ export function KampusProvider({ children }: { children: ReactNode }) {
   const [profile, setProfileState] = useState<UserProfile>(defaultProfile);
   const [hydrated, setHydrated] = useState(false);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
+  const [syncedUserId, setSyncedUserId] = useState<string | null>(null);
   const [locale] = useState<Locale>("es");
   const lastPushedJson = useRef<string>("");
   const authUserIdRef = useRef<string | null>(null);
@@ -184,12 +185,7 @@ export function KampusProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Demo mode is hermetic: a browser that entered through /demo must never
-    // merge a remote (logged-in) profile over the local demo profile.
-    if (typeof document !== "undefined" && document.cookie.split(";").some((c) => c.trim() === "kampus_demo=1")) {
-      setAuthUserId(null);
-      return;
-    }
+    // Always observe authentication, including when this browser previously used the demo.
     if (!isSupabaseConfigured()) return;
 
     const supabase = createSupabaseBrowserClient();
@@ -197,12 +193,14 @@ export function KampusProvider({ children }: { children: ReactNode }) {
 
     const runSync = async (userId: string | null) => {
       if (cancelled) return;
+      setSyncedUserId(null);
       if (userId === null) {
         setAuthUserId(null);
         return;
       }
 
-      setAuthUserId(userId);
+      // A real session takes precedence over the anonymous demo. Never merge its data.
+      document.cookie = "kampus_demo=; path=/; max-age=0; SameSite=Lax";
       setProfileStorageOwner(userId);
       setClassScheduleOwner(userId);
       setExamStorageOwner(userId);
@@ -221,6 +219,9 @@ export function KampusProvider({ children }: { children: ReactNode }) {
       setCommunitySavedOwner(userId);
       setAccountBoxOwner(userId);
       const local = loadProfile(userId);
+      accountRoleRef.current = null;
+      setProfileState(local);
+      setAuthUserId(userId);
 
       try {
         const remoteRaw = await fetchProfileForUser(supabase, userId);
@@ -235,6 +236,7 @@ export function KampusProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         setProfileState(display);
         saveProfile(cloud, userId);
+        setSyncedUserId(userId);
         if (!remoteMeaningful && isMeaningfulProfile(cloud)) {
           await upsertProfileForUser(supabase, userId, cloud);
         }
@@ -363,7 +365,7 @@ export function KampusProvider({ children }: { children: ReactNode }) {
   }, [hydrated, profile, authUserId]);
 
   useEffect(() => {
-    if (!hydrated || !authUserId || !isSupabaseConfigured()) return;
+    if (!hydrated || !authUserId || syncedUserId !== authUserId || !isSupabaseConfigured()) return;
     if (loadScreenRole(authUserId) && !accountRoleRef.current) return;
     const cloud = accountRoleRef.current ? profileWithAccountRole(profile, accountRoleRef.current) : profile;
     const json = JSON.stringify(cloud);
@@ -377,7 +379,7 @@ export function KampusProvider({ children }: { children: ReactNode }) {
         .catch((err) => console.error(err));
     }, 450);
     return () => clearTimeout(tm);
-  }, [hydrated, authUserId, profile]);
+  }, [hydrated, authUserId, syncedUserId, profile]);
 
   const setProfile = useCallback((next: UserProfile | ((previous: UserProfile) => UserProfile)) => {
     setProfileState((prev) => (typeof next === "function" ? (next as (p: UserProfile) => UserProfile)(prev) : next));

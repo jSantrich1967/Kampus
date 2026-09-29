@@ -110,9 +110,28 @@ export function AppGuideHub() {
     return GROUP_ORDER.filter((g) => set.has(g));
   })();
 
+  const description =
+    profile.role === "institution"
+      ? t.descriptionInstitution
+      : profile.role === "teacher"
+        ? t.descriptionTeacher
+        : t.description;
+  const introBody =
+    profile.role === "institution"
+      ? t.introBodyInstitution
+      : profile.role === "teacher"
+        ? t.introBodyTeacher
+        : t.introBody;
+  const benefitsLabel =
+    profile.role === "institution"
+      ? t.labels.benefitsInstitution
+      : profile.role === "teacher"
+        ? t.labels.benefitsTeacher
+        : t.labels.benefits;
+
   return (
     <div className="space-y-8">
-      <PageHeader eyebrow={t.eyebrow} title={t.title} description={t.description} />
+      <PageHeader eyebrow={t.eyebrow} title={t.title} description={description} />
 
       <Card className="border-indigo-400/25 bg-gradient-to-br from-indigo-500/10 via-transparent to-purple-500/5">
         <CardHeader>
@@ -120,7 +139,7 @@ export function AppGuideHub() {
             <BookOpen className="h-5 w-5 text-indigo-300" aria-hidden />
             {t.introTitle}
           </CardTitle>
-          <CardDescription className="text-slate-300">{t.introBody}</CardDescription>
+          <CardDescription className="text-slate-300">{introBody}</CardDescription>
         </CardHeader>
       </Card>
 
@@ -187,9 +206,7 @@ export function AppGuideHub() {
                 </div>
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    {section.roles.length === 1 && section.roles[0] === "institution"
-                      ? t.labels.benefitsInstitution
-                      : t.labels.benefits}
+                    {benefitsLabel}
                   </div>
                   <ul className="mt-2 list-disc space-y-1 pl-5 text-slate-300">
                     {section.benefits.map((b) => (

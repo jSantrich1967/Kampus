@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/layout/page-header";
-import { SectionProntoBanner } from "@/components/layout/section-pronto-banner";
 import { InstitutionCounselorAlertsPanel } from "@/components/institution/institution-counselor-alerts-panel";
 import { InstitutionLmsIntegrationPanel } from "@/components/institution/institution-lms-integration-panel";
 import { InstitutionVirtualAttendancePanel } from "@/components/institution/institution-virtual-attendance-panel";
@@ -351,8 +350,6 @@ export function InstitutionConsole() {
           </div>
         }
       />
-
-      <SectionProntoBanner kind="institution" />
 
       <InstitutionWellbeingPulsePanel />
 

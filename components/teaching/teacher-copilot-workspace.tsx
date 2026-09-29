@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 
 import { ShareLinkButton } from "@/components/growth/share-link-button";
 import { PageHeader } from "@/components/layout/page-header";
-import { SectionProntoBanner } from "@/components/layout/section-pronto-banner";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -87,8 +86,6 @@ export function TeacherCopilotWorkspace() {
           />
         }
       />
-
-      <SectionProntoBanner kind="teacher" />
 
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone={workflow === "draft" ? "neutral" : workflow === "review" ? "warning" : "success"}>
