@@ -129,16 +129,14 @@ export async function listMyTeachers(client: SupabaseClient): Promise<TeacherRef
 export async function createStudentWork(
   client: SupabaseClient,
   input: {
-    teacherUserId: string;
-    sessionId?: string | null;
-    course: string;
+    courseId: string;
+    courseName: string;
     title: string;
     body: string;
     attachmentPath?: string | null;
     attachmentName?: string | null;
     attachmentMime?: string | null;
     studentDisplayName: string;
-    teacherDisplayName: string;
   },
 ): Promise<{ id: string }> {
   const { data: userData, error: userError } = await client.auth.getUser();
@@ -149,16 +147,16 @@ export async function createStudentWork(
     .from("student_submissions")
     .insert({
       student_user_id: uid,
-      teacher_user_id: input.teacherUserId,
-      session_id: input.sessionId ?? null,
-      course: input.course.trim(),
+      teacher_user_id: uid,
+      course_id: input.courseId,
+      course: input.courseName.trim(),
       title: input.title.trim(),
       body: input.body.trim(),
       attachment_path: input.attachmentPath ?? null,
       attachment_name: input.attachmentName ?? null,
       attachment_mime: input.attachmentMime ?? null,
       student_display_name: input.studentDisplayName.trim() || "Estudiante",
-      teacher_display_name: input.teacherDisplayName.trim() || "Profesor",
+      teacher_display_name: "Profesor",
     })
     .select("id")
     .single();
@@ -173,13 +171,12 @@ const WORK_COLUMNS =
 export async function submitStudentWork(
   client: SupabaseClient,
   input: {
-    teacherUserId: string;
-    course: string;
+    courseId: string;
+    courseName: string;
     title: string;
     note: string;
     file: File;
     studentDisplayName: string;
-    teacherDisplayName: string;
   },
 ): Promise<{ id: string }> {
   const problem = submissionFileProblem(input.file);
@@ -198,15 +195,14 @@ export async function submitStudentWork(
 
   try {
     return await createStudentWork(client, {
-      teacherUserId: input.teacherUserId,
-      course: input.course,
+      courseId: input.courseId,
+      courseName: input.courseName,
       title: input.title,
       body: input.note,
       attachmentPath: path,
       attachmentName: input.file.name.split(/[/\\]/).pop() || input.file.name,
       attachmentMime: submissionContentType(input.file.name),
       studentDisplayName: input.studentDisplayName,
-      teacherDisplayName: input.teacherDisplayName,
     });
   } catch (error) {
     await client.storage.from(SUBMISSION_BUCKET).remove([path]);
@@ -239,6 +235,65 @@ export async function listWorksForReview(client: SupabaseClient): Promise<Studen
     .order("created_at", { ascending: false });
   if (error) throw error;
   return ((data ?? []) as WorkRow[]).map(toStudentWork);
+}
+
+export type CourseSubmission = {
+  id: string;
+  courseId: string;
+  title: string;
+  body: string;
+  studentDisplayName: string;
+  attachmentPath: string | null;
+  attachmentName: string | null;
+  status: "sent" | "reviewed";
+};
+
+type CourseSubmissionRow = {
+  id: string;
+  course_id: string;
+  title: string | null;
+  body: string | null;
+  student_display_name: string | null;
+  attachment_path: string | null;
+  attachment_name: string | null;
+  status: string;
+};
+
+function missingCourseSubmissionColumn(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  const message = error.message ?? "";
+  return error.code === "42703" || error.code === "PGRST204" || /course_id/.test(message);
+}
+
+/** Reports saved on the courses this account teaches. */
+export async function listCourseSubmissions(
+  client: SupabaseClient,
+  courseIds: string[],
+): Promise<CourseSubmission[]> {
+  if (courseIds.length === 0) return [];
+  const { data, error } = await client
+    .from("student_submissions")
+    .select("id, course_id, title, body, student_display_name, attachment_path, attachment_name, status")
+    .in("course_id", courseIds)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    if (missingCourseSubmissionColumn(error)) return [];
+    throw error;
+  }
+
+  return ((data ?? []) as CourseSubmissionRow[])
+    .filter((row) => row.course_id)
+    .map((row) => ({
+      id: String(row.id),
+      courseId: String(row.course_id),
+      title: row.title ?? "",
+      body: row.body ?? "",
+      studentDisplayName: row.student_display_name?.trim() || "Estudiante",
+      attachmentPath: row.attachment_path ? String(row.attachment_path) : null,
+      attachmentName: row.attachment_name ? String(row.attachment_name) : null,
+      status: row.status === "reviewed" ? "reviewed" : "sent",
+    }));
 }
 
 /** El profesor corrige: devolución + nota (0–20) + marca como revisado. */

@@ -9,7 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { SubmissionDelivery } from "@/components/study/submission-delivery";
 import { archiveTaughtCourse, createTaughtCourse, listCourseSeats, listTaughtCourses, setCourseSeatStatus, type CourseSeat, type TaughtCourse } from "@/lib/supabase/courses-db";
+import { listCourseSubmissions, type CourseSubmission } from "@/lib/supabase/teacher-student-db";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { listMyOrganizations } from "@/lib/supabase/organizations-db";
 import { canArchiveCourse, canAttachCourseToOrganization } from "@/lib/courses/access";
@@ -21,6 +23,7 @@ export function CourseList() {
   const { authUserId, profile, hydrated } = useKampus();
   const [courses, setCourses] = useState<TaughtCourse[]>([]);
   const [seats, setSeats] = useState<CourseSeat[]>([]);
+  const [submissions, setSubmissions] = useState<CourseSubmission[]>([]);
   const [organizations, setOrganizations] = useState<Array<{ id: string; name: string }>>([]);
   const [name, setName] = useState("");
   const [organizationId, setOrganizationId] = useState("");
@@ -37,6 +40,7 @@ export function CourseList() {
       .then(async ([rows, memberships]) => {
         setCourses(rows);
         setSeats(await listCourseSeats(supabase, rows.map((course) => course.id)));
+        setSubmissions(await listCourseSubmissions(supabase, rows.map((course) => course.id)));
         setOrganizations(
           memberships
             .filter((membership) =>
@@ -97,6 +101,7 @@ export function CourseList() {
       const rows = await listTaughtCourses(supabase, authUserId!);
       setCourses(rows);
       setSeats(await listCourseSeats(supabase, rows.map((course) => course.id)));
+      setSubmissions(await listCourseSubmissions(supabase, rows.map((course) => course.id)));
     } catch {
       setError("No se pudo crear el curso. Si acabas de agregar las tablas, recarga e inténtalo de nuevo.");
     } finally {
@@ -202,6 +207,7 @@ export function CourseList() {
           {courses.map((course) => {
             const courseSeats = seats.filter((seat) => seat.courseId === course.id);
             const activeCount = courseSeats.filter((seat) => seat.status === "active").length;
+            const courseSubmissions = submissions.filter((item) => item.courseId === course.id);
             return (
             <Card key={course.id}>
               <CardHeader>
@@ -246,6 +252,30 @@ export function CourseList() {
                           </Button>
                         ) : null}
                       </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="space-y-2 border-t border-white/10 pt-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Informes</p>
+                {courseSubmissions.length === 0 ? (
+                  <p className="text-sm text-slate-400">Nadie ha enviado un informe a este curso.</p>
+                ) : (
+                  courseSubmissions.map((item) => (
+                    <div key={item.id} className="space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-sm text-slate-200">
+                          {item.studentDisplayName} · {item.title}
+                        </span>
+                        <Badge tone={item.status === "reviewed" ? "success" : "accent"}>
+                          {item.status === "reviewed" ? "Corregido" : "Enviado"}
+                        </Badge>
+                      </div>
+                      <SubmissionDelivery
+                        body={item.body}
+                        attachmentPath={item.attachmentPath}
+                        attachmentName={item.attachmentName}
+                      />
                     </div>
                   ))
                 )}

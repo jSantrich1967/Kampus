@@ -32,6 +32,17 @@ export function canArchiveCourse(status: CourseStatus): boolean {
   return status === "active";
 }
 
+/** A report can land on a course only with an active seat on an open course. */
+export function canSubmitToCourse(input: {
+  courseStatus: CourseStatus;
+  enrollmentStatus: EnrollmentStatus | null;
+  viewerIsTeacher: boolean;
+}): boolean {
+  if (input.viewerIsTeacher) return false;
+  if (input.courseStatus !== "active") return false;
+  return input.enrollmentStatus === "active";
+}
+
 /**
  * A course with no institution belongs to the teacher. An institution course
  * requires an active staff seat in that institution. A student seat is not enough.

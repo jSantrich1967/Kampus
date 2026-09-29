@@ -17,6 +17,7 @@ export const mailboxCopy: Record<
     formTeacherEmpty: string;
     formCourse: string;
     formCoursePh: string;
+    formCourseEmpty: string;
     formTitle: string;
     formTitlePh: string;
     formFile: string;
@@ -69,14 +70,15 @@ export const mailboxCopy: Record<
 > = {
   es: {
     worksTitle: "Mis trabajos",
-    worksHint: "Sube el archivo de tu trabajo y recibe la corrección de tu profesor aquí.",
+    worksHint: "Elige un curso activo, sube el archivo y tu profesor lo verá en ese curso.",
     worksPrivacy: "Privado: tu profesor solo ve tu nombre y tu archivo. Nadie ve perfiles.",
     tabSend: "Enviar",
     tabSent: "Enviados",
     formTeacher: "Profesor",
     formTeacherEmpty: "Aún no tienes profesores: inscríbete en una clase del aula virtual.",
-    formCourse: "Materia",
+    formCourse: "Curso",
     formCoursePh: "Ej. Biología",
+    formCourseEmpty: "Entra a un curso activo para enviar el informe.",
     formTitle: "Título",
     formTitlePh: "Ej. Informe de fotosíntesis",
     formFile: "Tu trabajo o informe",

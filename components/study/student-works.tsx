@@ -12,15 +12,10 @@ import { SubmissionDelivery } from "@/components/study/submission-delivery";
 import { mailboxCopy } from "@/lib/i18n/mailbox";
 import { submissionFileProblem } from "@/lib/study/submission-file";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { listEnrolledCourses, type EnrolledCourse } from "@/lib/supabase/courses-db";
 import { logStudyActivity } from "@/lib/supabase/study-streak-db";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import {
-  listMyStudentWorks,
-  listMyTeachers,
-  submitStudentWork,
-  type StudentWork,
-  type TeacherRef,
-} from "@/lib/supabase/teacher-student-db";
+import { listMyStudentWorks, submitStudentWork, type StudentWork } from "@/lib/supabase/teacher-student-db";
 import { cn } from "@/lib/cn";
 
 const inputClass =
@@ -46,12 +41,11 @@ export function StudentWorks() {
   const { authUserId, profile, hydrated } = useKampus();
 
   const [tab, setTab] = useState<Tab>("send");
-  const [teachers, setTeachers] = useState<TeacherRef[]>([]);
+  const [courses, setCourses] = useState<EnrolledCourse[]>([]);
   const [works, setWorks] = useState<StudentWork[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const [teacherId, setTeacherId] = useState("");
-  const [course, setCourse] = useState("");
+  const [courseId, setCourseId] = useState("");
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -63,12 +57,12 @@ export function StudentWorks() {
   const canUse = hydrated && isSupabaseConfigured() && !!authUserId;
 
   useEffect(() => {
-    if (!canUse) return;
+    if (!canUse || !authUserId) return;
     setLoading(true);
     const supabase = createSupabaseBrowserClient();
-    Promise.all([listMyTeachers(supabase), listMyStudentWorks(supabase)])
-      .then(([ts, ws]) => {
-        setTeachers(ts);
+    Promise.all([listEnrolledCourses(supabase, authUserId), listMyStudentWorks(supabase)])
+      .then(([enrolled, ws]) => {
+        setCourses(enrolled.filter((course) => course.seatStatus === "active"));
         setWorks(ws);
       })
       .catch(() => {
@@ -115,31 +109,29 @@ export function StudentWorks() {
       setError(t.formFileSize);
       return;
     }
-    if (!teacherId || !course.trim() || !title.trim()) {
+    if (!courseId || !title.trim()) {
       setError(t.sendError);
       return;
     }
-    const teacher = teachers.find((x) => x.teacherUserId === teacherId);
-    if (!teacher) {
-      setError(t.sendError);
+    const course = courses.find((item) => item.id === courseId);
+    if (!course || course.seatStatus !== "active") {
+      setError(t.formCourseEmpty);
       return;
     }
     setBusy(true);
     try {
       const supabase = createSupabaseBrowserClient();
       await submitStudentWork(supabase, {
-        teacherUserId: teacher.teacherUserId,
-        course: course.trim(),
+        courseId: course.id,
+        courseName: course.name,
         title: title.trim(),
         note: note.trim(),
         file,
         studentDisplayName: profile.displayName,
-        teacherDisplayName: teacher.displayName,
       });
       setOk(t.sendOk);
       logStudyActivity("trabajo");
-      setTeacherId("");
-      setCourse("");
+      setCourseId("");
       setTitle("");
       setNote("");
       setFile(null);
@@ -206,37 +198,26 @@ export function StudentWorks() {
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Cargando…
               </div>
-            ) : teachers.length === 0 ? (
-              <p className="text-sm text-slate-400">{t.formTeacherEmpty}</p>
+            ) : courses.length === 0 ? (
+              <p className="text-sm text-slate-400">{t.formCourseEmpty}</p>
             ) : (
               <>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-400">
-                    {t.formTeacher} *
+                    {t.formCourse} *
                   </label>
                   <select
                     className={inputClass}
-                    value={teacherId}
-                    onChange={(e) => setTeacherId(e.target.value)}
+                    value={courseId}
+                    onChange={(e) => setCourseId(e.target.value)}
                   >
-                    <option value="">{t.formTeacher}…</option>
-                    {teachers.map((x) => (
-                      <option key={x.teacherUserId} value={x.teacherUserId}>
-                        {x.displayName}
+                    <option value="">{t.formCourse}…</option>
+                    {courses.map((course) => (
+                      <option key={course.id} value={course.id}>
+                        {course.name}
                       </option>
                     ))}
                   </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-400">
-                    {t.formCourse} *
-                  </label>
-                  <input
-                    className={inputClass}
-                    value={course}
-                    onChange={(e) => setCourse(e.target.value)}
-                    placeholder={t.formCoursePh}
-                  />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-400">

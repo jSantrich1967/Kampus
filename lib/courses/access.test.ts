@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   canAttachCourseToOrganization,
   canArchiveCourse,
+  canSubmitToCourse,
   courseVisibleTo,
   enrollmentDisplayName,
   joinCourseDecision,
@@ -176,6 +177,29 @@ describe("canArchiveCourse", () => {
   it("closes an open course and leaves an archived course alone", () => {
     expect(canArchiveCourse("active")).toBe(true);
     expect(canArchiveCourse("archived")).toBe(false);
+  });
+});
+
+describe("canSubmitToCourse", () => {
+  it("allows an active seat on an open course", () => {
+    expect(
+      canSubmitToCourse({ courseStatus: "active", enrollmentStatus: "active", viewerIsTeacher: false }),
+    ).toBe(true);
+  });
+
+  it("rejects a suspended seat, an archived course, and the teacher", () => {
+    expect(
+      canSubmitToCourse({ courseStatus: "active", enrollmentStatus: "suspended", viewerIsTeacher: false }),
+    ).toBe(false);
+    expect(
+      canSubmitToCourse({ courseStatus: "archived", enrollmentStatus: "active", viewerIsTeacher: false }),
+    ).toBe(false);
+    expect(
+      canSubmitToCourse({ courseStatus: "active", enrollmentStatus: "active", viewerIsTeacher: true }),
+    ).toBe(false);
+    expect(
+      canSubmitToCourse({ courseStatus: "active", enrollmentStatus: null, viewerIsTeacher: false }),
+    ).toBe(false);
   });
 });
 
