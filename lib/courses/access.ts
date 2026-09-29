@@ -16,6 +16,18 @@ export function courseVisibleTo(input: {
 }
 
 /**
+ * What the student may see on Mis cursos. A suspended seat stays as a notice.
+ * An archived course stays off the list. This is not permission to open the course.
+ */
+export function studentCourseListStatus(input: {
+  courseStatus: CourseStatus;
+  enrollmentStatus: EnrollmentStatus;
+}): EnrollmentStatus | null {
+  if (input.courseStatus !== "active") return null;
+  return input.enrollmentStatus;
+}
+
+/**
  * A course with no institution belongs to the teacher. An institution course
  * requires an active staff seat in that institution. A student seat is not enough.
  */

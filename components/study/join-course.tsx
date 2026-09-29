@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { PageHeader } from "@/components/layout/page-header";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { joinCourseByCode, listEnrolledCourses, type EnrolledCourse } from "@/lib/supabase/courses-db";
@@ -58,7 +59,8 @@ export function JoinCourse() {
         return;
       }
       if (result.status === "suspended") {
-        setError("Tu lugar en ese curso está suspendido.");
+        setError("Tu lugar en ese curso está suspendido. El profesor puede devolverte el lugar.");
+        setCourses(await listEnrolledCourses(supabase, authUserId!));
         return;
       }
       if (result.status === "teacher") {
@@ -128,8 +130,18 @@ export function JoinCourse() {
           {courses.map((course) => (
             <Card key={course.id}>
               <CardHeader>
-                <CardTitle>{course.name}</CardTitle>
-                <CardDescription>{course.organizationName ?? "Sin institución"}</CardDescription>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <CardTitle>{course.name}</CardTitle>
+                  <Badge tone={course.seatStatus === "suspended" ? "warning" : "success"}>
+                    {course.seatStatus === "suspended" ? "Suspendido" : "Activo"}
+                  </Badge>
+                </div>
+                <CardDescription>
+                  {course.organizationName ?? "Sin institución"}
+                  {course.seatStatus === "suspended"
+                    ? " · El código no te deja entrar hasta que el profesor te devuelva."
+                    : ""}
+                </CardDescription>
               </CardHeader>
             </Card>
           ))}

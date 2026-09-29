@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { canAttachCourseToOrganization, courseVisibleTo, enrollmentDisplayName, joinCourseDecision, normalizeCourseCode } from "@/lib/courses/access";
+import {
+  canAttachCourseToOrganization,
+  courseVisibleTo,
+  enrollmentDisplayName,
+  joinCourseDecision,
+  normalizeCourseCode,
+  studentCourseListStatus,
+} from "@/lib/courses/access";
 
 describe("courseVisibleTo", () => {
   it("lets the teacher see an archived course", () => {
@@ -150,6 +157,17 @@ describe("joinCourseDecision", () => {
         enrollmentStatus: null,
       }),
     ).toBe("rejected");
+  });
+});
+
+describe("studentCourseListStatus", () => {
+  it("keeps an active seat and a suspended seat on an open course", () => {
+    expect(studentCourseListStatus({ courseStatus: "active", enrollmentStatus: "active" })).toBe("active");
+    expect(studentCourseListStatus({ courseStatus: "active", enrollmentStatus: "suspended" })).toBe("suspended");
+  });
+
+  it("hides the course once the teacher archives it", () => {
+    expect(studentCourseListStatus({ courseStatus: "archived", enrollmentStatus: "suspended" })).toBeNull();
   });
 });
 

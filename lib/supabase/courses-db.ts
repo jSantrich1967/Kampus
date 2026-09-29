@@ -1,6 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { canAttachCourseToOrganization, enrollmentDisplayName, normalizeCourseCode } from "@/lib/courses/access";
+import {
+  canAttachCourseToOrganization,
+  enrollmentDisplayName,
+  normalizeCourseCode,
+  studentCourseListStatus,
+} from "@/lib/courses/access";
 import { listMyOrganizations } from "@/lib/supabase/organizations-db";
 
 export type TaughtCourse = {
@@ -17,6 +22,7 @@ export type EnrolledCourse = {
   id: string;
   name: string;
   organizationName: string | null;
+  seatStatus: "active" | "suspended";
 };
 
 type CourseRow = {
@@ -97,6 +103,7 @@ export async function createTaughtCourse(
 }
 
 type EnrollmentRow = {
+  status: string;
   courses:
     | {
         id: string;
@@ -113,28 +120,85 @@ type EnrollmentRow = {
     | null;
 };
 
-/** Courses where this account has an active seat. */
-export async function listEnrolledCourses(client: SupabaseClient, userId: string): Promise<EnrolledCourse[]> {
-  const { data, error } = await client
-    .from("course_enrollments")
-    .select("courses(id, name, status, organizations(name))")
-    .eq("user_id", userId)
-    .eq("status", "active");
+type EnrolledCourseRpcRow = {
+  course_id: string;
+  course_name: string;
+  organization_name: string | null;
+  course_status: string;
+  seat_status: string;
+};
 
-  if (error) {
+function missingEnrollmentNotice(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  const message = error.message ?? "";
+  return error.code === "PGRST202" || /list_my_enrolled_courses/.test(message);
+}
+
+function toEnrolledCourse(input: {
+  id: string;
+  name: string;
+  organizationName: string | null;
+  courseStatus: string;
+  seatStatus: string;
+}): EnrolledCourse | null {
+  const seatStatus = studentCourseListStatus({
+    courseStatus: input.courseStatus === "archived" ? "archived" : "active",
+    enrollmentStatus: input.seatStatus === "suspended" ? "suspended" : "active",
+  });
+  if (!seatStatus) return null;
+  return {
+    id: input.id,
+    name: input.name,
+    organizationName: input.organizationName,
+    seatStatus,
+  };
+}
+
+/** The student's own seats. A suspended seat stays visible as a notice. */
+export async function listEnrolledCourses(client: SupabaseClient, userId: string): Promise<EnrolledCourse[]> {
+  const { data, error } = await client.rpc("list_my_enrolled_courses");
+  if (!error) {
+    return ((data ?? []) as EnrolledCourseRpcRow[])
+      .map((row) =>
+        toEnrolledCourse({
+          id: String(row.course_id),
+          name: row.course_name,
+          organizationName: row.organization_name,
+          courseStatus: row.course_status,
+          seatStatus: row.seat_status,
+        }),
+      )
+      .filter((course): course is EnrolledCourse => course !== null)
+      .sort((left, right) => left.name.localeCompare(right.name));
+  }
+  if (!missingEnrollmentNotice(error)) {
     if (missingCoursesTable(error)) return [];
     throw error;
   }
 
+  const fallback = await client
+    .from("course_enrollments")
+    .select("status, courses(id, name, status, organizations(name))")
+    .eq("user_id", userId)
+    .eq("status", "active");
+
+  if (fallback.error) {
+    if (missingCoursesTable(fallback.error)) return [];
+    throw fallback.error;
+  }
+
   const courses: EnrolledCourse[] = [];
-  for (const row of (data ?? []) as unknown as EnrollmentRow[]) {
+  for (const row of (fallback.data ?? []) as unknown as EnrollmentRow[]) {
     const course = Array.isArray(row.courses) ? row.courses[0] : row.courses;
-    if (!course || course.status !== "active") continue;
-    courses.push({
+    if (!course) continue;
+    const enrolled = toEnrolledCourse({
       id: String(course.id),
       name: course.name,
       organizationName: organizationName(course.organizations),
+      courseStatus: course.status,
+      seatStatus: row.status,
     });
+    if (enrolled) courses.push(enrolled);
   }
   return courses;
 }
