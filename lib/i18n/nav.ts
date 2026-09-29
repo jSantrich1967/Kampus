@@ -19,6 +19,8 @@ export const navCopy = {
     },
     items: {
       today: "Hoy",
+      tutor: "Tutor IA",
+      duelos: "Duelos",
       passMode: "Modo aprobar",
       rescue: "Kit de estudios",
       flashcards: "Tarjetas",
@@ -42,6 +44,8 @@ export const navCopy = {
       teaching: "Copiloto docente",
       reviewWorks: "Revisar trabajos",
       examGenerator: "Generador de exámenes",
+      autoGrader: "Corrección automática",
+      cramMode: "Modo examen",
       issueCertificates: "Acreditar logros",
       myCertificates: "Mis logros",
       familyReport: "Reporte familiar",

@@ -19,7 +19,7 @@ import { useKampus } from "@/components/kampus/kampus-provider";
 import { useDiaryCheckInStatus } from "@/hooks/use-diary-check-in-status";
 import { useDiaryPendingCount } from "@/hooks/use-diary-pending-count";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { wellbeingCopy } from "@/lib/i18n/wellbeing";
@@ -103,9 +103,7 @@ export function WellbeingHub() {
                 ) : null}
               </div>
             ) : null}
-            <Link href="/wellbeing/diary">
-              <Button className="w-full sm:w-auto">{t.diaryCardCta}</Button>
-            </Link>
+            <Link href="/wellbeing/diary" className={buttonClasses({ className: "w-full sm:w-auto" })}>{t.diaryCardCta}</Link>
           </div>
         </Card>
 
@@ -118,11 +116,9 @@ export function WellbeingHub() {
             <CardDescription>{useCloud ? t.psychologistCardHintCloud : t.psychologistCardHint}</CardDescription>
           </CardHeader>
           <div className="px-6 pb-6">
-            <Link href="/wellbeing/psychologist">
-              <Button variant="secondary" className="w-full sm:w-auto">
+            <Link href="/wellbeing/psychologist" className={buttonClasses({ variant: "secondary", className: "w-full sm:w-auto" })}>
                 {t.psychologistCardCta}
-              </Button>
-            </Link>
+              </Link>
           </div>
         </Card>
       </div>

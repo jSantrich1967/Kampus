@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { useDiaryCheckInStatus } from "@/hooks/use-diary-check-in-status";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   dismissCheckInReminderForToday,
@@ -57,9 +57,7 @@ export function WellbeingCheckInReminder({ compact = false }: Props) {
           {t.checkInReminderTitle}
         </span>
         <div className="flex gap-2">
-          <Link href="/wellbeing/diary">
-            <Button size="sm">{t.checkInReminderCta}</Button>
-          </Link>
+          <Link href="/wellbeing/diary" className={buttonClasses({ size: "sm" })}>{t.checkInReminderCta}</Link>
           <Button size="sm" variant="ghost" onClick={dismiss} aria-label={t.checkInReminderDismiss}>
             <X className="h-4 w-4" />
           </Button>
@@ -83,9 +81,7 @@ export function WellbeingCheckInReminder({ compact = false }: Props) {
         </Button>
       </CardHeader>
       <div className="px-6 pb-4">
-        <Link href="/wellbeing/diary">
-          <Button size="sm">{t.checkInReminderCta}</Button>
-        </Link>
+        <Link href="/wellbeing/diary" className={buttonClasses({ size: "sm" })}>{t.checkInReminderCta}</Link>
       </div>
     </Card>
   );

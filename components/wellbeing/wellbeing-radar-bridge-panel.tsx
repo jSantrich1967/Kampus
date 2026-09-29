@@ -5,7 +5,7 @@ import { Activity } from "lucide-react";
 
 import { useWellbeingRiskSignal } from "@/hooks/use-wellbeing-risk-signal";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { buildPsychologistHref } from "@/lib/wellbeing/psychologist-path";
@@ -63,23 +63,17 @@ export function WellbeingRadarBridgePanel({ variant = "insights" }: Props) {
           ))}
         </ul>
         <div className="flex flex-wrap gap-2">
-          <Link href={buildPsychologistHref()}>
-            <Button size="sm" variant="secondary">
+          <Link href={buildPsychologistHref()} className={buttonClasses({ variant: "secondary", size: "sm" })}>
               {t.insightsTalkCta}
-            </Button>
-          </Link>
+            </Link>
           {variant === "radar" ? (
-            <Link href="/wellbeing">
-              <Button size="sm" variant="ghost">
+            <Link href="/wellbeing" className={buttonClasses({ variant: "ghost", size: "sm" })}>
                 {t.riskBridgeWellbeingCta}
-              </Button>
-            </Link>
+              </Link>
           ) : (
-            <Link href="/risk">
-              <Button size="sm" variant="ghost">
+            <Link href="/risk" className={buttonClasses({ variant: "ghost", size: "sm" })}>
                 {t.riskBridgeRadarCta}
-              </Button>
-            </Link>
+              </Link>
           )}
         </div>
       </div>

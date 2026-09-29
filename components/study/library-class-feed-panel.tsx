@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { libraryCopy } from "@/lib/i18n/library";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
@@ -101,39 +101,29 @@ export function LibraryClassFeedPanel({
                       {t.classFeedUploadCta}
                     </Button>
                   ) : (
-                    <Link href={item.uploadHref}>
-                      <Button size="sm" className="gap-1.5">
+                    <Link href={item.uploadHref} className={buttonClasses({ size: "sm", className: "gap-1.5" })}>
                         <Upload className="h-3.5 w-3.5" aria-hidden />
                         {t.classFeedUploadCta}
-                      </Button>
-                    </Link>
+                      </Link>
                   )
                 ) : item.status === "unlinked" ? (
-                  <Link href={item.openHref}>
-                    <Button size="sm" variant="secondary" className="gap-1.5">
+                  <Link href={item.openHref} className={buttonClasses({ variant: "secondary", size: "sm", className: "gap-1.5" })}>
                       <Link2 className="h-3.5 w-3.5" aria-hidden />
                       {t.openReader}
-                    </Button>
-                  </Link>
+                    </Link>
                 ) : (
                   <>
-                    <Link href={item.openHref}>
-                      <Button size="sm" variant="secondary" className="gap-1.5">
+                    <Link href={item.openHref} className={buttonClasses({ variant: "secondary", size: "sm", className: "gap-1.5" })}>
                         <BookOpen className="h-3.5 w-3.5" aria-hidden />
                         {t.openReader}
-                      </Button>
-                    </Link>
-                    <Link href={item.quizHref}>
-                      <Button size="sm" variant="ghost" className="gap-1.5">
+                      </Link>
+                    <Link href={item.quizHref} className={buttonClasses({ variant: "ghost", size: "sm", className: "gap-1.5" })}>
                         <Zap className="h-3.5 w-3.5" aria-hidden />
                         {t.quickQuiz}
-                      </Button>
-                    </Link>
-                    <Link href={`${item.openHref.split("?")[0]}?kit=1`}>
-                      <Button size="sm" variant="ghost" className="gap-1.5">
+                      </Link>
+                    <Link href={`${item.openHref.split("?")[0]}?kit=1`} className={buttonClasses({ variant: "ghost", size: "sm", className: "gap-1.5" })}>
                         {t.quickKit}
-                      </Button>
-                    </Link>
+                      </Link>
                   </>
                 )}
               </div>

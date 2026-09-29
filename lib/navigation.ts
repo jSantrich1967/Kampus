@@ -25,8 +25,12 @@ import {
   Send,
   Bell,
   ClipboardCheck,
+  BadgeCheck,
   Megaphone,
   Award,
+  Bot,
+  Swords,
+  AlarmClock,
 } from "lucide-react";
 
 import type { UserRole } from "@/lib/schemas/profile";
@@ -58,6 +62,9 @@ export const navigationGroups: NavGroup[] = [
   {
     id: "learn",
     items: [
+      { href: "/tutor", key: "tutor", icon: Bot, roles: ["student", "learner"] },
+      { href: "/duelos", key: "duelos", icon: Swords, roles: ["student", "learner"] },
+      { href: "/modo-examen", key: "cramMode", icon: AlarmClock, roles: ["student", "learner"] },
       { href: "/study/library", key: "library", icon: Library, roles: ["student", "teacher", "learner"] },
       { href: "/study/convertir", key: "convertir", icon: FileUp, roles: ["student", "learner"] },
       { href: "/study/plan", key: "studyPlan", icon: CalendarCheck, roles: ["student", "learner"] },
@@ -102,6 +109,7 @@ export const navigationGroups: NavGroup[] = [
     items: [
       { href: "/teaching", key: "teaching", icon: School, roles: ["teacher"] },
       { href: "/teaching/examenes", key: "examGenerator", icon: FileUp, roles: ["teacher"] },
+      { href: "/teaching/corregir", key: "autoGrader", icon: BadgeCheck, roles: ["teacher"] },
       { href: "/teaching/trabajos", key: "reviewWorks", icon: ClipboardCheck, roles: ["teacher"] },
       { href: "/teaching/certificados", key: "issueCertificates", icon: Award, roles: ["teacher"] },
       { href: "/teaching/avisos", key: "teacherNotices", icon: Megaphone, roles: ["teacher"] },
@@ -129,7 +137,7 @@ export const navigationGroups: NavGroup[] = [
  */
 const studentNavStructure: Array<{ id: NavGroup["id"]; keys: NavItemKey[] }> = [
   { id: "command", keys: ["today"] },
-  { id: "learn", keys: ["library", "convertir", "studyPlan", "myWorks", "studentNotices", "flashcards", "myCertificates", "familyReport"] },
+  { id: "learn", keys: ["tutor", "duelos", "cramMode", "library", "convertir", "studyPlan", "myWorks", "studentNotices", "flashcards", "myCertificates", "familyReport"] },
   { id: "evaluate", keys: ["exams", "agendaCalendar"] },
   { id: "classes", keys: ["collaborate"] },
   { id: "social", keys: ["community"] },
@@ -144,7 +152,7 @@ const studentNavStructure: Array<{ id: NavGroup["id"]; keys: NavItemKey[] }> = [
 const teacherNavStructure: Array<{ id: NavGroup["id"]; keys: NavItemKey[] }> = [
   { id: "command", keys: ["today"] },
   { id: "teach", keys: ["library", "classes", "reviewWorks", "teacherNotices"] },
-  { id: "evaluate", keys: ["exams", "examGenerator", "risk"] },
+  { id: "evaluate", keys: ["exams", "examGenerator", "autoGrader", "risk"] },
   { id: "followup", keys: ["teacherAlerts", "teacherReports", "issueCertificates"] },
   { id: "social", keys: ["community"] },
   { id: "system", keys: ["settings"] },

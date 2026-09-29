@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { useAcademicRadarData } from "@/hooks/use-academic-radar-data";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { WellbeingRadarBridgePanel } from "@/components/wellbeing/wellbeing-radar-bridge-panel";
@@ -114,23 +114,17 @@ export function AcademicRiskRadar() {
                 </ul>
                 <div className="flex flex-wrap gap-2 pt-2">
                   {profile.role === "student" ? (
-                    <Link href="/pass-mode">
-                      <Button size="sm" variant="secondary">
-                        {t.passModeCta}
-                      </Button>
+                    <Link href="/pass-mode" className={buttonClasses({ size: "sm", variant: "secondary" })}>
+                      {t.passModeCta}
                     </Link>
                   ) : null}
                   {profile.role === "student" || profile.role === "teacher" ? (
-                    <Link href="/study/library/rescue">
-                      <Button size="sm" variant="ghost">
-                        Kit de estudios
-                      </Button>
+                    <Link href="/study/library/rescue" className={buttonClasses({ size: "sm", variant: "ghost" })}>
+                      Kit de estudios
                     </Link>
                   ) : null}
-                  <Link href="/collaborate/investigaciones">
-                    <Button size="sm" variant="ghost">
-                      {t.researchCta}
-                    </Button>
+                  <Link href="/collaborate/investigaciones" className={buttonClasses({ size: "sm", variant: "ghost" })}>
+                    {t.researchCta}
                   </Link>
                 </div>
               </div>

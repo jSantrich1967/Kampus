@@ -4,7 +4,7 @@ import { CheckCircle2, Play, Target } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { passModeCopy } from "@/lib/i18n/pass-mode";
@@ -69,22 +69,18 @@ export function PassModeNextBlockPanel({
             </p>
             <p className="mt-2 text-xs text-slate-400">{block.rationale}</p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Link href={getStudyBlockActionHref(block)}>
-                <Button className="gap-2">
+              <Link href={getStudyBlockActionHref(block)} className={buttonClasses({ className: "gap-2" })}>
                   <Play className="h-4 w-4" aria-hidden />
                   {getStudyBlockActionLabel(block)}
-                </Button>
-              </Link>
+                </Link>
               {!isDone ? (
                 <Button type="button" variant="secondary" onClick={() => onMarkDone(block.id)}>
                   {t.markDone}
                 </Button>
               ) : null}
-              <Link href="/today#today-mission">
-                <Button type="button" variant="ghost">
+              <Link href="/today#today-mission" className={buttonClasses({ variant: "ghost" })}>
                   {t.viewToday}
-                </Button>
-              </Link>
+                </Link>
             </div>
           </div>
         ) : null}

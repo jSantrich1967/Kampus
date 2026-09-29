@@ -9,7 +9,7 @@ import { useKampus } from "@/components/kampus/kampus-provider";
 import { useDiaryCheckInStatus } from "@/hooks/use-diary-check-in-status";
 import { useDiaryInsights } from "@/hooks/use-diary-insights";
 import { useWellbeingRiskSignal } from "@/hooks/use-wellbeing-risk-signal";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
@@ -131,11 +131,12 @@ export function WellbeingCounselorSharePanel() {
             {copied ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />}
             {copied ? t.counselorShareCopied : t.counselorShareCopy}
           </Button>
-          <a href={mailto}>
-            <Button type="button" size="sm" variant="secondary" className="gap-1.5">
-              <Mail className="h-3.5 w-3.5" aria-hidden />
-              {t.counselorShareEmail}
-            </Button>
+          <a
+            href={mailto}
+            className={buttonClasses({ variant: "secondary", size: "sm", className: "gap-1.5" })}
+          >
+            <Mail className="h-3.5 w-3.5" aria-hidden />
+            {t.counselorShareEmail}
           </a>
           <ShareLinkButton
             pathname="/wellbeing"
@@ -144,12 +145,10 @@ export function WellbeingCounselorSharePanel() {
             label={t.counselorShareLink}
             copiedLabel={t.counselorShareCopied}
           />
-          <Link href="/wellbeing/counselor-verify">
-            <Button type="button" size="sm" variant="ghost" className="gap-1.5">
+          <Link href="/wellbeing/counselor-verify" className={buttonClasses({ variant: "ghost", size: "sm", className: "gap-1.5" })}>
               <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
               {t.counselorVerifyLink}
-            </Button>
-          </Link>
+            </Link>
         </div>
         <p className="text-[11px] text-slate-500">{t.counselorSharePrivacy}</p>
       </div>

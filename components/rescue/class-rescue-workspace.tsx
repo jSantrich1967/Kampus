@@ -9,7 +9,7 @@ import { ShareLinkButton } from "@/components/growth/share-link-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RescueNotebookPicker } from "@/components/rescue/rescue-notebook-picker";
 import { RescuePackDisplay } from "@/components/rescue/rescue-pack-display";
@@ -1081,11 +1081,9 @@ export function ClassRescueWorkspace() {
               >
                 {saveFlashcardsBusy ? "Guardando tarjetas…" : "Guardar tarjetas en el cuaderno"}
               </Button>
-              <Link href={buildPassModeSubjectHref(subjectHint.trim() || profile.subjects[0] || "General", "rescue")}>
-                <Button variant="secondary" size="sm">
+              <Link href={buildPassModeSubjectHref(subjectHint.trim() || profile.subjects[0] || "General", "rescue")} className={buttonClasses({ variant: "secondary", size: "sm" })}>
                   Llevar esto a Modo aprobar
-                </Button>
-              </Link>
+                </Link>
             </>
           }
         />

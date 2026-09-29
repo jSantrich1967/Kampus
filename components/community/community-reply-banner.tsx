@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { MessageCircle, X } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { buildCommunityPostHref } from "@/lib/community/reply-notifications";
 import { communityCopy } from "@/lib/i18n/community";
 
@@ -29,17 +29,13 @@ export function CommunityReplyBanner({ count, preview, href, onDismiss }: Commun
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {href ? (
-          <Link href={href}>
-            <Button size="sm" variant="secondary">
+          <Link href={href} className={buttonClasses({ variant: "secondary", size: "sm" })}>
               {t.replyBannerCta}
-            </Button>
-          </Link>
+            </Link>
         ) : (
-          <Link href="/community">
-            <Button size="sm" variant="secondary">
+          <Link href="/community" className={buttonClasses({ variant: "secondary", size: "sm" })}>
               {t.replyBannerCta}
-            </Button>
-          </Link>
+            </Link>
         )}
         <Button type="button" size="sm" variant="ghost" className="gap-1" onClick={onDismiss}>
           <X className="h-4 w-4" aria-hidden />

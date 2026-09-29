@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Heart, Phone } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { HUMAN_SUPPORT_RESOURCES, phoneTelHref, VENEZUELA_EMERGENCY_PHONE } from "@/lib/wellbeing/human-support-resources";
 import { wellbeingCopy } from "@/lib/i18n/wellbeing";
@@ -21,16 +21,15 @@ export function WellbeingHumanSupportPanel({ compact = false }: Props) {
         <p className="font-medium text-rose-100">{t.humanSupportCompactTitle}</p>
         <p className="mt-1 text-slate-300">{t.humanSupportCompactHint}</p>
         <div className="mt-3 flex flex-wrap gap-2">
-          <a href={phoneTelHref(VENEZUELA_EMERGENCY_PHONE)}>
-            <Button size="sm" variant="secondary">
-              {t.humanSupportEmergencyCta}
-            </Button>
+          <a
+            href={phoneTelHref(VENEZUELA_EMERGENCY_PHONE)}
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
+          >
+            {t.humanSupportEmergencyCta}
           </a>
-          <Link href="/wellbeing#apoyo-humano">
-            <Button size="sm" variant="ghost">
+          <Link href="/wellbeing#apoyo-humano" className={buttonClasses({ variant: "ghost", size: "sm" })}>
               {t.humanSupportSeeAll}
-            </Button>
-          </Link>
+            </Link>
         </div>
       </div>
     );
@@ -58,19 +57,22 @@ export function WellbeingHumanSupportPanel({ compact = false }: Props) {
               </div>
               <div className="flex shrink-0 flex-wrap gap-2">
                 {r.phone ? (
-                  <a href={phoneTelHref(r.phone)}>
-                    <Button size="sm" variant={r.urgent ? "primary" : "secondary"} className="gap-1.5">
-                      <Phone className="h-3.5 w-3.5" aria-hidden />
-                      {r.phone}
-                    </Button>
+                  <a
+                    href={phoneTelHref(r.phone)}
+                    className={buttonClasses({
+                      variant: r.urgent ? "primary" : "secondary",
+                      size: "sm",
+                      className: "gap-1.5",
+                    })}
+                  >
+                    <Phone className="h-3.5 w-3.5" aria-hidden />
+                    {r.phone}
                   </a>
                 ) : null}
                 {r.href ? (
-                  <Link href={r.href}>
-                    <Button size="sm" variant="ghost">
+                  <Link href={r.href} className={buttonClasses({ variant: "ghost", size: "sm" })}>
                       {t.humanSupportOpen}
-                    </Button>
-                  </Link>
+                    </Link>
                 ) : null}
               </div>
             </div>

@@ -98,3 +98,24 @@ export function examGeneratorRateLimits(): { max: number; windowMs: number } {
     windowMs: parseInt(process.env.API_RL_EXAM_GENERATOR_WINDOW_MS ?? String(60 * 60 * 1000), 10),
   };
 }
+
+export function autoGraderRateLimits(): { max: number; windowMs: number } {
+  return {
+    max: parseInt(process.env.API_RL_MAX_AUTO_GRADER ?? "30", 10),
+    windowMs: parseInt(process.env.API_RL_AUTO_GRADER_WINDOW_MS ?? String(60 * 60 * 1000), 10),
+  };
+}
+
+export function cramModeRateLimits(): { max: number; windowMs: number } {
+  return {
+    max: parseInt(process.env.API_RL_MAX_CRAM_MODE ?? "20", 10),
+    windowMs: parseInt(process.env.API_RL_CRAM_MODE_WINDOW_MS ?? String(60 * 60 * 1000), 10),
+  };
+}
+
+export function socraticTutorRateLimits(): { max: number; windowMs: number } {
+  return {
+    max: parseInt(process.env.API_RL_MAX_SOCRATIC_TUTOR ?? "40", 10),
+    windowMs: parseInt(process.env.API_RL_SOCRATIC_TUTOR_WINDOW_MS ?? String(15 * 60 * 1000), 10),
+  };
+}

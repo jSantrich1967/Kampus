@@ -4,7 +4,7 @@ import { AlertTriangle } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { passModeCopy } from "@/lib/i18n/pass-mode";
 import type { NotebookHealthAlert } from "@/lib/today/notebook-health";
@@ -51,11 +51,9 @@ export function PassModeMaterialPanel({ alerts, loading }: PassModeMaterialPanel
               </div>
               <p className="mt-1 text-xs text-slate-400">{alert.description}</p>
             </div>
-            <Link href={alert.href} className="shrink-0">
-              <Button size="sm" variant="secondary">
+            <Link href={alert.href} className={buttonClasses({ variant: "secondary", size: "sm", className: "shrink-0" })}>
                 Subir material
-              </Button>
-            </Link>
+              </Link>
           </li>
         ))}
       </ul>

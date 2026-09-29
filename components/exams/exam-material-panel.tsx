@@ -4,7 +4,7 @@ import Link from "next/link";
 import { BookOpen, Calendar, Loader2, Upload } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { examsCopy } from "@/lib/i18n/exams";
 import type { ExamSubjectMaterialStatus } from "@/lib/exams/exam-subject-material";
@@ -54,25 +54,19 @@ export function ExamMaterialPanel({ subject, loading = false, material }: ExamMa
         ) : null}
 
         <div className="flex flex-wrap gap-2">
-          <Link href={notebookHref}>
-            <Button size="sm" variant="secondary" className="gap-2">
+          <Link href={notebookHref} className={buttonClasses({ variant: "secondary", size: "sm", className: "gap-2" })}>
               <BookOpen className="h-4 w-4" aria-hidden />
               {t.materialNotebookCta}
-            </Button>
-          </Link>
-          <Link href="/exams/calendar">
-            <Button size="sm" variant="secondary" className="gap-2">
+            </Link>
+          <Link href="/exams/calendar" className={buttonClasses({ variant: "secondary", size: "sm", className: "gap-2" })}>
               <Calendar className="h-4 w-4" aria-hidden />
               {t.materialCalendarCta}
-            </Button>
-          </Link>
+            </Link>
           {!loading && !material.hasRealMaterial ? (
-            <Link href={uploadHref}>
-              <Button size="sm" variant="ghost" className="gap-2">
+            <Link href={uploadHref} className={buttonClasses({ variant: "ghost", size: "sm", className: "gap-2" })}>
                 <Upload className="h-4 w-4" aria-hidden />
                 {t.materialUploadCta}
-              </Button>
-            </Link>
+              </Link>
           ) : null}
         </div>
       </div>

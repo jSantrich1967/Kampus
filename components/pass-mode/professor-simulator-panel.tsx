@@ -8,7 +8,7 @@ import { useMemo, useState } from "react";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePassModePlan } from "@/lib/hooks/use-pass-mode-plan";
 import { passModeCopy } from "@/lib/i18n/pass-mode";
@@ -54,12 +54,10 @@ export function ProfessorSimulatorPanel() {
         title={t.simulatorTitle}
         description={t.simulatorHint}
         actions={
-          <Link href="/pass-mode">
-            <Button variant="secondary" size="sm" className="gap-2">
+          <Link href="/pass-mode" className={buttonClasses({ variant: "secondary", size: "sm", className: "gap-2" })}>
               <ArrowLeft className="h-4 w-4" />
               {t.backToPassMode}
-            </Button>
-          </Link>
+            </Link>
         }
       />
 
@@ -139,9 +137,7 @@ export function ProfessorSimulatorPanel() {
                   {t.simulatorNext}
                 </Button>
               ) : isPremium ? (
-                <Link href="/pass-mode">
-                  <Button>{t.backToPassMode}</Button>
-                </Link>
+                <Link href="/pass-mode" className={buttonClasses()}>{t.backToPassMode}</Link>
               ) : (
                 <p className="text-sm text-slate-400">{t.simulatorUnlockAll}</p>
               )}

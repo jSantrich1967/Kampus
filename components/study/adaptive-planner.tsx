@@ -6,7 +6,7 @@ import { CalendarDays, CheckCircle2, Plus, RefreshCcw, Trash2 } from "lucide-rea
 
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { PageHeader } from "@/components/layout/page-header";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StudyStreakCard } from "@/components/study/study-streak-card";
 import { localIsoDate } from "@/lib/calendar/local-iso-date";
@@ -57,9 +57,7 @@ function StudentOnly() {
           </CardDescription>
         </CardHeader>
         <div className="px-6 pb-6">
-          <Link href="/study">
-            <Button size="sm">Volver a la Sala de estudio</Button>
-          </Link>
+          <Link href="/study" className={buttonClasses({ size: "sm" })}>Volver a la Sala de estudio</Link>
         </div>
       </Card>
     </div>

@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { attributionDismissKey, parseShareAttribution } from "@/lib/growth/attribution";
 
 export function AttributionBanner() {
@@ -74,16 +74,12 @@ export function AttributionBanner() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/today">
-            <Button size="sm" type="button">
+          <Link href="/today" className={buttonClasses({ size: "sm" })}>
               Ir a Hoy
-            </Button>
-          </Link>
-          <Link href="/community">
-            <Button size="sm" type="button" variant="secondary">
+            </Link>
+          <Link href="/community" className={buttonClasses({ variant: "secondary", size: "sm" })}>
               Comunidad
-            </Button>
-          </Link>
+            </Link>
           <Button size="sm" type="button" variant="ghost" onClick={dismiss}>
             Cerrar
           </Button>

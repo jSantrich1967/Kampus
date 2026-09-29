@@ -9,7 +9,7 @@ import { ShareLinkButton } from "@/components/growth/share-link-button";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { NotebookPagePicker } from "@/components/study/notebook-page-picker";
 import { RescuePackDisplay } from "@/components/rescue/rescue-pack-display";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 import type { RescuePack } from "@/lib/class-rescue";
@@ -313,11 +313,9 @@ export function NotebookStudyKitPanel({
                 label="Compartir kit"
                 copiedLabel="Copiado"
               />
-              <Link href={buildPassModeSubjectHref(subjectLabel.trim() || "General", "kit")}>
-                <Button variant="secondary" size="sm">
+              <Link href={buildPassModeSubjectHref(subjectLabel.trim() || "General", "kit")} className={buttonClasses({ variant: "secondary", size: "sm" })}>
                   Llevar esto a Modo aprobar
-                </Button>
-              </Link>
+                </Link>
             </>
           }
         />
