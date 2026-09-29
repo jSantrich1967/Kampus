@@ -9,10 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { createTaughtCourse, listCourseSeats, listTaughtCourses, setCourseSeatStatus, type CourseSeat, type TaughtCourse } from "@/lib/supabase/courses-db";
+import { archiveTaughtCourse, createTaughtCourse, listCourseSeats, listTaughtCourses, setCourseSeatStatus, type CourseSeat, type TaughtCourse } from "@/lib/supabase/courses-db";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { listMyOrganizations } from "@/lib/supabase/organizations-db";
-import { canAttachCourseToOrganization } from "@/lib/courses/access";
+import { canArchiveCourse, canAttachCourseToOrganization } from "@/lib/courses/access";
 
 const inputClass =
   "w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm placeholder:text-slate-500 focus:border-indigo-400/60 focus:outline-none";
@@ -26,6 +26,7 @@ export function CourseList() {
   const [organizationId, setOrganizationId] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [archivingId, setArchivingId] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -103,7 +104,27 @@ export function CourseList() {
     }
   }
 
+  async function archiveCourse(course: TaughtCourse) {
+    if (!canArchiveCourse(course.status)) return;
+    if (!window.confirm(`¿Archivar «${course.name}»? El código dejará de servir. El curso no se borra.`)) return;
+    setError("");
+    setArchivingId(course.id);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      await archiveTaughtCourse(supabase, course.id);
+      setCourses((current) =>
+        current.map((item) => (item.id === course.id ? { ...item, status: "archived" } : item)),
+      );
+    } catch {
+      setError("No se pudo archivar el curso.");
+    } finally {
+      setArchivingId(null);
+    }
+  }
+
   async function changeSeat(seat: CourseSeat) {
+    const course = courses.find((item) => item.id === seat.courseId);
+    if (!course || !canArchiveCourse(course.status)) return;
     const next = seat.status === "active" ? "suspended" : "active";
     if (next === "suspended" && !window.confirm(`¿Suspender a ${seat.displayName}? El código ya no le servirá.`)) {
       return;
@@ -194,8 +215,20 @@ export function CourseList() {
                   {course.organizationName ?? "Sin institución"} · {activeCount}{" "}
                   {activeCount === 1 ? "inscrito" : "inscritos"}
                   {course.status === "active" && course.joinCode ? ` · Código ${course.joinCode}` : ""}
+                  {course.status === "archived" ? " · El código ya no acepta alumnos." : ""}
                 </CardDescription>
               </CardHeader>
+              {canArchiveCourse(course.status) ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => void archiveCourse(course)}
+                  disabled={archivingId === course.id}
+                >
+                  {archivingId === course.id ? "Archivando…" : "Archivar"}
+                </Button>
+              ) : null}
               <div className="space-y-2">
                 {courseSeats.length === 0 ? (
                   <p className="text-sm text-slate-400">Nadie ha entrado con el código.</p>
@@ -207,9 +240,11 @@ export function CourseList() {
                         <Badge tone={seat.status === "active" ? "success" : "warning"}>
                           {seat.status === "active" ? "Activo" : "Suspendido"}
                         </Badge>
-                        <Button type="button" size="sm" variant="secondary" onClick={() => void changeSeat(seat)}>
-                          {seat.status === "active" ? "Suspender" : "Devolver"}
-                        </Button>
+                        {canArchiveCourse(course.status) ? (
+                          <Button type="button" size="sm" variant="secondary" onClick={() => void changeSeat(seat)}>
+                            {seat.status === "active" ? "Suspender" : "Devolver"}
+                          </Button>
+                        ) : null}
                       </div>
                     </div>
                   ))

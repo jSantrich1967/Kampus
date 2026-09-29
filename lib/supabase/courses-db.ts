@@ -261,6 +261,12 @@ export async function listCourseSeats(client: SupabaseClient, courseIds: string[
   }));
 }
 
+/** Closes the class code. The row stays. A seat change does not call this. */
+export async function archiveTaughtCourse(client: SupabaseClient, courseId: string): Promise<void> {
+  const { error } = await client.from("courses").update({ status: "archived" }).eq("id", courseId);
+  if (error) throw error;
+}
+
 export async function setCourseSeatStatus(
   client: SupabaseClient,
   courseId: string,

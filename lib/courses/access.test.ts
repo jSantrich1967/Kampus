@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   canAttachCourseToOrganization,
+  canArchiveCourse,
   courseVisibleTo,
   enrollmentDisplayName,
   joinCourseDecision,
@@ -168,6 +169,13 @@ describe("studentCourseListStatus", () => {
 
   it("hides the course once the teacher archives it", () => {
     expect(studentCourseListStatus({ courseStatus: "archived", enrollmentStatus: "suspended" })).toBeNull();
+  });
+});
+
+describe("canArchiveCourse", () => {
+  it("closes an open course and leaves an archived course alone", () => {
+    expect(canArchiveCourse("active")).toBe(true);
+    expect(canArchiveCourse("archived")).toBe(false);
   });
 });
 

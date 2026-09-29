@@ -27,6 +27,11 @@ export function studentCourseListStatus(input: {
   return input.enrollmentStatus;
 }
 
+/** Only an open course can be archived. Returning a seat does not call this. */
+export function canArchiveCourse(status: CourseStatus): boolean {
+  return status === "active";
+}
+
 /**
  * A course with no institution belongs to the teacher. An institution course
  * requires an active staff seat in that institution. A student seat is not enough.
