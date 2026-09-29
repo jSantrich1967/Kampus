@@ -62,6 +62,9 @@ export function DuelArena({ code, demo = false }: Props) {
   const [answers, setAnswers] = useState<number[]>([]);
   const [secondsLeft, setSecondsLeft] = useState(DUEL_SECONDS_PER_QUESTION);
   const [result, setResult] = useState<PlayResult | null>(null);
+  // Duelos reales: índice correcto revelado por el servidor por pregunta
+  // respondida (questionIndex -> correctIndex). En demo se usa answerIndex local.
+  const [revealed, setRevealed] = useState<Record<number, number>>({});
   const startRef = useRef(0);
   const timerRef = useRef<number | null>(null);
 
@@ -112,11 +115,46 @@ export function DuelArena({ code, demo = false }: Props) {
     setAnswers([]);
     setIdx(0);
     setPicked(null);
+    setRevealed({});
     setResult(null);
     setError(null);
+    lastReportedRef.current = null;
     startRef.current = Date.now();
     setPhase("playing");
-  }, []);
+    if (!demo && order.length > 0) {
+      // Registra el orden en el servidor para validar respuestas una por una.
+      // Si falla, el juego sigue: el feedback por pregunta será neutral.
+      fetch(`/api/duels/${encodeURIComponent(code)}/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order }),
+      }).catch(() => undefined);
+    }
+  }, [demo, code, order]);
+
+  // Evita reportar dos veces la misma pregunta (click + timeout, reintentos).
+  const lastReportedRef = useRef<string | null>(null);
+
+  function reportAnswer(choiceIndex: number, questionIndex: number) {
+    if (demo || questionIndex === undefined) return;
+    const key = `${code}:${questionIndex}`;
+    if (lastReportedRef.current === key) return;
+    lastReportedRef.current = key;
+    fetch(`/api/duels/${encodeURIComponent(code)}/answer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ choiceIndex }),
+    })
+      .then((res) => res.json().catch(() => ({})))
+      .then((data: { correctIndex?: number; questionIndex?: number }) => {
+        if (typeof data.correctIndex === "number" && typeof data.questionIndex === "number") {
+          const qi = data.questionIndex;
+          const ci = data.correctIndex;
+          setRevealed((r) => ({ ...r, [qi]: ci }));
+        }
+      })
+      .catch(() => undefined);
+  }
 
   // Temporizador por pregunta
   useEffect(() => {
@@ -130,6 +168,7 @@ export function DuelArena({ code, demo = false }: Props) {
           // Tiempo agotado: se registra como sin respuesta (-1) y avanza.
           setAnswers((prev) => {
             if (prev.length > idx) return prev;
+            reportAnswer(-1, order[idx]);
             return [...prev, -1];
           });
           setIdx((i) => i + 1);
@@ -200,6 +239,7 @@ export function DuelArena({ code, demo = false }: Props) {
     setPicked(i);
     const next = [...answers, i];
     setAnswers(next);
+    reportAnswer(i, order[idx]);
     window.setTimeout(() => setIdx((v) => v + 1), 450);
   }
 
@@ -297,8 +337,13 @@ export function DuelArena({ code, demo = false }: Props) {
           <div className="grid gap-2 px-6 pb-6">
             {currentQ.options.map((opt, i) => {
               const isPicked = picked === i;
-              const isCorrect = picked !== null && i === currentQ.answerIndex;
-              const isWrongPick = isPicked && i !== currentQ.answerIndex;
+              // Demo: la clave viene en local. Duelo real: el servidor revela
+              // el índice correcto al responder; si aún no llega, neutral.
+              const revealIndex =
+                (currentQ as DuelQuestion).answerIndex ?? revealed[order[idx]] ?? null;
+              const isCorrect = picked !== null && revealIndex !== null && i === revealIndex;
+              const isWrongPick = isPicked && revealIndex !== null && i !== revealIndex;
+              const isPickedPending = isPicked && revealIndex === null;
               return (
                 <button
                   key={i}
@@ -309,13 +354,15 @@ export function DuelArena({ code, demo = false }: Props) {
                     "flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm transition",
                     isCorrect && "border-emerald-400/60 bg-emerald-500/15 text-emerald-100",
                     isWrongPick && "border-rose-400/60 bg-rose-500/15 text-rose-100",
+                    isPickedPending && "border-amber-400/60 bg-amber-500/15 text-amber-100",
                     picked === null && "border-white/10 bg-white/5 text-slate-100 hover:border-amber-400/40 hover:bg-amber-500/10",
-                    picked !== null && !isCorrect && !isWrongPick && "border-white/10 bg-white/5 text-slate-400 opacity-60",
+                    picked !== null && !isCorrect && !isWrongPick && !isPickedPending && "border-white/10 bg-white/5 text-slate-400 opacity-60",
                   )}
                 >
                   <span>{opt}</span>
                   {isCorrect ? <Check className="h-4 w-4 text-emerald-300" aria-hidden /> : null}
                   {isWrongPick ? <X className="h-4 w-4 text-rose-300" aria-hidden /> : null}
+                  {isPickedPending ? <Loader2 className="h-4 w-4 animate-spin text-amber-300" aria-hidden /> : null}
                 </button>
               );
             })}
