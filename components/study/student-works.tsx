@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Loader2, Send } from "lucide-react";
+import { CheckCircle2, Loader2, Paperclip, Send } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
@@ -8,14 +8,16 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SubmissionDelivery } from "@/components/study/submission-delivery";
 import { mailboxCopy } from "@/lib/i18n/mailbox";
+import { submissionFileProblem } from "@/lib/study/submission-file";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { logStudyActivity } from "@/lib/supabase/study-streak-db";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
-  createStudentWork,
   listMyStudentWorks,
   listMyTeachers,
+  submitStudentWork,
   type StudentWork,
   type TeacherRef,
 } from "@/lib/supabase/teacher-student-db";
@@ -23,7 +25,7 @@ import { cn } from "@/lib/cn";
 
 const inputClass =
   "w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm placeholder:text-slate-500 focus:border-indigo-400/60 focus:outline-none";
-const areaClass = `${inputClass} min-h-36`;
+const areaClass = `${inputClass} min-h-24`;
 
 type Tab = "send" | "sent";
 
@@ -51,7 +53,8 @@ export function StudentWorks() {
   const [teacherId, setTeacherId] = useState("");
   const [course, setCourse] = useState("");
   const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
+  const [note, setNote] = useState("");
+  const [file, setFile] = useState<File | null>(null);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -99,7 +102,20 @@ export function StudentWorks() {
   async function send() {
     setError("");
     setOk("");
-    if (!teacherId || !course.trim() || !title.trim() || !body.trim()) {
+    if (!file) {
+      setError(t.formFileMissing);
+      return;
+    }
+    const fileProblem = submissionFileProblem(file);
+    if (fileProblem === "type") {
+      setError(t.formFileType);
+      return;
+    }
+    if (fileProblem === "size") {
+      setError(t.formFileSize);
+      return;
+    }
+    if (!teacherId || !course.trim() || !title.trim()) {
       setError(t.sendError);
       return;
     }
@@ -111,11 +127,12 @@ export function StudentWorks() {
     setBusy(true);
     try {
       const supabase = createSupabaseBrowserClient();
-      await createStudentWork(supabase, {
+      await submitStudentWork(supabase, {
         teacherUserId: teacher.teacherUserId,
         course: course.trim(),
         title: title.trim(),
-        body: body.trim(),
+        note: note.trim(),
+        file,
         studentDisplayName: profile.displayName,
         teacherDisplayName: teacher.displayName,
       });
@@ -124,7 +141,8 @@ export function StudentWorks() {
       setTeacherId("");
       setCourse("");
       setTitle("");
-      setBody("");
+      setNote("");
+      setFile(null);
       await reloadWorks();
     } catch {
       setError(t.sendError);
@@ -233,13 +251,32 @@ export function StudentWorks() {
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-slate-400">
-                    {t.formBody} *
+                    {t.formFile} *
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-white/15 bg-slate-950/40 px-4 py-4 text-sm text-slate-300 hover:border-indigo-400/40">
+                    <Paperclip className="h-4 w-4 text-indigo-200" />
+                    <span className="min-w-0 flex-1 truncate">{file ? file.name : t.formFileChoose}</span>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg,image/webp"
+                      className="sr-only"
+                      onChange={(e) => {
+                        setFile(e.target.files?.[0] ?? null);
+                        setError("");
+                      }}
+                    />
+                  </label>
+                  <p className="mt-1 text-xs text-slate-500">{t.formFileHint}</p>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-400">
+                    {t.formNote}
                   </label>
                   <textarea
                     className={areaClass}
-                    value={body}
-                    onChange={(e) => setBody(e.target.value)}
-                    placeholder={t.formBodyPh}
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder={t.formNotePh}
                   />
                 </div>
                 <Button onClick={send} disabled={busy} className="gap-2">
@@ -278,9 +315,11 @@ export function StudentWorks() {
                   </CardDescription>
                 </CardHeader>
                 <div className="space-y-3 px-6 pb-6">
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-300">
-                    {w.body}
-                  </p>
+                  <SubmissionDelivery
+                    body={w.body}
+                    attachmentPath={w.attachmentPath}
+                    attachmentName={w.attachmentName}
+                  />
                   {w.status === "reviewed" && (
                     <div className="rounded-xl border border-emerald-400/25 bg-emerald-500/[0.07] p-4">
                       <p className="text-xs font-medium uppercase tracking-wide text-emerald-200/80">

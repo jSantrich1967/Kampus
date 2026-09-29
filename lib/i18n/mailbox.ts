@@ -19,8 +19,15 @@ export const mailboxCopy: Record<
     formCoursePh: string;
     formTitle: string;
     formTitlePh: string;
-    formBody: string;
-    formBodyPh: string;
+    formFile: string;
+    formFileHint: string;
+    formFileChoose: string;
+    formFileMissing: string;
+    formFileType: string;
+    formFileSize: string;
+    formNote: string;
+    formNotePh: string;
+    openFile: string;
     sendCta: string;
     sendOk: string;
     sendError: string;
@@ -62,8 +69,8 @@ export const mailboxCopy: Record<
 > = {
   es: {
     worksTitle: "Mis trabajos",
-    worksHint: "Envía trabajos o informes a tu profesor y recibe su corrección aquí.",
-    worksPrivacy: "Privado: tu profesor solo ve tu nombre y tu trabajo. Nadie ve perfiles.",
+    worksHint: "Sube el archivo de tu trabajo y recibe la corrección de tu profesor aquí.",
+    worksPrivacy: "Privado: tu profesor solo ve tu nombre y tu archivo. Nadie ve perfiles.",
     tabSend: "Enviar",
     tabSent: "Enviados",
     formTeacher: "Profesor",
@@ -72,8 +79,15 @@ export const mailboxCopy: Record<
     formCoursePh: "Ej. Biología",
     formTitle: "Título",
     formTitlePh: "Ej. Informe de fotosíntesis",
-    formBody: "Tu trabajo o informe",
-    formBodyPh: "Pega aquí el texto de tu trabajo…",
+    formFile: "Tu trabajo o informe",
+    formFileHint: "PDF, Word o imagen. Hasta 20 MB.",
+    formFileChoose: "Elegir archivo",
+    formFileMissing: "Elige el archivo de tu trabajo.",
+    formFileType: "Ese archivo no sirve. Usa PDF, Word o una imagen.",
+    formFileSize: "El archivo pesa más de 20 MB.",
+    formNote: "Nota para el profesor",
+    formNotePh: "Opcional. Por ejemplo: la gráfica está en la página 3.",
+    openFile: "Abrir archivo",
     sendCta: "Enviar al profesor",
     sendOk: "Trabajo enviado. Te avisaremos aquí cuando lo corrija.",
     sendError: "No se pudo enviar. Inténtalo de nuevo.",

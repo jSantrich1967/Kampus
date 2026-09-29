@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SubmissionDelivery } from "@/components/study/submission-delivery";
 import { mailboxCopy } from "@/lib/i18n/mailbox";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -215,9 +216,11 @@ export function ReviewWorks() {
                   </div>
                 </CardHeader>
                 <div className="space-y-4 px-6 pb-6">
-                  <div className="max-h-56 overflow-y-auto rounded-xl border border-white/10 bg-slate-950/40 p-4">
-                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-300">{work.body}</p>
-                  </div>
+                  <SubmissionDelivery
+                    body={work.body}
+                    attachmentPath={work.attachmentPath}
+                    attachmentName={work.attachmentName}
+                  />
 
                   {work.status === "reviewed" && !isOpen && work.feedback && (
                     <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/[0.06] p-4">

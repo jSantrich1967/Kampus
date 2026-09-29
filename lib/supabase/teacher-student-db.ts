@@ -1,5 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import {
+  SUBMISSION_BUCKET,
+  submissionContentType,
+  submissionFileProblem,
+  submissionObjectPath,
+} from "@/lib/study/submission-file";
+
 /**
  * Conexión profesor ↔ estudiante (buzón de trabajos y avisos).
  * Privacidad: ninguna de las partes consulta el perfil de la otra; los
@@ -19,6 +26,9 @@ export type StudentWork = {
   course: string;
   title: string;
   body: string;
+  attachmentPath: string | null;
+  attachmentName: string | null;
+  attachmentMime: string | null;
   studentDisplayName: string;
   teacherDisplayName: string;
   status: "sent" | "reviewed";
@@ -47,6 +57,9 @@ type WorkRow = {
   course: string;
   title: string;
   body: string;
+  attachment_path: string | null;
+  attachment_name: string | null;
+  attachment_mime: string | null;
   student_display_name: string;
   teacher_display_name: string;
   status: "sent" | "reviewed";
@@ -76,6 +89,9 @@ function toStudentWork(r: WorkRow): StudentWork {
     course: r.course ?? "",
     title: r.title ?? "",
     body: r.body ?? "",
+    attachmentPath: r.attachment_path ? String(r.attachment_path) : null,
+    attachmentName: r.attachment_name ? String(r.attachment_name) : null,
+    attachmentMime: r.attachment_mime ? String(r.attachment_mime) : null,
     studentDisplayName: r.student_display_name ?? "Estudiante",
     teacherDisplayName: r.teacher_display_name ?? "Profesor",
     status: r.status === "reviewed" ? "reviewed" : "sent",
@@ -118,6 +134,9 @@ export async function createStudentWork(
     course: string;
     title: string;
     body: string;
+    attachmentPath?: string | null;
+    attachmentName?: string | null;
+    attachmentMime?: string | null;
     studentDisplayName: string;
     teacherDisplayName: string;
   },
@@ -135,6 +154,9 @@ export async function createStudentWork(
       course: input.course.trim(),
       title: input.title.trim(),
       body: input.body.trim(),
+      attachment_path: input.attachmentPath ?? null,
+      attachment_name: input.attachmentName ?? null,
+      attachment_mime: input.attachmentMime ?? null,
       student_display_name: input.studentDisplayName.trim() || "Estudiante",
       teacher_display_name: input.teacherDisplayName.trim() || "Profesor",
     })
@@ -144,13 +166,66 @@ export async function createStudentWork(
   return { id: String((data as { id: string }).id) };
 }
 
+const WORK_COLUMNS =
+  "id,student_user_id,teacher_user_id,session_id,course,title,body,attachment_path,attachment_name,attachment_mime,student_display_name,teacher_display_name,status,feedback,grade,created_at,reviewed_at";
+
+/** Uploads the report, then records the delivery. Removes the file if the row cannot be saved. */
+export async function submitStudentWork(
+  client: SupabaseClient,
+  input: {
+    teacherUserId: string;
+    course: string;
+    title: string;
+    note: string;
+    file: File;
+    studentDisplayName: string;
+    teacherDisplayName: string;
+  },
+): Promise<{ id: string }> {
+  const problem = submissionFileProblem(input.file);
+  if (problem) throw new Error(problem);
+  const { data: userData, error: userError } = await client.auth.getUser();
+  if (userError) throw userError;
+  const uid = userData.user?.id;
+  if (!uid) throw new Error("auth");
+
+  const path = submissionObjectPath(uid, input.file.name, crypto.randomUUID());
+  const { error: uploadError } = await client.storage.from(SUBMISSION_BUCKET).upload(path, input.file, {
+    contentType: submissionContentType(input.file.name),
+    upsert: false,
+  });
+  if (uploadError) throw uploadError;
+
+  try {
+    return await createStudentWork(client, {
+      teacherUserId: input.teacherUserId,
+      course: input.course,
+      title: input.title,
+      body: input.note,
+      attachmentPath: path,
+      attachmentName: input.file.name.split(/[/\\]/).pop() || input.file.name,
+      attachmentMime: submissionContentType(input.file.name),
+      studentDisplayName: input.studentDisplayName,
+      teacherDisplayName: input.teacherDisplayName,
+    });
+  } catch (error) {
+    await client.storage.from(SUBMISSION_BUCKET).remove([path]);
+    throw error;
+  }
+}
+
+/** Short-lived link. The bucket stays private. */
+export async function submissionFileUrl(client: SupabaseClient, path: string): Promise<string> {
+  const { data, error } = await client.storage.from(SUBMISSION_BUCKET).createSignedUrl(path, 600);
+  if (error || !data?.signedUrl) throw error ?? new Error("url");
+  return data.signedUrl;
+}
+
 /** Trabajos del estudiante autenticado (con devoluciones). */
 export async function listMyStudentWorks(client: SupabaseClient): Promise<StudentWork[]> {
   const { data, error } = await client
     .from("student_submissions")
-    .select(
-      "id,student_user_id,teacher_user_id,session_id,course,title,body,student_display_name,teacher_display_name,status,feedback,grade,created_at,reviewed_at",
-    )
+    .select(WORK_COLUMNS)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return ((data ?? []) as WorkRow[]).map(toStudentWork);
@@ -160,9 +235,7 @@ export async function listMyStudentWorks(client: SupabaseClient): Promise<Studen
 export async function listWorksForReview(client: SupabaseClient): Promise<StudentWork[]> {
   const { data, error } = await client
     .from("student_submissions")
-    .select(
-      "id,student_user_id,teacher_user_id,session_id,course,title,body,student_display_name,teacher_display_name,status,feedback,grade,created_at,reviewed_at",
-    )
+    .select(WORK_COLUMNS)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return ((data ?? []) as WorkRow[]).map(toStudentWork);
