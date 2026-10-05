@@ -396,7 +396,7 @@ export function CramMode() {
                 <a href="/tutor" className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20">
                   <Sparkles className="h-4 w-4" aria-hidden /> Reforzar con el Tutor IA
                 </a>
-                <a href="/duelos/practica" className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20">
+                <a href="/duelos/practica?autostart=1" className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20">
                   <Swords className="h-4 w-4" aria-hidden /> Practicar en un duelo
                 </a>
                 <Button variant="secondary" size="sm" onClick={restart}>
