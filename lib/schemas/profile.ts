@@ -25,6 +25,10 @@ export const profileSchema = z.object({
   learningGoals: z.string().min(1),
   streakDays: z.coerce.number().int().min(0).default(0),
   lastActiveDate: z.string().optional(),
+  /** Teléfono en formato E.164 (ej: +584121234567) para avisos por WhatsApp. */
+  phone: z.string().default(""),
+  /** Opt-in para recordatorios de WhatsApp (exámenes, exposiciones, entregas). */
+  whatsappReminders: z.boolean().default(false),
 });
 
 export type UserProfile = z.infer<typeof profileSchema>;
@@ -47,4 +51,6 @@ export const defaultProfile: UserProfile = {
   interestedInCommunity: true,
   learningGoals: "",
   streakDays: 0,
+  phone: "",
+  whatsappReminders: false,
 };

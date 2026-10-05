@@ -30,6 +30,8 @@ export function buildDemoProfile(): UserProfile {
     learningGoals: "Aprobar el período manteniendo un ritmo de estudio sostenible.",
     streakDays: 3,
     lastActiveDate: new Date().toISOString().slice(0, 10),
+    phone: "",
+    whatsappReminders: false,
   };
 }
 

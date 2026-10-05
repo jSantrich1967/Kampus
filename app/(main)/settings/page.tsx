@@ -151,6 +151,71 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle>Avisos por WhatsApp</CardTitle>
+          <CardDescription>
+            Recibe recordatorios de exámenes, exposiciones y entregas en tu WhatsApp.
+          </CardDescription>
+        </CardHeader>
+        <div className="flex flex-col gap-3 px-6 pb-6">
+          <div>
+            <label htmlFor="wa-phone" className="mb-1 block text-xs font-medium text-slate-300">
+              Tu número de WhatsApp
+            </label>
+            <input
+              id="wa-phone"
+              type="tel"
+              inputMode="tel"
+              placeholder="+584121234567"
+              value={profile.phone ?? ""}
+              onChange={(e) => setProfile({ ...profile, phone: e.target.value.trim() })}
+              onBlur={(e) => {
+                const normalized = e.target.value.replace(/[\s\-().]/g, "");
+                const fixed =
+                  normalized && !normalized.startsWith("+") ? `+${normalized}` : normalized;
+                if (fixed !== e.target.value) setProfile({ ...profile, phone: fixed });
+              }}
+              className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-indigo-400/60 focus:outline-none"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Con código de país. Ej: +58 para Venezuela, +57 para Colombia.
+            </p>
+          </div>
+          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2">
+            <span className="text-sm text-slate-200">
+              Recordarme por WhatsApp
+              <span className="block text-xs text-slate-500">
+                Un día antes y el mismo día de cada fecha importante.
+              </span>
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={Boolean(profile.whatsappReminders)}
+              disabled={!/^\+[1-9]\d{7,14}$/.test(profile.phone ?? "")}
+              onClick={() =>
+                setProfile({ ...profile, whatsappReminders: !profile.whatsappReminders })
+              }
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                profile.whatsappReminders ? "bg-emerald-500" : "bg-slate-700"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${
+                  profile.whatsappReminders ? "left-[22px]" : "left-0.5"
+                }`}
+              />
+            </button>
+          </label>
+          {!/^\+[1-9]\d{7,14}$/.test(profile.phone ?? "") && (profile.phone ?? "") !== "" ? (
+            <p className="text-xs text-amber-200/90">
+              Revisa el número: debe empezar con + y el código de país.
+            </p>
+          ) : null}
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Idioma</CardTitle>
           <CardDescription>La app está configurada solo en español.</CardDescription>
         </CardHeader>
