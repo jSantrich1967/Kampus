@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, RotateCcw, Trash2 } from "lucide-react";
-import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CalendarTodayFocusPanel } from "@/components/exams/calendar-today-focus-panel";
 import { VirtualClassIcsExportButton } from "@/components/collaborate/virtual-class-ics-export-button";
@@ -712,7 +712,16 @@ export function AcademicCalendarHub() {
 
   const upcoming = useMemo(() => {
     const today = localIsoDate();
-    return allEvents.filter((e) => e.date >= today).slice(0, 12);
+    const seen = new Set<string>();
+    return allEvents
+      .filter((e) => {
+        if (e.date < today) return false;
+        const key = `${e.kind}|${e.title}|${e.subject}|${e.date}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 12);
   }, [allEvents]);
 
   const unscheduledExams = useMemo(
@@ -1405,6 +1414,76 @@ export function AcademicCalendarHub() {
                 const classMat = classKey ? classDocsByKey[classKey] : null;
                 const classNoteCount = classMat?.count ?? 0;
 
+                // Una acción principal por tarjeta; el resto va en el menú "Más".
+                const menuItemClass =
+                  "block w-full rounded-lg px-3 py-2 text-left text-xs text-slate-200 hover:bg-white/5";
+                const secondaryActions: ReactNode[] = [];
+                let primaryAction: ReactNode = (
+                  <Link href={ev.href} className={buttonClasses({ variant: "secondary", size: "sm" })}>
+                    Abrir
+                  </Link>
+                );
+                if (ev.kind === "exam" && ev.passModeHref) {
+                  primaryAction = (
+                    <Link href={ev.passModeHref} className={buttonClasses({ variant: "secondary", size: "sm" })}>
+                      {examsCopy.es.calendarPassModeCta}
+                    </Link>
+                  );
+                  secondaryActions.push(
+                    <Link key="detail" href={ev.href} className={menuItemClass}>
+                      Abrir detalle
+                    </Link>,
+                  );
+                  if (profile.interestedInCommunity !== false) {
+                    secondaryActions.push(
+                      <Link
+                        key="community"
+                        href={buildCommunityExamHref(ev.subject, ev.date)}
+                        className={menuItemClass}
+                      >
+                        {calendarCopy.es.communityExamCta}
+                      </Link>,
+                    );
+                  }
+                  secondaryActions.push(
+                    <span key="practice" className="block px-3 py-1">
+                      <ExamPracticePanel subject={ev.subject} compact />
+                    </span>,
+                  );
+                } else if (ev.kind === "presentation") {
+                  primaryAction = (
+                    <Link href={ev.href} className={buttonClasses({ variant: "secondary", size: "sm" })}>
+                      {calendarCopy.es.calendarPresentationCta}
+                    </Link>
+                  );
+                  secondaryActions.push(
+                    <Link key="room" href="/collaborate/sala-estudio" className={menuItemClass}>
+                      {calendarCopy.es.calendarStudyRoomCta}
+                    </Link>,
+                  );
+                }
+                if (isClass && scheduleId) {
+                  secondaryActions.push(
+                    <Link
+                      key="virtual"
+                      href={buildVirtualClassFromScheduleHref(scheduleId, ev.date)}
+                      className={menuItemClass}
+                    >
+                      {cal.calendarVirtualClassCta}
+                    </Link>,
+                    <button
+                      key="kit"
+                      type="button"
+                      className={menuItemClass}
+                      onClick={() => {
+                        void generateKitForClass(scheduleId, ev.date, ev.subject);
+                      }}
+                    >
+                      Kit
+                    </button>,
+                  );
+                }
+
                 return (
                 <li key={ev.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2 text-sm">
                   <div className="min-w-0">
@@ -1424,55 +1503,24 @@ export function AcademicCalendarHub() {
                       ) : null}
                     </div>
                   </div>
-                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
                     <Badge tone={kindTone(ev.kind)}>{labelForKind(ev.kind)}</Badge>
                     {isClass ? (
                       <Badge tone={classNoteCount > 0 ? "success" : "warning"}>
                         {classNoteCount > 0 ? calendarCopy.es.classNotesReady : calendarCopy.es.classNotesMissing}
                       </Badge>
                     ) : null}
-                    {ev.kind === "exam" && ev.passModeHref ? (
-                      <Link href={ev.passModeHref} className={buttonClasses({ variant: "secondary", size: "sm" })}>
-                          {examsCopy.es.calendarPassModeCta}
-                        </Link>
+                    {primaryAction}
+                    {secondaryActions.length > 0 ? (
+                      <details className="relative">
+                        <summary className="cursor-pointer list-none rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-slate-300 hover:bg-white/5">
+                          Más
+                        </summary>
+                        <div className="absolute right-0 z-20 mt-1 w-48 rounded-xl border border-white/10 bg-slate-900 p-1.5 shadow-2xl">
+                          {secondaryActions}
+                        </div>
+                      </details>
                     ) : null}
-                    {ev.kind === "exam" && profile.interestedInCommunity !== false ? (
-                      <Link href={buildCommunityExamHref(ev.subject, ev.date)} className={buttonClasses({ variant: "ghost", size: "sm" })}>
-                          {calendarCopy.es.communityExamCta}
-                        </Link>
-                    ) : null}
-                    {ev.kind === "exam" ? <ExamPracticePanel subject={ev.subject} compact /> : null}
-                    {ev.kind === "presentation" ? (
-                      <>
-                        <Link href={ev.href} className={buttonClasses({ variant: "secondary", size: "sm" })}>
-                            {calendarCopy.es.calendarPresentationCta}
-                          </Link>
-                        <Link href="/collaborate/sala-estudio" className={buttonClasses({ variant: "ghost", size: "sm" })}>
-                            {calendarCopy.es.calendarStudyRoomCta}
-                          </Link>
-                      </>
-                    ) : null}
-                    {isClass && scheduleId ? (
-                      <Link href={buildVirtualClassFromScheduleHref(scheduleId, ev.date)} className={buttonClasses({ variant: "ghost", size: "sm" })}>
-                          {cal.calendarVirtualClassCta}
-                        </Link>
-                    ) : null}
-                    {isClass ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => {
-                          if (!scheduleId) return;
-                          void generateKitForClass(scheduleId, ev.date, ev.subject);
-                        }}
-                      >
-                        Kit
-                      </Button>
-                    ) : null}
-                    <Link href={ev.href} className="text-xs text-indigo-200 hover:underline">
-                      Abrir
-                    </Link>
                   </div>
                 </li>
                 );
@@ -1565,11 +1613,13 @@ export function AcademicCalendarHub() {
             </Button>
           </form>
 
-          <div className="border-t border-white/10 px-6 py-4">
-            <div className="text-sm font-semibold text-white">Clase suspendida</div>
-            <p className="mt-1 text-xs text-slate-400">
-              Marca una clase específica (una fecha) como suspendida. Esa fecha aparecerá en el calendario marcada como suspendida, con su justificación.
-            </p>
+          <details className="border-t border-white/10 px-6 py-4">
+            <summary className="cursor-pointer text-sm font-semibold text-white">
+              Clase suspendida
+              <span className="ml-2 text-xs font-normal text-slate-400">
+                Marca una fecha como suspendida, con justificación.
+              </span>
+            </summary>
             <form className="mt-3 space-y-3" onSubmit={(e) => void submitCancellation(e)}>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="space-y-1 text-xs">
@@ -1626,7 +1676,7 @@ export function AcademicCalendarHub() {
                 ))}
               </ul>
             ) : null}
-          </div>
+          </details>
 
           <ul className="space-y-2 border-t border-white/10 px-6 py-4">
             {classes.length === 0 ? (
