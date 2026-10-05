@@ -28,6 +28,8 @@ type Phase = "loading" | "ready" | "playing" | "submitting" | "result" | "error"
 type Props = {
   code: string;
   demo?: boolean;
+  /** Cuando viene del hub (que ya mostró la intro), arranca el juego sin pedir otro clic. */
+  autostart?: boolean;
 };
 
 type PlayResult = {
@@ -46,8 +48,8 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-export function DuelArena({ code, demo = false }: Props) {
-  const { profile } = useKampus();
+export function DuelArena({ code, demo = false, autostart = false }: Props) {
+  const { profile, authUserId } = useKampus();
   const t = duelsCopy.es;
   const [phase, setPhase] = useState<Phase>("loading");
   const [duel, setDuel] = useState<PublicDuel | null>(null);
@@ -131,6 +133,11 @@ export function DuelArena({ code, demo = false }: Props) {
       }).catch(() => undefined);
     }
   }, [demo, code, order]);
+
+  // Si viene del hub con autostart, arranca solo al estar listo (evita el doble clic).
+  useEffect(() => {
+    if (autostart && demo && phase === "ready") beginPlay();
+  }, [autostart, demo, phase, beginPlay]);
 
   // Evita reportar dos veces la misma pregunta (click + timeout, reintentos).
   const lastReportedRef = useRef<string | null>(null);
@@ -237,10 +244,12 @@ export function DuelArena({ code, demo = false }: Props) {
   function answer(i: number) {
     if (phase !== "playing" || picked !== null || idx >= total) return;
     setPicked(i);
+    stopTimer(); // congela el temporizador mientras se muestra el feedback verde/rojo
     const next = [...answers, i];
     setAnswers(next);
     reportAnswer(i, order[idx]);
-    window.setTimeout(() => setIdx((v) => v + 1), 450);
+    // 1.4s para que el feedback verde/rojo sea claramente visible antes de avanzar.
+    window.setTimeout(() => setIdx((v) => v + 1), 1400);
   }
 
   function copyCode() {
@@ -412,7 +421,11 @@ export function DuelArena({ code, demo = false }: Props) {
           {waiting ? t.resultWaiting : iWon ? t.resultTitleWin : iLost ? t.resultTitleLose : t.resultTitleTie}
         </h2>
         {waiting ? <p className="mt-1 text-sm text-slate-400">{t.resultWaitingHint}</p> : null}
-        {demo ? <p className="mt-1 text-xs text-slate-500">{t.demoResultHint}</p> : null}
+        {demo ? (
+          <p className="mt-1 text-xs text-slate-500">
+            {authUserId ? t.demoResultHintLoggedIn : t.demoResultHint}
+          </p>
+        ) : null}
       </div>
 
       <Card className="border-white/10 bg-white/5">

@@ -59,6 +59,7 @@ export const duelsCopy: Record<
     backToDuels: string;
     demoRivalName: string;
     demoResultHint: string;
+    demoResultHintLoggedIn: string;
     loginToChallenge: string;
     questionsCount: (n: number) => string;
   }
@@ -121,6 +122,7 @@ export const duelsCopy: Record<
     backToDuels: "Volver a duelos",
     demoRivalName: "Rival demo",
     demoResultHint: "Esto fue una práctica. Inicia sesión para retar a amigos de verdad.",
+    demoResultHintLoggedIn: "Esto fue una práctica. Crea un duelo real para retar a tus amigos.",
     loginToChallenge: "Inicia sesión para retar amigos",
     questionsCount: (n) => `${n} preguntas · 20s por pregunta`,
   },

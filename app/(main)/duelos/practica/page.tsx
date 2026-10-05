@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
@@ -8,7 +8,9 @@ import { DuelArena } from "@/components/duels/duel-arena";
 
 function DuelPracticePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { profile, hydrated } = useKampus();
+  const autostart = searchParams.get("autostart") === "1";
 
   useEffect(() => {
     if (!hydrated) return;
@@ -23,7 +25,7 @@ function DuelPracticePageContent() {
     return <div className="text-sm text-slate-400">Cargando…</div>;
   }
 
-  return <DuelArena code="PRACTICA" demo />;
+  return <DuelArena code="PRACTICA" demo autostart={autostart} />;
 }
 
 export default function DuelPracticePage() {

@@ -309,7 +309,7 @@ export function DuelHub() {
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => router.push("/duelos/practica")}
+                onClick={() => router.push("/duelos/practica?autostart=1")}
                 className="w-full"
               >
                 {t.practiceCta}

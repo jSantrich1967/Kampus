@@ -533,7 +533,7 @@ export function NotebookLibraryPanel({
             <>
               <EmptyStatePrimaryCta onClick={() => onCreateOpenChange?.(true)}>Crear mi primer cuaderno</EmptyStatePrimaryCta>
               <Link href="/study/library/rescue">
-                <EmptyStateSecondaryCta>Probar Rescue (desde un archivo)</EmptyStateSecondaryCta>
+                <EmptyStateSecondaryCta>Probar el kit (desde un archivo)</EmptyStateSecondaryCta>
               </Link>
             </>
           }
