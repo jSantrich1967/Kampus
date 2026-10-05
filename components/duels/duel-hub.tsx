@@ -2,7 +2,7 @@
 
 import { Camera, Loader2, Plus, Swords, Ticket } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,9 @@ export function DuelHub() {
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  // Idempotencia: el mismo intento conserva su requestId aunque el usuario
+  // reintente (evita duelos duplicados y doble costo de IA).
+  const createRequestIdRef = useRef<string | null>(null);
   const [photoUrl, setPhotoUrl] = useState("");
   const [photoName, setPhotoName] = useState("");
   const [photoCreating, setPhotoCreating] = useState(false);
@@ -88,13 +91,25 @@ export function DuelHub() {
     setCreating(true);
     setCreateError(null);
     try {
+      if (!createRequestIdRef.current) {
+        createRequestIdRef.current =
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      }
       const res = await fetch("/api/duels/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject: subject.trim(), topic: topic.trim(), playerName: name.trim() }),
+        body: JSON.stringify({
+          subject: subject.trim(),
+          topic: topic.trim(),
+          playerName: name.trim(),
+          requestId: createRequestIdRef.current,
+        }),
       });
       const data = (await res.json().catch(() => ({}))) as { duel?: { code: string }; error?: string };
       if (!res.ok || !data.duel) throw new Error(data.error || t.errorMessage);
+      createRequestIdRef.current = null; // listo: el próximo duelo es un intento nuevo
       router.push(`/duelos/${data.duel.code}`);
     } catch (e) {
       setCreateError(e instanceof Error ? e.message : t.errorMessage);

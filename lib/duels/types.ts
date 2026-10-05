@@ -43,15 +43,17 @@ export function normalizeDuelCode(raw: string): string {
 
 export type DuelOutcome = {
   winner: "creator" | "challenger" | "tie" | null;
-  creatorScore: number;
+  creatorScore: number | null;
   challengerScore: number | null;
 };
 
 export function decideDuelWinner(duel: DuelRow): DuelOutcome {
-  const creatorScore = duel.creator_score ?? 0;
-  const challengerScore = duel.challenger_score;
-  if (challengerScore === null || challengerScore === undefined) {
-    return { winner: null, creatorScore, challengerScore: null };
+  const creatorScore = duel.creator_score ?? null;
+  const challengerScore = duel.challenger_score ?? null;
+  // Si alguno no ha jugado, no hay ganador todavía (antes se declaraba
+  // ganador al primero en terminar comparando contra 0).
+  if (creatorScore === null || challengerScore === null) {
+    return { winner: null, creatorScore, challengerScore };
   }
   if (creatorScore > challengerScore) return { winner: "creator", creatorScore, challengerScore };
   if (challengerScore > creatorScore) return { winner: "challenger", creatorScore, challengerScore };
@@ -68,4 +70,29 @@ export function buildDuelShareText(code: string, subject: string): string {
 
 export function buildDuelShareUrl(code: string, subject: string): string {
   return `https://wa.me/?text=${encodeURIComponent(buildDuelShareText(code, subject))}`;
+}
+
+export function buildDuelResultShareText(
+  subject: string,
+  myScore: number,
+  rivalScore: number,
+  rivalName: string,
+  iWon: boolean,
+): string {
+  const marcador = `${myScore} a ${rivalScore} contra ${rivalName}`;
+  return iWon
+    ? `🏆 ¡Gané un duelo en Kampus! ${marcador} en ${subject}. ¿Te animas a retarme? Entra a Kampus → Duelos.`
+    : `⚔️ Duelo en Kampus: ${marcador} en ${subject}. ¡La revancha está pendiente! Entra a Kampus → Duelos.`;
+}
+
+export function buildDuelResultShareUrl(
+  subject: string,
+  myScore: number,
+  rivalScore: number,
+  rivalName: string,
+  iWon: boolean,
+): string {
+  return `https://wa.me/?text=${encodeURIComponent(
+    buildDuelResultShareText(subject, myScore, rivalScore, rivalName, iWon),
+  )}`;
 }

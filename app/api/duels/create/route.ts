@@ -14,15 +14,10 @@ const requestSchema = z.object({
   subject: z.string().trim().min(2).max(120),
   topic: z.string().trim().max(200).default(""),
   playerName: z.string().trim().max(60).default(""),
-  materialImage: z
-    .string()
-    .trim()
-    .max(4_500_000)
-    .refine((v) => v === "" || /^data:image\/(png|jpe?g|webp|gif);base64,/.test(v), {
+  requestId: z.string().trim().max(64).default(""),
+  materialImage: z.string().trim().max(4_500_000).refine((v) => v === "" || /^data:image\/(png|jpe?g|webp|gif);base64,/.test(v), {
       message: "Imagen no válida.",
-    })
-    .default(""),
-});
+    }).default(""),});
 
 const duelQuestionSchema = z.object({
   question: z.string().min(4).max(500),
@@ -134,6 +129,20 @@ export async function POST(req: Request) {
 
       const body = requestSchema.parse(await req.json().catch(() => ({})));
 
+      // Idempotencia: si el cliente reintenta con el mismo requestId,
+      // devolvemos el duelo ya creado en vez de generar preguntas de nuevo.
+      if (body.requestId) {
+        const { data: existing } = await supabase
+          .from("duels")
+          .select("code, subject, topic, questions")
+          .eq("request_id", body.requestId)
+          .eq("creator_id", user.id)
+          .maybeSingle();
+        if (existing) {
+          return NextResponse.json({ duel: existing });
+        }
+      }
+
       let questions: DuelQuestion[];
       try {
         questions = await generateDuelQuestions(body.subject, body.topic, body.materialImage);
@@ -155,11 +164,24 @@ export async function POST(req: Request) {
           questions,
           creator_id: user.id,
           creator_name: body.playerName || user.email?.split("@")[0] || "Jugador 1",
+          request_id: body.requestId || null,
         })
         .select("code, subject, topic, questions")
         .single();
 
       if (error || !data) {
+        // Si otro intento con el mismo requestId ganó la carrera, devuelve ese duelo.
+        if (body.requestId) {
+          const { data: raced } = await supabase
+            .from("duels")
+            .select("code, subject, topic, questions")
+            .eq("request_id", body.requestId)
+            .eq("creator_id", user.id)
+            .maybeSingle();
+          if (raced) {
+            return NextResponse.json({ duel: raced });
+          }
+        }
         return NextResponse.json(
           { error: "No pudimos guardar el duelo. ¿Ya ejecutaste la migración SQL de duelos en Supabase?" },
           { status: 500 },

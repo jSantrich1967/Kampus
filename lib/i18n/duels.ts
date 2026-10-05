@@ -39,6 +39,7 @@ export const duelsCopy: Record<
     codeCopied: string;
     copyCode: string;
     shareWhatsapp: string;
+    shareResultWhatsapp: string;
     waitingRival: string;
     waitingHint: string;
     yourTurn: string;
@@ -102,6 +103,7 @@ export const duelsCopy: Record<
     codeCopied: "¡Código copiado!",
     copyCode: "Copiar código",
     shareWhatsapp: "Retar por WhatsApp",
+    shareResultWhatsapp: "Compartir resultado",
     waitingRival: "Esperando rival…",
     waitingHint: "Comparte tu código. Cuando tu rival juegue, verás el resultado aquí.",
     yourTurn: "Tu turno",

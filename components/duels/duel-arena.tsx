@@ -12,6 +12,7 @@ import { duelsCopy } from "@/lib/i18n/duels";
 import { buildDemoSubjectQuiz } from "@/lib/study/demo-subject-quiz";
 import {
   DUEL_SECONDS_PER_QUESTION,
+  buildDuelResultShareUrl,
   buildDuelShareUrl,
   decideDuelWinner,
   type DuelQuestion,
@@ -93,7 +94,26 @@ export function DuelArena({ code, demo = false, autostart = false }: Props) {
         if (!res.ok || !data.duel) throw new Error(data.error || t.errorMessage);
         setDuel(data.duel);
         setOrder(shuffle(Array.from({ length: data.duel.questions.length }, (_, i) => i)));
-        setPhase("ready");
+        // Si este usuario ya jugó este duelo, va directo al resultado
+        // (antes volvía al lobby y no veía el marcador final).
+        const d = data.duel as unknown as {
+          creator_id?: string;
+          challenger_id?: string | null;
+          creator_score?: number | null;
+          challenger_score?: number | null;
+        };
+        const myScore =
+          authUserId && d.creator_id === authUserId && d.creator_score != null
+            ? d.creator_score
+            : authUserId && d.challenger_id === authUserId && d.challenger_score != null
+              ? d.challenger_score
+              : null;
+        if (myScore !== null) {
+          setResult({ answers: [], timeMs: 0, score: myScore, serverDuel: data.duel });
+          setPhase("result");
+        } else {
+          setPhase("ready");
+        }
       } catch (e) {
         if (cancelled) return;
         setError(e instanceof Error ? e.message : t.errorMessage);
@@ -104,7 +124,7 @@ export function DuelArena({ code, demo = false, autostart = false }: Props) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [code, demo]);
+  }, [code, demo, authUserId]);
 
   const stopTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -393,9 +413,13 @@ export function DuelArena({ code, demo = false, autostart = false }: Props) {
     rivalScore = demoRival.score;
   } else if (serverDuel) {
     const outcome = decideDuelWinner(serverDuel as DuelRow);
-    const iAmCreator = playerName.trim()
-      ? serverDuel.creator_name === playerName.trim()
-      : true;
+    const sd = serverDuel as unknown as { creator_id?: string; challenger_id?: string | null };
+    // Se prefiere el user id real; el nombre escrito a mano es solo respaldo.
+    const iAmCreator = authUserId
+      ? sd.creator_id === authUserId
+      : playerName.trim()
+        ? serverDuel.creator_name === playerName.trim()
+        : true;
     if (iAmCreator) {
       rivalName = serverDuel.challenger_name || t.rivalLabel;
       rivalScore = outcome.challengerScore;
@@ -403,6 +427,7 @@ export function DuelArena({ code, demo = false, autostart = false }: Props) {
     } else {
       rivalName = serverDuel.creator_name;
       rivalScore = outcome.creatorScore;
+      waiting = rivalScore === null;
     }
   }
 
@@ -474,6 +499,26 @@ export function DuelArena({ code, demo = false, autostart = false }: Props) {
       <div className="flex flex-wrap justify-center gap-2">
         <Badge tone="neutral">{t.questionsCount(total)}</Badge>
       </div>
+
+      {!demo && rivalScore !== null && !waiting ? (
+        <div className="flex flex-wrap justify-center gap-2">
+          <a
+            href={buildDuelResultShareUrl(
+              duel?.subject ?? "",
+              myScore,
+              rivalScore,
+              rivalName,
+              iWon,
+            )}
+            target="_blank"
+            rel="noreferrer"
+            className={buttonClasses({ size: "sm", className: "gap-1.5" })}
+          >
+            <Send className="h-3.5 w-3.5" aria-hidden />
+            {t.shareResultWhatsapp}
+          </a>
+        </div>
+      ) : null}
     </div>
   );
 }

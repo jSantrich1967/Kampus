@@ -101,7 +101,6 @@ import {
   setClassScheduleOwner,
 } from "@/lib/storage/class-schedule-storage";
 import {
-  clearProfileStorage,
   discardLegacyProfileStorage,
   loadProfile,
   saveProfile,
@@ -269,9 +268,9 @@ export function KampusProvider({ children }: { children: ReactNode }) {
         clearDiaryPendingOps(null);
         discardLegacyDiaryStorage();
         discardLegacyDiaryPendingQueue();
-        clearProfileStorage(authUserIdRef.current);
-        clearProfileStorage(null);
-        discardLegacyProfileStorage();
+        // NOTA: el perfil local NO se borra al cerrar sesión. Está claveado
+        // por usuario y el servidor lo reconcilia al entrar; borrarlo
+        // obligaba a repetir el onboarding en cada login.
         setProfileStorageOwner(null);
         setProfileState(defaultProfile);
         clearClassScheduleStorage(authUserIdRef.current);
