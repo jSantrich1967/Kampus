@@ -4,6 +4,8 @@ import { Menu, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 
+import { FeedbackFab } from "@/components/feedback/feedback-fab";
+
 import { KampusLogo } from "@/components/brand/kampus-logo";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { AttributionBanner } from "@/components/growth/attribution-banner";
@@ -125,6 +127,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {children}
         </main>
       </div>
+      <FeedbackFab />
     </div>
   );
 }

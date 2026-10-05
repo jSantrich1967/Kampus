@@ -19,6 +19,7 @@ const ALLOWED_FIRST_SEGMENTS = new Set([
   "pass-mode",
   "guide",
   "settings",
+  "admin",
   "login",
   "register",
   "onboarding",

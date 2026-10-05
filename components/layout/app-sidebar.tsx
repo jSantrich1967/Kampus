@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { ShieldCheck } from "lucide-react";
 
 import { KampusLogo } from "@/components/brand/kampus-logo";
 import { useKampus } from "@/components/kampus/kampus-provider";
@@ -54,6 +56,24 @@ export function AppSidebar({ onNavigate, luminaMode = false }: AppSidebarProps) 
   const communityT = communityCopy.es;
   const { hasCheckedInToday: diaryCheckedInToday, loading: diaryStatusLoading } = useDiaryCheckInStatus();
   const wellbeingT = wellbeingCopy.es;
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!authUserId) {
+      setIsAdmin(false);
+      return;
+    }
+    let cancelled = false;
+    fetch("/api/admin/me")
+      .then((r) => r.json().catch(() => ({})))
+      .then((d: { isAdmin?: boolean }) => {
+        if (!cancelled) setIsAdmin(Boolean(d.isAdmin));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId]);
 
   function pathMatchesNavItem(item: NavItem, pathname: string): boolean {
     if (item.key === "library" && pathname.startsWith("/study/notebook")) return true;
@@ -209,6 +229,16 @@ export function AppSidebar({ onNavigate, luminaMode = false }: AppSidebarProps) 
       </nav>
 
       <div className="border-t border-white/5 p-4">
+        {isAdmin ? (
+          <Link
+            href="/admin/observaciones"
+            onClick={() => onNavigate?.()}
+            className="mb-2 flex items-center gap-2 rounded-xl border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-100 transition hover:bg-amber-500/20"
+          >
+            <ShieldCheck className="h-4 w-4" aria-hidden />
+            Observaciones
+          </Link>
+        ) : null}
         {isSupabaseConfigured() && authUserId ? (
           <Button
             type="button"
