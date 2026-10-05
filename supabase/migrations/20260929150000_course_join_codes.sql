@@ -115,7 +115,11 @@ $$;
 
 revoke all on function public.generate_course_join_code() from public;
 revoke all on function public.generate_course_join_code() from anon;
-revoke all on function public.generate_course_join_code() from authenticated;
+-- NOTE: authenticated needs EXECUTE here: the courses_assign_join_code
+-- trigger calls this function on every course insert. Revoking it breaks
+-- course creation with 42501 "permission denied for function
+-- generate_course_join_code".
+grant execute on function public.generate_course_join_code() to authenticated;
 
 revoke all on function public.assign_course_join_code() from public;
 revoke all on function public.assign_course_join_code() from anon;
