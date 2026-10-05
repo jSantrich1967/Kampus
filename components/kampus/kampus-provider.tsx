@@ -117,6 +117,8 @@ type KampusContextValue = {
   locale: Locale;
   setLocale: (locale: Locale) => void;
   hydrated: boolean;
+  /** True cuando el estado de auth inicial ya se resolvió y el perfil se reconcilió. */
+  authReady: boolean;
   /** Supabase auth user id when session exists and Supabase is configured. */
   authUserId: string | null;
   /** True when profile changes are persisted to Supabase (session + env). */
@@ -129,6 +131,7 @@ export function KampusProvider({ children }: { children: ReactNode }) {
   const [profile, setProfileState] = useState<UserProfile>(defaultProfile);
   const [hydrated, setHydrated] = useState(false);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
+  const [authReady, setAuthReady] = useState(false);
   const [syncedUserId, setSyncedUserId] = useState<string | null>(null);
   const [locale] = useState<Locale>("es");
   const lastPushedJson = useRef<string>("");
@@ -185,7 +188,10 @@ export function KampusProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Always observe authentication, including when this browser previously used the demo.
-    if (!isSupabaseConfigured()) return;
+    if (!isSupabaseConfigured()) {
+      setAuthReady(true);
+      return;
+    }
 
     const supabase = createSupabaseBrowserClient();
     let cancelled = false;
@@ -193,8 +199,10 @@ export function KampusProvider({ children }: { children: ReactNode }) {
     const runSync = async (userId: string | null) => {
       if (cancelled) return;
       setSyncedUserId(null);
+      setAuthReady(false);
       if (userId === null) {
         setAuthUserId(null);
+        setAuthReady(true);
         return;
       }
 
@@ -236,6 +244,7 @@ export function KampusProvider({ children }: { children: ReactNode }) {
         setProfileState(display);
         saveProfile(cloud, userId);
         setSyncedUserId(userId);
+        setAuthReady(true);
         if (!remoteMeaningful && isMeaningfulProfile(cloud)) {
           await upsertProfileForUser(supabase, userId, cloud);
         }
@@ -245,6 +254,7 @@ export function KampusProvider({ children }: { children: ReactNode }) {
           setProfileState(local);
           saveProfile(local, userId);
         }
+        setAuthReady(true);
       }
     };
 
@@ -393,10 +403,11 @@ export function KampusProvider({ children }: { children: ReactNode }) {
       locale,
       setLocale: () => {},
       hydrated,
+      authReady,
       authUserId,
       profileRemoteSyncActive,
     }),
-    [profile, setProfile, locale, hydrated, authUserId, profileRemoteSyncActive],
+    [profile, setProfile, locale, hydrated, authReady, authUserId, profileRemoteSyncActive],
   );
 
   return <KampusContext.Provider value={value}>{children}</KampusContext.Provider>;
