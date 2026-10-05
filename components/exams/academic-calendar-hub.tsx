@@ -1012,6 +1012,154 @@ export function AcademicCalendarHub() {
         }
       />
 
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Mis exámenes</CardTitle>
+            <CardDescription>
+              Registra las fechas de tus exámenes para verlos en el calendario y recibir avisos.
+            </CardDescription>
+          </CardHeader>
+          <form className="space-y-3 px-6 pb-4" onSubmit={(e) => void submitExam(e)}>
+            <label className="block space-y-1 text-xs">
+              <span className="text-slate-500">Título</span>
+              <input
+                required
+                className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm outline-none ring-indigo-400/30 focus:ring"
+                value={examTitle}
+                onChange={(e) => setExamTitle(e.target.value)}
+                placeholder="Ej. Parcial 1"
+              />
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-1 text-xs">
+                <span className="text-slate-500">Materia</span>
+                <input
+                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm outline-none ring-indigo-400/30 focus:ring"
+                  value={examSubject}
+                  onChange={(e) => setExamSubject(e.target.value)}
+                  placeholder="Ej. Cálculo"
+                />
+              </label>
+              <label className="space-y-1 text-xs">
+                <span className="text-slate-500">Fecha del examen</span>
+                <input
+                  required
+                  type="date"
+                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
+                  value={examDue}
+                  onChange={(e) => setExamDue(e.target.value)}
+                />
+              </label>
+            </div>
+            <Button type="submit" size="sm">
+              Añadir examen
+            </Button>
+          </form>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Mis trabajos e investigaciones</CardTitle>
+            <CardDescription>{workStorageHint}</CardDescription>
+          </CardHeader>
+          <form className="space-y-3 px-6 pb-4" onSubmit={(e) => void submitWork(e)}>
+            <label className="block space-y-1 text-xs">
+              <span className="text-slate-500">Título</span>
+              <input
+                required
+                className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm outline-none ring-indigo-400/30 focus:ring"
+                value={workTitle}
+                onChange={(e) => setWorkTitle(e.target.value)}
+                placeholder="Ej. Ensayo final unidad 3"
+              />
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-1 text-xs">
+                <span className="text-slate-500">Materia</span>
+                <input
+                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm outline-none ring-indigo-400/30 focus:ring"
+                  value={workSubject}
+                  onChange={(e) => setWorkSubject(e.target.value)}
+                  placeholder="Ej. Historia"
+                />
+              </label>
+              <label className="space-y-1 text-xs">
+                <span className="text-slate-500">Fecha límite</span>
+                <input
+                  required
+                  type="date"
+                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
+                  value={workDue}
+                  onChange={(e) => setWorkDue(e.target.value)}
+                />
+              </label>
+            </div>
+            <label className="block space-y-1 text-xs">
+              <span className="text-slate-500">Notas (opcional)</span>
+              <input
+                className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm outline-none ring-indigo-400/30 focus:ring"
+                value={workNotes}
+                onChange={(e) => setWorkNotes(e.target.value)}
+                placeholder="Enlace al enunciado, página del libro…"
+              />
+            </label>
+            <Button type="submit" size="sm">
+              Añadir al calendario
+            </Button>
+          </form>
+          <ul className="space-y-2 border-t border-white/10 px-6 py-4">
+            {works.length === 0 ? (
+              <li className="text-sm text-slate-500">Aún no hay trabajos registrados.</li>
+            ) : (
+              sortedWorksForCalendarList.map((w) => {
+                const done = isStudentWorkCompleted(w);
+                return (
+                  <li
+                    key={w.id}
+                    className={cn(
+                      "flex items-start justify-between gap-2 rounded-lg border border-white/10 bg-slate-950/30 px-3 py-2 text-sm",
+                      done && "border-teal-500/20 opacity-90",
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <div className={cn("font-medium text-slate-100", done && "line-through decoration-slate-500/70")}>{w.title}</div>
+                      <div className="text-xs text-slate-500">
+                        {w.dueDate} · {w.subject}
+                        {done ? <span className="ml-2 text-teal-300/90">· Entregado</span> : null}
+                      </div>
+                      {w.notes ? <div className="mt-1 text-xs text-slate-400">{w.notes}</div> : null}
+                    </div>
+                    <div className="flex shrink-0 gap-1">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className={done ? "text-teal-200 hover:text-teal-100" : "text-emerald-200/90 hover:text-emerald-100"}
+                        aria-label={done ? "Marcar como pendiente" : "Marcar como entregado"}
+                        onClick={() => void toggleWorkCompleted(w.id, !done)}
+                      >
+                        {done ? <RotateCcw className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="text-rose-300 hover:text-rose-200"
+                        aria-label="Eliminar trabajo"
+                        onClick={() => void removeWork(w.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </li>
+                );
+              })
+            )}
+          </ul>
+        </Card>
+      </div>
+
       {loadError ? <p className="text-sm text-rose-300">{loadError}</p> : null}
 
       {loading ? (
@@ -1535,151 +1683,6 @@ export function AcademicCalendarHub() {
           </ul>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Mis exámenes</CardTitle>
-            <CardDescription>
-              Registra las fechas de tus exámenes para verlos en el calendario y recibir avisos.
-            </CardDescription>
-          </CardHeader>
-          <form className="space-y-3 px-6 pb-4" onSubmit={(e) => void submitExam(e)}>
-            <label className="block space-y-1 text-xs">
-              <span className="text-slate-500">Título</span>
-              <input
-                required
-                className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm outline-none ring-indigo-400/30 focus:ring"
-                value={examTitle}
-                onChange={(e) => setExamTitle(e.target.value)}
-                placeholder="Ej. Parcial 1"
-              />
-            </label>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="space-y-1 text-xs">
-                <span className="text-slate-500">Materia</span>
-                <input
-                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm outline-none ring-indigo-400/30 focus:ring"
-                  value={examSubject}
-                  onChange={(e) => setExamSubject(e.target.value)}
-                  placeholder="Ej. Cálculo"
-                />
-              </label>
-              <label className="space-y-1 text-xs">
-                <span className="text-slate-500">Fecha del examen</span>
-                <input
-                  required
-                  type="date"
-                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
-                  value={examDue}
-                  onChange={(e) => setExamDue(e.target.value)}
-                />
-              </label>
-            </div>
-            <Button type="submit" size="sm">
-              Añadir examen
-            </Button>
-          </form>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Mis trabajos e investigaciones</CardTitle>
-            <CardDescription>{workStorageHint}</CardDescription>
-          </CardHeader>
-          <form className="space-y-3 px-6 pb-4" onSubmit={(e) => void submitWork(e)}>
-            <label className="block space-y-1 text-xs">
-              <span className="text-slate-500">Título</span>
-              <input
-                required
-                className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm outline-none ring-indigo-400/30 focus:ring"
-                value={workTitle}
-                onChange={(e) => setWorkTitle(e.target.value)}
-                placeholder="Ej. Ensayo final unidad 3"
-              />
-            </label>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="space-y-1 text-xs">
-                <span className="text-slate-500">Materia</span>
-                <input
-                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm outline-none ring-indigo-400/30 focus:ring"
-                  value={workSubject}
-                  onChange={(e) => setWorkSubject(e.target.value)}
-                  placeholder="Ej. Historia"
-                />
-              </label>
-              <label className="space-y-1 text-xs">
-                <span className="text-slate-500">Fecha límite</span>
-                <input
-                  required
-                  type="date"
-                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
-                  value={workDue}
-                  onChange={(e) => setWorkDue(e.target.value)}
-                />
-              </label>
-            </div>
-            <label className="block space-y-1 text-xs">
-              <span className="text-slate-500">Notas (opcional)</span>
-              <input
-                className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm outline-none ring-indigo-400/30 focus:ring"
-                value={workNotes}
-                onChange={(e) => setWorkNotes(e.target.value)}
-                placeholder="Enlace al enunciado, página del libro…"
-              />
-            </label>
-            <Button type="submit" size="sm">
-              Añadir al calendario
-            </Button>
-          </form>
-          <ul className="space-y-2 border-t border-white/10 px-6 py-4">
-            {works.length === 0 ? (
-              <li className="text-sm text-slate-500">Aún no hay trabajos registrados.</li>
-            ) : (
-              sortedWorksForCalendarList.map((w) => {
-                const done = isStudentWorkCompleted(w);
-                return (
-                  <li
-                    key={w.id}
-                    className={cn(
-                      "flex items-start justify-between gap-2 rounded-lg border border-white/10 bg-slate-950/30 px-3 py-2 text-sm",
-                      done && "border-teal-500/20 opacity-90",
-                    )}
-                  >
-                    <div className="min-w-0">
-                      <div className={cn("font-medium text-slate-100", done && "line-through decoration-slate-500/70")}>{w.title}</div>
-                      <div className="text-xs text-slate-500">
-                        {w.dueDate} · {w.subject}
-                        {done ? <span className="ml-2 text-teal-300/90">· Entregado</span> : null}
-                      </div>
-                      {w.notes ? <div className="mt-1 text-xs text-slate-400">{w.notes}</div> : null}
-                    </div>
-                    <div className="flex shrink-0 gap-1">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className={done ? "text-teal-200 hover:text-teal-100" : "text-emerald-200/90 hover:text-emerald-100"}
-                        aria-label={done ? "Marcar como pendiente" : "Marcar como entregado"}
-                        onClick={() => void toggleWorkCompleted(w.id, !done)}
-                      >
-                        {done ? <RotateCcw className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="text-rose-300 hover:text-rose-200"
-                        aria-label="Eliminar trabajo"
-                        onClick={() => void removeWork(w.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </li>
-                );
-              })
-            )}
-          </ul>
-        </Card>
       </div>
 
       {kitBusy || kitError || kitPack ? (
