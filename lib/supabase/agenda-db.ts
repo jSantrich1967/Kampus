@@ -329,8 +329,7 @@ export async function insertStudentWorkRemote(
   client: SupabaseClient,
   userId: string,
   input: Omit<StudentWork, "id" | "createdAt">,
-): Promise<StudentWork> {
-  const { data, error } = await client
+): Promise<StudentWork> {  const { data, error } = await client
     .from("student_works")
     .insert({
       user_id: userId,
@@ -344,6 +343,29 @@ export async function insertStudentWorkRemote(
     .single();
   if (error) throw new Error(formatAgendaCloudError(error.message));
   return mapWorkRow(data as WorkRow);
+}
+
+/** Registra un examen propio del estudiante (solo fecha; sin preguntas). */
+export async function insertUserExamRemote(
+  client: SupabaseClient,
+  userId: string,
+  input: { title: string; subject: string; dueDate: string },
+): Promise<Exam> {
+  const { data, error } = await client
+    .from("user_exams")
+    .insert({
+      user_id: userId,
+      title: input.title,
+      subject: input.subject,
+      description: "",
+      status: "open",
+      due_date: input.dueDate,
+      questions: [],
+    })
+    .select("id,user_id,subject,title,description,status,due_date,questions,created_at")
+    .single();
+  if (error) throw new Error(formatAgendaCloudError(error.message));
+  return mapExamRow(data as UserExamRow);
 }
 
 const DEMO_WORK_PREFIX = "Kampus ·";

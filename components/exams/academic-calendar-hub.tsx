@@ -66,6 +66,7 @@ import {
   fetchUserExams,
   insertClassScheduleRemote,
   insertStudentWorkRemote,
+  insertUserExamRemote,
   updateStudentWorkCompletedRemote,
   updateExamDueDateRemote,
   updateStudentWorkDueDateRemote,
@@ -146,6 +147,9 @@ export function AcademicCalendarHub() {
   const [workSubject, setWorkSubject] = useState("");
   const [workDue, setWorkDue] = useState("");
   const [workNotes, setWorkNotes] = useState("");
+  const [examTitle, setExamTitle] = useState("");
+  const [examSubject, setExamSubject] = useState("");
+  const [examDue, setExamDue] = useState("");
 
   const [classWeekday, setClassWeekday] = useState("0");
   const [classStart, setClassStart] = useState("08:00");
@@ -858,6 +862,29 @@ export function AcademicCalendarHub() {
     }
   }
 
+  async function submitExam(e: FormEvent) {
+    e.preventDefault();
+    if (!examTitle.trim() || !examDue) return;
+    if (!useCloud || !authUserId) {
+      setLoadError("Inicia sesión para registrar tus exámenes en el calendario.");
+      return;
+    }
+    try {
+      const supabase = createSupabaseBrowserClient();
+      await insertUserExamRemote(supabase, authUserId, {
+        title: examTitle.trim(),
+        subject: examSubject.trim() || profile.subjects[0] || "General",
+        dueDate: examDue,
+      });
+      setExamTitle("");
+      setExamSubject("");
+      setExamDue("");
+      refresh();
+    } catch (err) {
+      setLoadError(formatAgendaCloudError(err instanceof Error ? err.message : "Error al guardar."));
+    }
+  }
+
   async function removeWork(id: string) {
     try {
       if (useCloud) {
@@ -1506,6 +1533,51 @@ export function AcademicCalendarHub() {
               ))
             )}
           </ul>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Mis exámenes</CardTitle>
+            <CardDescription>
+              Registra las fechas de tus exámenes para verlos en el calendario y recibir avisos.
+            </CardDescription>
+          </CardHeader>
+          <form className="space-y-3 px-6 pb-4" onSubmit={(e) => void submitExam(e)}>
+            <label className="block space-y-1 text-xs">
+              <span className="text-slate-500">Título</span>
+              <input
+                required
+                className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm outline-none ring-indigo-400/30 focus:ring"
+                value={examTitle}
+                onChange={(e) => setExamTitle(e.target.value)}
+                placeholder="Ej. Parcial 1"
+              />
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-1 text-xs">
+                <span className="text-slate-500">Materia</span>
+                <input
+                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm outline-none ring-indigo-400/30 focus:ring"
+                  value={examSubject}
+                  onChange={(e) => setExamSubject(e.target.value)}
+                  placeholder="Ej. Cálculo"
+                />
+              </label>
+              <label className="space-y-1 text-xs">
+                <span className="text-slate-500">Fecha del examen</span>
+                <input
+                  required
+                  type="date"
+                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
+                  value={examDue}
+                  onChange={(e) => setExamDue(e.target.value)}
+                />
+              </label>
+            </div>
+            <Button type="submit" size="sm">
+              Añadir examen
+            </Button>
+          </form>
         </Card>
 
         <Card>

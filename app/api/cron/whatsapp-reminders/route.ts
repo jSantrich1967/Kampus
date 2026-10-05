@@ -51,8 +51,21 @@ export async function GET(req: Request) {
 
   for (const row of optedIn) {
     const userId = row.user_id as string;
-    const body = row.body as { phone: string };
+    const body = row.body as { phone: string; upcomingExams?: Array<{ subject?: string; date?: string }> };
     const events = await upcomingEvents(admin, userId, today, tomorrow);
+    // Exámenes registrados en el onboarding (viven en el perfil, no en user_exams).
+    for (const ue of body.upcomingExams ?? []) {
+      const date = (ue.date ?? "").slice(0, 10);
+      if (date !== today && date !== tomorrow) continue;
+      events.push({
+        key: `profile-exam:${ue.subject ?? ""}:${date}`,
+        kind: "exam",
+        day: date === tomorrow ? "tomorrow" : "today",
+        date,
+        title: `Examen de ${ue.subject ?? "materia"}`,
+        subject: ue.subject ?? "",
+      });
+    }
     if (events.length === 0) continue;
 
     const newOnes: typeof events = [];
