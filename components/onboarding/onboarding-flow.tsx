@@ -75,7 +75,9 @@ export function OnboardingFlow() {
     [progressCurrent, progressTotal],
   );
 
-  const canContinue = useMemo(() => {
+  // Sin useMemo: el compilador de React memoiza automáticamente este cálculo
+  // (la memoización manual hacía que el compilador omitiera este componente).
+  const canContinue = ((): boolean => {
     if (step === 0) return true;
     if (step === 1) {
       return anchorCanContinue(role, { displayName, university, major, semester });
@@ -93,18 +95,7 @@ export function OnboardingFlow() {
     if (step === 6) return learningGoals.trim().length > 6;
     if (step === 7) return true;
     return false;
-  }, [
-    step,
-    role,
-    university,
-    major,
-    semester,
-    subjects.length,
-    weakTopics.length,
-    weeklyAvailabilityHours,
-    missedClassesApprox,
-    learningGoals,
-  ]);
+  })();
 
   const goNext = useCallback(() => {
     if (step === 1 && role === "teacher" && major.trim().length > 1) {

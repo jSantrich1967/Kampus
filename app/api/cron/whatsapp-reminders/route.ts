@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { isWhatsAppConfigured, sendWhatsAppMessage } from "@/lib/whatsapp/twilio";
@@ -48,6 +49,11 @@ export async function GET(req: Request) {
   let usersNotified = 0;
   let messagesSent = 0;
   const failures: string[] = [];
+  const debug = {
+    profilesChecked: (profileRows ?? []).length,
+    optedInCount: optedIn.length,
+    perUserEvents: [] as Array<{ user: string; events: number; newOnes: number }>,
+  };
 
   for (const row of optedIn) {
     const userId = row.id as string;
@@ -83,7 +89,10 @@ export async function GET(req: Request) {
       if (error || !data || data.length === 0) continue; // ya enviado
       newOnes.push({ ...ev, logId: (data[0] as { id: string }).id });
     }
-    if (newOnes.length === 0) continue;
+    if (newOnes.length === 0) {
+      debug.perUserEvents.push({ user: `${userId.slice(0, 8)}…`, events: events.length, newOnes: 0 });
+      continue;
+    }
 
     const message = buildMessage(newOnes);
     const result = await sendWhatsAppMessage(body.phone, message);
@@ -103,13 +112,14 @@ export async function GET(req: Request) {
       usersNotified += 1;
       messagesSent += 1;
     } else {
-      failures.push(`${userId}:${result.error}`);
+      failures.push(`${userId.slice(0, 8)}…:${result.error}`);
     }
+    debug.perUserEvents.push({ user: `${userId.slice(0, 8)}…`, events: events.length, newOnes: newOnes.length });
 
     await sleep(250);
   }
 
-  return NextResponse.json({ ok: true, usersNotified, messagesSent, failures });
+  return NextResponse.json({ ok: true, usersNotified, messagesSent, failures, debug });
 }
 
 type EventItem = {
@@ -123,7 +133,7 @@ type EventItem = {
 };
 
 async function upcomingEvents(
-  admin: any,
+  admin: SupabaseClient,
   userId: string,
   today: string,
   tomorrow: string,
