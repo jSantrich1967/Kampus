@@ -34,9 +34,9 @@ export function toWhatsAppAddress(phone: string): string {
   return `whatsapp:${digits.startsWith("+") ? digits : `+${digits}`}`;
 }
 
-export async function sendWhatsAppMessage(to: string, body: string): Promise<SendResult> {
+export async function sendWhatsAppMessage(to: string, body: string, opts?: { plain?: boolean }): Promise<SendResult> {
   const { accountSid, authToken, from } = config();
-  const templateSid = process.env.TWILIO_WHATSAPP_TEMPLATE_SID?.trim();
+  const templateSid = opts?.plain ? undefined : process.env.TWILIO_WHATSAPP_TEMPLATE_SID?.trim();
   if (!accountSid || !authToken || !from) {
     return { ok: false, error: "twilio_not_configured" };
   }

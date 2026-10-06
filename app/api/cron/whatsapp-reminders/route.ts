@@ -76,6 +76,11 @@ export async function GET(req: Request) {
 
     const newOnes: typeof events = [];
     for (const ev of events) {
+      if (plain) {
+        // Modo prueba: sin dedup ni registro.
+        newOnes.push({ ...ev });
+        continue;
+      }
       const { data, error } = await admin
         .from("whatsapp_reminder_log")
         .insert({
@@ -107,10 +112,13 @@ export async function GET(req: Request) {
 
     // La plantilla ya trae "📚 Kampus te recuerda:" y "¡Éxito! 💪";
     // solo se le pasa la lista de eventos como {{1}}.
+    // ?plain=1 → texto directo sin plantilla (solo para pruebas del sandbox).
+    const plain = req.nextUrl.searchParams.get("plain") === "1";
     const eventLines = buildEventLines(newOnes);
-    const result = await sendWhatsAppMessage(body.phone, eventLines);
+    const result = await sendWhatsAppMessage(body.phone, eventLines, { plain });
 
     for (const ev of newOnes) {
+      if (!ev.logId) continue; // modo prueba: sin registro
       await admin
         .from("whatsapp_reminder_log")
         .update(
