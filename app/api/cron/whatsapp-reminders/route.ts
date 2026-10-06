@@ -86,8 +86,22 @@ export async function GET(req: Request) {
           event_date: ev.date,
         })
         .select("id");
-      if (error || !data || data.length === 0) continue; // ya enviado
-      newOnes.push({ ...ev, logId: (data[0] as { id: string }).id });
+      if (!error && data && data.length > 0) {
+        newOnes.push({ ...ev, logId: (data[0] as { id: string }).id });
+        continue;
+      }
+      // Ya existe: reintentar solo si el intento anterior falló (tiene error y sin SID).
+      const { data: existing } = await admin
+        .from("whatsapp_reminder_log")
+        .select("id, twilio_sid, error")
+        .eq("user_id", userId)
+        .eq("event_key", ev.key)
+        .eq("reminder_day", ev.day)
+        .eq("event_date", ev.date)
+        .maybeSingle();
+      if (existing && !(existing as { twilio_sid: string | null }).twilio_sid && (existing as { error: string | null }).error) {
+        newOnes.push({ ...ev, logId: (existing as { id: string }).id });
+      }
     }
     if (newOnes.length === 0) continue;
 
