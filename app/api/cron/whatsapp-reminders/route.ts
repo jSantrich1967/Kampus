@@ -105,8 +105,10 @@ export async function GET(req: Request) {
     }
     if (newOnes.length === 0) continue;
 
-    const message = buildMessage(newOnes);
-    const result = await sendWhatsAppMessage(body.phone, message);
+    // La plantilla ya trae "📚 Kampus te recuerda:" y "¡Éxito! 💪";
+    // solo se le pasa la lista de eventos como {{1}}.
+    const eventLines = buildEventLines(newOnes);
+    const result = await sendWhatsAppMessage(body.phone, eventLines);
 
     for (const ev of newOnes) {
       await admin
@@ -210,13 +212,18 @@ const KIND_LABEL: Record<EventItem["kind"], string> = {
   presentation: "Exposición",
 };
 
-function buildMessage(events: EventItem[]): string {
+function buildEventLines(events: EventItem[]): string {
   const lines = events.map((e) => {
     const when = e.day === "tomorrow" ? "Mañana" : "Hoy";
     const subj = e.subject ? ` (${e.subject})` : "";
     return `• ${when}: ${KIND_LABEL[e.kind]} «${e.title}»${subj}`;
   });
-  return `📚 Kampus te recuerda:\n${lines.join("\n")}\n¡Éxito! 💪`;
+  return lines.join("\n");
+}
+
+/** Mensaje completo para el fallback sin plantilla (texto libre). */
+function buildMessage(events: EventItem[]): string {
+  return `📚 Kampus te recuerda:\n${buildEventLines(events)}\n¡Éxito! 💪`;
 }
 
 /** YYYY-MM-DD en America/Caracas con desplazamiento de días. */

@@ -50,10 +50,11 @@ export async function sendWhatsAppMessage(to: string, body: string): Promise<Sen
   };
   if (templateSid) {
     // Plantilla aprobada: el texto va en la variable {{1}}.
+    // La plantilla ya incluye encabezado y cierre; `body` trae solo las líneas.
     params.ContentSid = templateSid;
     params.ContentVariables = JSON.stringify({ "1": body });
   } else {
-    params.Body = body;
+    params.Body = `📚 Kampus te recuerda:\n${body}\n¡Éxito! 💪`;
   }
 
   try {
