@@ -48,11 +48,17 @@ export async function GET(req: Request) {
   let usersNotified = 0;
   let messagesSent = 0;
   const failures: string[] = [];
+  const debug = {
+    profilesChecked: (profileRows ?? []).length,
+    optedInCount: optedIn.length,
+    perUser: [] as Array<{ u: string; events: number }>,
+  };
 
   for (const row of optedIn) {
     const userId = row.id as string;
     const body = row.body as { phone: string; upcomingExams?: Array<{ subject?: string; date?: string }> };
     const events = await upcomingEvents(admin, userId, today, tomorrow);
+    debug.perUser.push({ u: userId.slice(0, 8), events: events.length });
     // Exámenes registrados en el onboarding (viven en el perfil, no en user_exams).
     for (const ue of body.upcomingExams ?? []) {
       const date = (ue.date ?? "").slice(0, 10);
@@ -109,7 +115,7 @@ export async function GET(req: Request) {
     await sleep(250);
   }
 
-  return NextResponse.json({ ok: true, usersNotified, messagesSent, failures });
+  return NextResponse.json({ ok: true, usersNotified, messagesSent, failures, debug });
 }
 
 type EventItem = {
