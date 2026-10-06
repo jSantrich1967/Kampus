@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 
 import { AlarmClock, CheckCircle2, ChevronRight, ClipboardCheck, FlaskConical, Loader2, Sparkles, Swords } from "lucide-react";
 
@@ -394,12 +393,12 @@ export function CramMode() {
               })}
 
               <div className="flex flex-wrap gap-2">
-                <Link href="/tutor" className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20">
+                <a href="/tutor" className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20">
                   <Sparkles className="h-4 w-4" aria-hidden /> Reforzar con el Tutor IA
-                </Link>
-                <Link href="/duelos/practica?autostart=1" className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20">
+                </a>
+                <a href="/duelos/practica?autostart=1" className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20">
                   <Swords className="h-4 w-4" aria-hidden /> Practicar en un duelo
-                </Link>
+                </a>
                 <Button variant="secondary" size="sm" onClick={restart}>
                   <ClipboardCheck className="h-4 w-4" aria-hidden /> Nuevo plan
                 </Button>
