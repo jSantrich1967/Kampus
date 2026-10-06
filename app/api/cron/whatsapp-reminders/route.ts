@@ -54,9 +54,6 @@ export async function GET(req: Request) {
     perUser: [] as Array<{ u: string; events: number }>,
   };
 
-  // ?plain=1 → texto directo sin plantilla (solo para pruebas del sandbox).
-  const plain = new URL(req.url).searchParams.get("plain") === "1";
-
   for (const row of optedIn) {
     const userId = row.id as string;
     const body = row.body as { phone: string; upcomingExams?: Array<{ subject?: string; date?: string }> };
@@ -79,11 +76,6 @@ export async function GET(req: Request) {
 
     const newOnes: typeof events = [];
     for (const ev of events) {
-      if (plain) {
-        // Modo prueba: sin dedup ni registro.
-        newOnes.push({ ...ev });
-        continue;
-      }
       const { data, error } = await admin
         .from("whatsapp_reminder_log")
         .insert({
@@ -116,10 +108,9 @@ export async function GET(req: Request) {
     // La plantilla ya trae "📚 Kampus te recuerda:" y "¡Éxito! 💪";
     // solo se le pasa la lista de eventos como {{1}}.
     const eventLines = buildEventLines(newOnes);
-    const result = await sendWhatsAppMessage(body.phone, eventLines, { plain });
+    const result = await sendWhatsAppMessage(body.phone, eventLines);
 
     for (const ev of newOnes) {
-      if (!ev.logId) continue; // modo prueba: sin registro
       await admin
         .from("whatsapp_reminder_log")
         .update(
