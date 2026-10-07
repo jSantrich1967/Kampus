@@ -92,6 +92,9 @@ export function SocraticTutorPanel() {
             subject: subject.trim(),
             level: "university",
           }),
+          // La IA puede tardar, pero nunca debe colgar la interfaz:
+          // a los 90 s soltamos con error visible.
+          signal: AbortSignal.timeout(90_000),
         });
         const data = (await res.json().catch(() => ({}))) as {
           reply?: string;
