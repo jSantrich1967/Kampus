@@ -96,6 +96,7 @@ export function OnboardingFlow() {
   }, [
     step,
     role,
+    displayName,
     university,
     major,
     semester,

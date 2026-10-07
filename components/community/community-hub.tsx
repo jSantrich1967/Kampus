@@ -46,6 +46,25 @@ import {
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { loadSavedPostIds, toggleSavedPostId } from "@/lib/storage/community-saved-storage";
 
+// Si Supabase tarda demasiado, soltamos la espera con un error visible
+// en vez de dejar el botón colgado en "Publicando…" para siempre.
+async function withTimeout<T>(promise: Promise<T>, ms = 20_000): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error("La operación tardó demasiado. Revisa tu conexión e inténtalo de nuevo.")),
+          ms,
+        );
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export function CommunityHub() {
   const router = useRouter();
   const pathname = usePathname();
@@ -197,23 +216,27 @@ export function CommunityHub() {
     setPostError(null);
     try {
       const supabase = createSupabaseBrowserClient();
-      await insertCommunityPost(supabase, {
-        userId: authUserId,
-        channelId: selectedChannelId,
-        body,
-        resourceUrl: resourceUrl.trim() || undefined,
-        resourceLabel: resourceLabel.trim() || undefined,
-        resourceKind: resourceKind ?? undefined,
-      });
+      await withTimeout(
+        insertCommunityPost(supabase, {
+          userId: authUserId,
+          channelId: selectedChannelId,
+          body,
+          resourceUrl: resourceUrl.trim() || undefined,
+          resourceLabel: resourceLabel.trim() || undefined,
+          resourceKind: resourceKind ?? undefined,
+        }),
+      );
       setPostBody("");
       setResourceUrl("");
       setResourceLabel("");
       setResourceKind(null);
-      await mutateFeed();
+      // La publicación ya se guardó: soltamos el botón y refrescamos el
+      // feed en segundo plano para que la espera nunca cuelgue la interfaz.
+      setPostBusy(false);
+      void mutateFeed();
     } catch (e) {
       const msg = e instanceof Error ? e.message : t.postError;
       setPostError(msg);
-    } finally {
       setPostBusy(false);
     }
   }
@@ -226,13 +249,15 @@ export function CommunityHub() {
     setAnswerError(null);
     try {
       const supabase = createSupabaseBrowserClient();
-      await insertCommunityAnswer(supabase, { userId: authUserId, questionId, body });
+      await withTimeout(insertCommunityAnswer(supabase, { userId: authUserId, questionId, body }));
       setAnswerDrafts((prev) => ({ ...prev, [questionId]: "" }));
-      await mutateFeed();
+      // Igual que al publicar: la respuesta ya se guardó, soltamos el
+      // botón y refrescamos el feed en segundo plano.
+      setAnswerBusyId(null);
+      void mutateFeed();
     } catch (e) {
       const msg = e instanceof Error ? e.message : t.replyError;
       setAnswerError(msg);
-    } finally {
       setAnswerBusyId(null);
     }
   }

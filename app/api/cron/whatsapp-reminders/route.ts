@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { isWhatsAppConfigured, sendWhatsAppMessage } from "@/lib/whatsapp/twilio";
@@ -145,7 +146,7 @@ type EventItem = {
 };
 
 async function upcomingEvents(
-  admin: any,
+  admin: SupabaseClient,
   userId: string,
   today: string,
   tomorrow: string,
@@ -219,11 +220,6 @@ function buildEventLines(events: EventItem[]): string {
     return `• ${when}: ${KIND_LABEL[e.kind]} «${e.title}»${subj}`;
   });
   return lines.join("\n");
-}
-
-/** Mensaje completo para el fallback sin plantilla (texto libre). */
-function buildMessage(events: EventItem[]): string {
-  return `📚 Kampus te recuerda:\n${buildEventLines(events)}\n¡Éxito! 💪`;
 }
 
 /** YYYY-MM-DD en America/Caracas con desplazamiento de días. */
