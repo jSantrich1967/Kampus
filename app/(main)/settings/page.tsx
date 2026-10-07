@@ -170,7 +170,7 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle>Avisos por WhatsApp</CardTitle>
           <CardDescription>
-            Recibe recordatorios de exámenes, exposiciones y entregas en tu WhatsApp.
+            Recibe recordatorios de exámenes, exposiciones, entregas y clases virtuales en tu WhatsApp.
           </CardDescription>
         </CardHeader>
         <div className="flex flex-col gap-3 px-6 pb-6">
