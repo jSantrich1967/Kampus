@@ -115,6 +115,23 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <div className="flex flex-col gap-3">
+          <div>
+            <label htmlFor="profile-name" className="mb-1 block text-xs font-medium text-slate-300">
+              Tu nombre
+            </label>
+            <input
+              id="profile-name"
+              type="text"
+              autoComplete="name"
+              placeholder="¿Cómo te llamas?"
+              value={profile.displayName ?? ""}
+              onChange={(e) => setProfile({ ...profile, displayName: e.target.value })}
+              className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-indigo-400/60 focus:outline-none"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Es el nombre que verán tus compañeros y profesores en Kampus.
+            </p>
+          </div>
           {!isSupabaseConfigured() ? (
             <p className="text-sm text-amber-200/90">{tAuth.supabaseMissing}</p>
           ) : authUserId ? (

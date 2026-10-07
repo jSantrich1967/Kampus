@@ -30,6 +30,7 @@ import {
   fetchExamById,
   insertAttemptRemote,
 } from "@/lib/supabase/agenda-db";
+import { withTimeout } from "@/lib/with-timeout";
 import { cn } from "@/lib/cn";
 
 type DetailTab = "respond" | "attempts";
@@ -64,7 +65,7 @@ export function StudentExamDetail({ examId }: { examId: string }) {
       try {
         if (useCloud) {
           const supabase = createSupabaseBrowserClient();
-          const e = await fetchExamById(supabase, authUserId!, examId);
+          const e = await withTimeout(fetchExamById(supabase, authUserId!, examId));
           if (!cancelled) setExam(e);
         } else {
           if (!cancelled) setExam(getExamById(examId));
@@ -87,7 +88,7 @@ export function StudentExamDetail({ examId }: { examId: string }) {
     try {
       if (useCloud) {
         const supabase = createSupabaseBrowserClient();
-        const list = await fetchAttemptsForExam(supabase, authUserId!, exam.id, studentLabel);
+        const list = await withTimeout(fetchAttemptsForExam(supabase, authUserId!, exam.id, studentLabel));
         setAttempts(list);
       } else {
         setAttempts(listAttemptsForExam(exam.id, studentLabel));

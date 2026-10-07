@@ -45,25 +45,7 @@ import {
 } from "@/lib/supabase/community-db";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { loadSavedPostIds, toggleSavedPostId } from "@/lib/storage/community-saved-storage";
-
-// Si Supabase tarda demasiado, soltamos la espera con un error visible
-// en vez de dejar el botón colgado en "Publicando…" para siempre.
-async function withTimeout<T>(promise: Promise<T>, ms = 20_000): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    return await Promise.race([
-      promise,
-      new Promise<T>((_, reject) => {
-        timer = setTimeout(
-          () => reject(new Error("La operación tardó demasiado. Revisa tu conexión e inténtalo de nuevo.")),
-          ms,
-        );
-      }),
-    ]);
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
-}
+import { withTimeout } from "@/lib/with-timeout";
 
 export function CommunityHub() {
   const router = useRouter();
