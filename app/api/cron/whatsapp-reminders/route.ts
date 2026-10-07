@@ -7,8 +7,8 @@ import { isWhatsAppConfigured, sendWhatsAppMessage } from "@/lib/whatsapp/twilio
 export const maxDuration = 60;
 
 /**
- * Cron diario: recordatorios de WhatsApp para exámenes, exposiciones y
- * entregas de mañana y de hoy. Protegido con CRON_SECRET
+ * Cron diario: recordatorios de WhatsApp para exámenes, exposiciones,
+ * entregas y clases virtuales de mañana y de hoy. Protegido con CRON_SECRET
  * (Vercel Cron envía Authorization: Bearer <CRON_SECRET>).
  */
 export async function GET(req: Request) {
@@ -137,11 +137,12 @@ export async function GET(req: Request) {
 
 type EventItem = {
   key: string;
-  kind: "exam" | "work" | "presentation";
+  kind: "exam" | "work" | "presentation" | "class";
   day: "tomorrow" | "today";
   date: string;
   title: string;
   subject: string;
+  detail?: string;
   logId?: string;
 };
 
@@ -204,20 +205,69 @@ async function upcomingEvents(
     });
   }
 
+  // Clases virtuales en las que el estudiante está inscrito (roster).
+  // El horario semanal fijo NO va aquí: se repite cada semana y sería spam.
+  const { data: roster } = await db
+    .from("virtual_class_roster")
+    .select("session_id, virtual_class_sessions(id,course,professor_name,topic,starts_at)")
+    .eq("student_user_id", userId);
+
+  // Ventana [00:00 Caracas de hoy, 24:00 Caracas de mañana) en UTC (VE = UTC-4).
+  const rangeStart = Date.parse(`${today}T00:00:00-04:00`);
+  const rangeEnd = Date.parse(`${tomorrow}T00:00:00-04:00`) + 86_400_000;
+  const nowMs = Date.now();
+  const seenClasses = new Set<string>();
+  for (const r of roster ?? []) {
+    const nested = (
+      r as { virtual_class_sessions?: VirtualSession | VirtualSession[] | null }
+    ).virtual_class_sessions;
+    const sessions = Array.isArray(nested) ? nested : nested ? [nested] : [];
+    for (const s of sessions) {
+      if (seenClasses.has(s.id)) continue;
+      const startsMs = Date.parse(s.starts_at);
+      // Fuera de la ventana de hoy/mañana, o ya comenzó: no se avisa.
+      if (Number.isNaN(startsMs) || startsMs < rangeStart || startsMs >= rangeEnd || startsMs <= nowMs) {
+        continue;
+      }
+      const date = caracasDayOf(startsMs);
+      if (date !== today && date !== tomorrow) continue;
+      seenClasses.add(s.id);
+      out.push({
+        key: `class:${s.id}`,
+        kind: "class",
+        day: date === tomorrow ? "tomorrow" : "today",
+        date,
+        title: s.topic?.trim() || s.course,
+        subject: s.course,
+        detail: caracasTimeOf(startsMs),
+      });
+    }
+  }
+
   return out;
 }
+
+type VirtualSession = {
+  id: string;
+  course: string;
+  professor_name?: string | null;
+  topic?: string | null;
+  starts_at: string;
+};
 
 const KIND_LABEL: Record<EventItem["kind"], string> = {
   exam: "Examen",
   work: "Entrega",
   presentation: "Exposición",
+  class: "Clase virtual",
 };
 
 function buildEventLines(events: EventItem[]): string {
   const lines = events.map((e) => {
     const when = e.day === "tomorrow" ? "Mañana" : "Hoy";
     const subj = e.subject ? ` (${e.subject})` : "";
-    return `• ${when}: ${KIND_LABEL[e.kind]} «${e.title}»${subj}`;
+    const detail = e.detail ? ` · ${e.detail}` : "";
+    return `• ${when}: ${KIND_LABEL[e.kind]} «${e.title}»${subj}${detail}`;
   });
   return lines.join("\n");
 }
@@ -231,6 +281,25 @@ function caracasDate(offsetDays: number): string {
     month: "2-digit",
     day: "2-digit",
   }).format(d);
+}
+
+/** YYYY-MM-DD en America/Caracas de un instante dado. */
+function caracasDayOf(ms: number): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Caracas",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(ms));
+}
+
+/** Hora local de Caracas, ej: "2:30 p. m.". */
+function caracasTimeOf(ms: number): string {
+  return new Intl.DateTimeFormat("es-VE", {
+    timeZone: "America/Caracas",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(ms));
 }
 
 function sleep(ms: number) {
