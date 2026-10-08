@@ -15,7 +15,7 @@ export function LegalPageShell({ title, updated, children }: LegalPageShellProps
     <div className="min-h-dvh bg-[#131318] text-white">
       <header className="border-b border-white/5">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-5">
-          <Link href="/" className="inline-flex items-center" aria-label="Volver al inicio">
+          <Link href="/" className="inline-flex items-center" aria-label="Kampus — Inicio">
             <KampusLockup className="text-lg" />
           </Link>
           <Link
@@ -28,7 +28,14 @@ export function LegalPageShell({ title, updated, children }: LegalPageShellProps
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-6 py-14">
+      <a
+        href="#contenido"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-indigo-600 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
+      >
+        Saltar al contenido
+      </a>
+
+      <main id="contenido" tabIndex={-1} className="mx-auto max-w-3xl px-6 py-14">
         <h1 className="mb-3 text-4xl font-bold tracking-tight">{title}</h1>
         <p className="mb-10 text-sm text-gray-400">Última actualización: {updated}</p>
         <div className="space-y-8 text-[15px] leading-relaxed text-gray-300">{children}</div>

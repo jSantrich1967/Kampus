@@ -32,7 +32,12 @@ function useBcvRate() {
 
 /** Precio de un plan en bolívares, calculado con la tasa BCV del día. */
 export function BcvPrice({ usdPrice }: { usdPrice: number }) {
-  const { rate, date } = useBcvRate();
+  const { rate, date, live } = useBcvRate();
+  // Sin tasa vigente y verificable no mostramos un equivalente en Bs.:
+  // mejor "Consultar precio" que exhibir una tasa vencida (auditoría 2026-10-08).
+  if (!live) {
+    return <p className="text-sm font-semibold text-purple-300">Consultar precio en bolívares</p>;
+  }
   return (
     <>
       <p className="text-sm font-semibold text-purple-300">{formatBs(usdPrice * rate)} / mes</p>
@@ -46,7 +51,7 @@ export function BcvRateNote() {
   const { date, live } = useBcvRate();
   const text = live
     ? `Precio en bolívares calculado a la tasa oficial del BCV del ${formatBcvDate(date)}.`
-    : `Precio en bolívares calculado con la tasa de respaldo del ${formatBcvDate(date)}, porque no pudimos leer la tasa de hoy.`;
+    : `El precio en bolívares se calcula a la tasa oficial del BCV del día.`;
   return (
     <p className="mx-auto mt-10 max-w-7xl px-6 text-center text-xs text-gray-400">{text}</p>
   );

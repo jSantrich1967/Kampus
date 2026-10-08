@@ -118,7 +118,15 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Suspense fallback={null}>
           <AttributionBanner />
         </Suspense>
+        <a
+          href="#contenido"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-indigo-600 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
+        >
+          Saltar al contenido
+        </a>
         <main
+          id="contenido"
+          tabIndex={-1}
           className={cn(
             "mx-auto px-4 py-8 pb-16 md:px-8 md:py-10 md:pb-10",
             luminaStudy ? "max-w-7xl" : "max-w-6xl",

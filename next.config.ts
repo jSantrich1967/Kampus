@@ -37,6 +37,27 @@ const distDir = devDistDirFromEnv();
 const nextConfig: NextConfig = {
   ...(distDir ? { distDir } : {}),
   devIndicators: false,
+  poweredByHeader: false,
+  // Cabeceras defensivas (auditoría 2026-10-08). La CSP completa va por
+  // etapas: hoy solo se impone frame-ancestors para no romper Google
+  // Auth/Supabase; ampliar a default-src cuando haya endpoint de reportes.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(self), microphone=(self), geolocation=()",
+          },
+        ],
+      },
+    ];
+  },
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   serverExternalPackages: ["pdf-parse", "@napi-rs/canvas"],
   ...(envFlag("KAMPUS_NEXT_DISABLE_DIST_LOCK")
