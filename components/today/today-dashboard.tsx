@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { ShareLinkButton } from "@/components/growth/share-link-button";
+import { DemoGuideCard } from "@/components/demo/demo-guide-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Badge } from "@/components/ui/badge";
@@ -222,6 +223,7 @@ export function TodayDashboard() {
       />
 
       <TodayAuthBypassNote />
+      <DemoGuideCard />
 
       {isTeacher ? (
         <TodayStep step="Paso 1" label="Empieza aquí">

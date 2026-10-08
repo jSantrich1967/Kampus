@@ -1,5 +1,6 @@
 import { buildDemoClassScheduleRows } from "@/lib/demo/demo-class-schedule";
 import { buildDemoProfile, buildPremiumDemoProfile } from "@/lib/demo/demo-profile";
+import { markDemoBrowser } from "@/lib/demo/demo-session";
 import { seedDemoStudyStreak } from "@/lib/demo/demo-study-streak";
 import type { UserProfile } from "@/lib/schemas/profile";
 import { saveClassSchedule } from "@/lib/storage/class-schedule-storage";
@@ -12,6 +13,7 @@ export type DemoModeOptions = {
 
 /** Load demo subjects, exams, schedule seed, streak — optionally with Premium plan. */
 export function activateDemoMode(options?: DemoModeOptions): UserProfile {
+  markDemoBrowser();
   const demo = options?.premium ? buildPremiumDemoProfile() : buildDemoProfile();
   saveProfile(demo);
   // Los exámenes demo reflejan los próximos exámenes del perfil: misma materia y fecha.
