@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { tutorCopy } from "@/lib/i18n/tutor";
+import { preferredProfileSubject } from "@/lib/study/preferred-subject";
 
 type ChatTurn = { role: "user" | "assistant"; content: string };
 
@@ -45,6 +46,7 @@ export function SocraticTutorPanel() {
   const [error, setError] = useState<string | null>(null);
   const [quota, setQuota] = useState<{ used: number; limit: number } | null>(null);
   const [hydratedLocal, setHydratedLocal] = useState(false);
+  const manualSubjectRef = useRef(false);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -58,6 +60,19 @@ export function SocraticTutorPanel() {
     setHydratedLocal(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // La materia guardada en este navegador puede venir de otro perfil o de
+  // antes de sincronizar la cuenta. Si el perfil activo cambia (p. ej. a
+  // Finanzas), el Tutor sigue al perfil salvo que la persona escriba otra
+  // materia manualmente en esta sesión.
+  useEffect(() => {
+    if (!hydratedLocal || manualSubjectRef.current) return;
+    const preferred = preferredProfileSubject(profile);
+    if (!preferred || subject === preferred) return;
+    setSubject(preferred);
+    setMessages([]);
+    setError(null);
+  }, [hydratedLocal, profile, subject]);
 
   useEffect(() => {
     if (!hydratedLocal) return;
@@ -167,7 +182,10 @@ export function SocraticTutorPanel() {
               value={subject}
               maxLength={120}
               placeholder={t.subjectPlaceholder}
-              onChange={(e) => setSubject(e.target.value)}
+              onChange={(e) => {
+                manualSubjectRef.current = true;
+                setSubject(e.target.value);
+              }}
             />
           </div>
 

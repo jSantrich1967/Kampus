@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 
 import { AlarmClock, CheckCircle2, ChevronRight, ClipboardCheck, FlaskConical, Loader2, Sparkles, Swords } from "lucide-react";
@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DiagnoseQuestion, PlanBlock } from "@/lib/schemas/cram";
+import { preferredProfileSubject } from "@/lib/study/preferred-subject";
 import { cn } from "@/lib/cn";
 
 type Step = "setup" | "diagnostic" | "plan";
@@ -32,6 +33,7 @@ export function CramMode() {
 
   const [step, setStep] = useState<Step>("setup");
   const [subject, setSubject] = useState("");
+  const manualSubjectRef = useRef(false);
   const [topics, setTopics] = useState("");
   const [daysLeft, setDaysLeft] = useState(1);
   const [hoursPerDay, setHoursPerDay] = useState(2);
@@ -50,12 +52,14 @@ export function CramMode() {
 
   const loggedIn = Boolean(authUserId);
 
+  // Mantener la materia alineada con el perfil sincronizado: antes solo se
+  // fijaba en el primer render y quedaba la materia anterior (p. ej. Cálculo)
+  // aunque el perfil activo ya estuviera en Finanzas.
   useEffect(() => {
-    if (hydrated && !subject && profile.subjects.length > 0) {
-      setSubject(profile.subjects[0]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated]);
+    if (!hydrated || manualSubjectRef.current) return;
+    const preferred = preferredProfileSubject(profile);
+    if (preferred && subject !== preferred) setSubject(preferred);
+  }, [hydrated, profile, subject]);
 
   useEffect(() => {
     if (step === "plan" && plan) {
@@ -233,7 +237,10 @@ export function CramMode() {
                 <label className="mb-1 block text-xs font-medium text-slate-300">Materia</label>
                 <input
                   value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
+                  onChange={(e) => {
+                    manualSubjectRef.current = true;
+                    setSubject(e.target.value);
+                  }}
                   placeholder="Ej.: Física"
                   className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-slate-500"
                 />

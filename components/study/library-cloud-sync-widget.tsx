@@ -45,7 +45,7 @@ export function LibraryCloudSyncWidget({ documentCount, synced }: LibraryCloudSy
         </div>
         <p className="mb-8 max-w-xl leading-relaxed text-gray-400">
           {synced
-            ? "Todos tus cuadernos se están sincronizando con Kampus Lumina Cloud. No pierdas nunca tu progreso, incluso sin conexión."
+            ? "Todos tus cuadernos se están sincronizando con la nube de Kampus. No pierdas nunca tu progreso, incluso sin conexión."
             : "Inicia sesión para sincronizar tus cuadernos en la nube y acceder desde cualquier dispositivo."}
         </p>
         <div className="flex flex-wrap justify-center gap-4 md:justify-start">

@@ -18,12 +18,16 @@ function countOpenExams(list: Exam[]): number {
  * Alineado con la lista en /exams/student: incluye seed demo si aún no hay datos.
  */
 export function useOpenExamsCount(): number {
-  const { hydrated, authUserId, profile } = useKampus();
+  const { hydrated, authReady, authUserId, profile } = useKampus();
   const useCloud = Boolean(isSupabaseConfigured() && authUserId);
   const [count, setCount] = useState(0);
 
   const refresh = useCallback(async () => {
     if (!hydrated) return;
+    // Con Supabase configurado, no mezclar la caja local anónima mientras la
+    // sesión aún se está resolviendo: ese era un origen del 3 vs 9 según la
+    // pantalla o el momento de carga.
+    if (isSupabaseConfigured() && !authReady) return;
     try {
       let list: Exam[];
       if (useCloud) {
@@ -38,7 +42,7 @@ export function useOpenExamsCount(): number {
     } catch {
       setCount(0);
     }
-  }, [hydrated, useCloud, authUserId, profile.subjects]);
+  }, [hydrated, authReady, useCloud, authUserId, profile.subjects]);
 
   useEffect(() => {
     void refresh();

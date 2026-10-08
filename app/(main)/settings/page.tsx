@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import * as Sentry from "@sentry/nextjs";
+import { Eye, EyeOff } from "lucide-react";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
@@ -45,6 +46,12 @@ export default function SettingsPage() {
   const [authBypassDismissed, setAuthBypassDismissed] = useState(false);
   const [authBypassHydrated, setAuthBypassHydrated] = useState(false);
   const [subjectDraft, setSubjectDraft] = useState("");
+  const [phoneVisible, setPhoneVisible] = useState(false);
+
+  const phoneValue = profile.phone ?? "";
+  const maskedPhone = phoneValue
+    ? `${phoneValue.slice(0, 3)} ••• ••• ${phoneValue.slice(-4)}`
+    : "";
 
   useEffect(() => {
     setAuthBypassDismissed(loadAuthBypassBannerDismissed(authUserId));
@@ -137,10 +144,6 @@ export default function SettingsPage() {
           ) : authUserId ? (
             <>
               <p className="text-sm text-slate-300">{tAuth.sessionActive}</p>
-              <p className="break-all font-mono text-xs text-slate-500">
-                <span className="text-slate-400">{tAuth.userId}: </span>
-                {authUserId}
-              </p>
               <Button
                 type="button"
                 variant="secondary"
@@ -178,21 +181,51 @@ export default function SettingsPage() {
             <label htmlFor="wa-phone" className="mb-1 block text-xs font-medium text-slate-300">
               Tu número de WhatsApp
             </label>
-            <input
-              id="wa-phone"
-              type="tel"
-              inputMode="tel"
-              placeholder="+584121234567"
-              value={profile.phone ?? ""}
-              onChange={(e) => setProfile({ ...profile, phone: e.target.value.trim() })}
-              onBlur={(e) => {
-                const normalized = e.target.value.replace(/[\s\-().]/g, "");
-                const fixed =
-                  normalized && !normalized.startsWith("+") ? `+${normalized}` : normalized;
-                if (fixed !== e.target.value) setProfile({ ...profile, phone: fixed });
-              }}
-              className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-indigo-400/60 focus:outline-none"
-            />
+            {phoneVisible || !phoneValue ? (
+              <div className="flex gap-2">
+                <input
+                  id="wa-phone"
+                  type="tel"
+                  inputMode="tel"
+                  placeholder="+584121234567"
+                  value={phoneValue}
+                  onChange={(e) => setProfile({ ...profile, phone: e.target.value.trim() })}
+                  onBlur={(e) => {
+                    const normalized = e.target.value.replace(/[\s\-().]/g, "");
+                    const fixed =
+                      normalized && !normalized.startsWith("+") ? `+${normalized}` : normalized;
+                    if (fixed !== e.target.value) setProfile({ ...profile, phone: fixed });
+                  }}
+                  className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-indigo-400/60 focus:outline-none"
+                />
+                {phoneValue ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setPhoneVisible(false)}
+                    className="shrink-0 gap-1.5"
+                  >
+                    <EyeOff className="h-3.5 w-3.5" aria-hidden />
+                    Ocultar
+                  </Button>
+                ) : null}
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2">
+                <span className="text-sm tabular-nums text-slate-200">{maskedPhone}</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setPhoneVisible(true)}
+                  className="shrink-0 gap-1.5"
+                >
+                  <Eye className="h-3.5 w-3.5" aria-hidden />
+                  Ver o editar
+                </Button>
+              </div>
+            )}
             <p className="mt-1 text-xs text-slate-500">
               Con código de país. Ej: +58 para Venezuela, +57 para Colombia.
             </p>

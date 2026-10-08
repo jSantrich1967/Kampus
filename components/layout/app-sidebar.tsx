@@ -117,9 +117,7 @@ export function AppSidebar({ onNavigate, luminaMode = false }: AppSidebarProps) 
               ? "Espacio docente · feedback y aula"
               : profile.role === "institution"
                 ? "Panel institución · cohorte"
-                : luminaMode
-                  ? "Lumina Studio"
-                  : "Sistema operativo académico"}
+                : "Sistema operativo académico"}
           </div>
         </Link>
         <div className="mt-4 flex items-center gap-2">

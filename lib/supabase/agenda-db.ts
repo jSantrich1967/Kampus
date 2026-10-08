@@ -174,7 +174,24 @@ export async function fetchUserExams(client: SupabaseClient, userId: string): Pr
     .order("created_at", { ascending: false });
   if (error) throw new Error(formatAgendaCloudError(error.message));
   const rows = (data ?? []) as UserExamRow[];
-  return rows.map(mapExamRow);
+  const exams = rows.map(mapExamRow);
+
+  // Las siembras demo antiguas pudieron insertarse más de una vez si varias
+  // pantallas cargaban a la vez. No mostramos dos veces el mismo demo: así
+  // el contador del menú y la lista cuentan lo mismo.
+  const seenDemo = new Set<string>();
+  return exams.filter((exam) => {
+    if (!exam.title.toLocaleLowerCase("es").includes("(demo)")) return true;
+    const key = [
+      exam.title.trim().toLocaleLowerCase("es"),
+      exam.subject.trim().toLocaleLowerCase("es"),
+      exam.dueDate ?? "",
+      exam.status,
+    ].join("|");
+    if (seenDemo.has(key)) return false;
+    seenDemo.add(key);
+    return true;
+  });
 }
 
 export async function fetchExamById(client: SupabaseClient, userId: string, examId: string): Promise<Exam | null> {
@@ -189,8 +206,25 @@ export async function fetchExamById(client: SupabaseClient, userId: string, exam
   return mapExamRow(data as UserExamRow);
 }
 
+const demoExamEnsureInFlight = new Map<string, Promise<void>>();
+
 /** Si el usuario no tiene exámenes, inserta el mismo par demo que el seed local. */
-export async function ensureDemoExamsRemote(client: SupabaseClient, userId: string, subjectHint: string): Promise<void> {
+export function ensureDemoExamsRemote(
+  client: SupabaseClient,
+  userId: string,
+  subjectHint: string,
+): Promise<void> {
+  const existing = demoExamEnsureInFlight.get(userId);
+  if (existing) return existing;
+
+  const task = ensureDemoExamsRemoteOnce(client, userId, subjectHint).finally(() => {
+    demoExamEnsureInFlight.delete(userId);
+  });
+  demoExamEnsureInFlight.set(userId, task);
+  return task;
+}
+
+async function ensureDemoExamsRemoteOnce(client: SupabaseClient, userId: string, subjectHint: string): Promise<void> {
   const { count, error: cErr } = await client
     .from("user_exams")
     .select("id", { count: "exact", head: true })
