@@ -288,14 +288,24 @@ export function AppSidebar({ onNavigate, luminaMode = false }: AppSidebarProps) 
 
       <div className="border-t border-white/5 p-4">
         {isAdmin ? (
-          <Link
-            href="/admin/observaciones"
-            onClick={() => onNavigate?.()}
-            className="mb-2 flex items-center gap-2 rounded-xl border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-100 transition hover:bg-amber-500/20"
-          >
-            <ShieldCheck className="h-4 w-4" aria-hidden />
-            Observaciones
-          </Link>
+          <>
+            <Link
+              href="/admin/observaciones"
+              onClick={() => onNavigate?.()}
+              className="mb-2 flex items-center gap-2 rounded-xl border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-100 transition hover:bg-amber-500/20"
+            >
+              <ShieldCheck className="h-4 w-4" aria-hidden />
+              Observaciones
+            </Link>
+            <Link
+              href="/admin/pagos"
+              onClick={() => onNavigate?.()}
+              className="mb-2 flex items-center gap-2 rounded-xl border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-100 transition hover:bg-amber-500/20"
+            >
+              <ShieldCheck className="h-4 w-4" aria-hidden />
+              Pagos Pro
+            </Link>
+          </>
         ) : null}
         {isSupabaseConfigured() && authUserId ? (
           <Button

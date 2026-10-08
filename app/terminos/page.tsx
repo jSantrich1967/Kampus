@@ -39,8 +39,9 @@ export default function TerminosPage() {
       <section className="space-y-3">
         <H>3. Planes y pagos</H>
         <P>
-          El plan Estudiante es gratuito. El plan Pro es de pago mensual y se puede cancelar en cualquier
-          momento desde los ajustes de tu cuenta; la cancelación aplica al final del periodo facturado.
+          El plan Estudiante es gratuito. El plan Pro es de pago mensual, sin renovación automática: se
+          paga por Pago Móvil o Zelle, y al terminar el periodo pagado vuelves al plan Estudiante sin
+          perder tu cuenta, tu progreso ni tus materiales.
           Los precios se muestran en dólares estadounidenses y su equivalente en bolívares a la tasa
           oficial del BCV indicada en la página de precios.
         </P>

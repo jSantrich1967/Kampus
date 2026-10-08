@@ -47,12 +47,12 @@ export const PRICING_PLANS = [
     price: "$10,30",
     period: "/ mes",
     usdPrice: 10.3,
-    description: "Precio de referencia. Crear cuenta no cobra: el pago todavía no está activo.",
+    description: "Pagas por Pago Móvil o Zelle y te activamos el mismo día. Sin renovación automática.",
     features: [
-      "El botón crea una cuenta gratis, sin tarjeta",
-      "El cobro de 10,30 USD al mes todavía no existe",
-      "Modo Aprobar y los exámenes usan el límite de tu cuenta",
-      "Premium dentro de la app es un interruptor de prueba",
+      "Todo lo del plan Estudiante",
+      "Tutor IA, Modo examen y Modo aprobar con cuota amplia",
+      "Avisos por WhatsApp de exámenes, clases y duelos",
+      "Sin tarjeta: pagas en bolívares a la tasa BCV o por Zelle",
     ],
     highlighted: true,
   },
@@ -84,12 +84,12 @@ export const FAQS = [
   {
     question: "¿Kampus es gratis?",
     answer:
-      "Sí. El plan Estudiante es gratis. El precio Pro de la página es una referencia: todavía no hay cobro, y crear cuenta no pide tarjeta.",
+      "Sí, el plan Estudiante es gratis y no pide tarjeta. Si quieres más, el plan Pro cuesta 10,30 USD al mes y se paga por Pago Móvil o Zelle.",
   },
   {
     question: "¿Cómo se calcula el precio en bolívares?",
     answer:
-      "El número en bolívares multiplica 10,30 USD por la tasa del BCV. Si la fuente no responde, se muestra la última tasa guardada y su fecha. Hoy ese precio no se cobra.",
+      "El número en bolívares multiplica 10,30 USD por la tasa oficial del BCV del día. Pagas ese monto por Pago Móvil, reportas tu referencia en la app y activamos tu Pro el mismo día.",
   },
   {
     question: "¿Puedo usar Kampus en mi colegio o universidad?",
@@ -112,9 +112,9 @@ export const FAQS = [
       "Solo crear tu cuenta gratis. En minutos tienes tu primera misión de estudio lista, sin tarjeta ni compromiso.",
   },
   {
-    question: "¿Qué pasa si más adelante existe el plan Pro?",
+    question: "¿Qué pasa cuando vence mi plan Pro?",
     answer:
-      "Hoy Pro no se cobra. Cuando exista un pago de verdad, cancelarlo no borra tu cuenta, tu progreso ni tus materiales.",
+      "No hay renovación automática: si no reportas otro pago, vuelves al plan Estudiante al vencer tu periodo. Tu cuenta, tu progreso y tus materiales se quedan intactos.",
   },
 ] as const;
 

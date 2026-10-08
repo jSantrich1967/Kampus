@@ -47,6 +47,24 @@ export default function SettingsPage() {
   const [authBypassHydrated, setAuthBypassHydrated] = useState(false);
   const [subjectDraft, setSubjectDraft] = useState("");
   const [phoneVisible, setPhoneVisible] = useState(false);
+  const [billing, setBilling] = useState<{
+    active: boolean;
+    expiresAt: string | null;
+    pending: { id: string } | null;
+  } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/billing/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data) setBilling(data);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const phoneValue = profile.phone ?? "";
   const maskedPhone = phoneValue
@@ -173,7 +191,7 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle>Avisos por WhatsApp</CardTitle>
           <CardDescription>
-            Recibe recordatorios de exámenes, exposiciones, entregas y clases virtuales en tu WhatsApp.
+            Recibe recordatorios de exámenes, exposiciones, entregas, clases virtuales, clases suspendidas y duelos en tu WhatsApp.
           </CardDescription>
         </CardHeader>
         <div className="flex flex-col gap-3 px-6 pb-6">
@@ -407,15 +425,25 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Plan (demo)</CardTitle>
-          <CardDescription>Simula el acceso Premium vs Gratis.</CardDescription>
+          <CardTitle>Tu plan</CardTitle>
+          <CardDescription>
+            {profile.plan === "premium"
+              ? billing?.expiresAt
+                ? `Eres Pro hasta el ${new Date(billing.expiresAt).toLocaleDateString("es-VE", { day: "numeric", month: "long", year: "numeric" })}. Sin renovación automática: al vencer vuelves a Estudiante sin perder nada.`
+                : "Eres Pro. Sin renovación automática: al vencer tu periodo vuelves a Estudiante sin perder nada."
+              : billing?.pending
+                ? "Recibimos tu pago y lo estamos verificando. Te activamos en menos de 24 horas."
+                : "Estás en el plan Estudiante (gratis). Pro cuesta $10,30 al mes por Pago Móvil o Zelle."}
+          </CardDescription>
         </CardHeader>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" variant={profile.plan === "free" ? "secondary" : "ghost"} onClick={() => setProfile({ ...profile, plan: "free" })}>
-            Gratis
-          </Button>
-          <Button type="button" size="sm" variant={profile.plan === "premium" ? "secondary" : "ghost"} onClick={() => setProfile({ ...profile, plan: "premium" })}>
-            Premium
+        <div className="flex flex-wrap items-center gap-3 px-6 pb-6">
+          {profile.plan === "premium" ? (
+            <Badge tone="success">Pro activo</Badge>
+          ) : (
+            <Badge tone="neutral">Estudiante</Badge>
+          )}
+          <Button type="button" size="sm" onClick={() => router.push("/pro")}>
+            {profile.plan === "premium" ? "Extender mi Pro" : "Pasarme a Pro"}
           </Button>
         </div>
       </Card>

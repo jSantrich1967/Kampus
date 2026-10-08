@@ -37,6 +37,10 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "profiles_fetch_failed" }, { status: 500 });
   }
 
+  // Planes Pro vencidos: la suscripción activa manda; al vencer, el perfil
+  // vuelve a gratis sin tocar nada más de su contenido.
+  const expiredPlans = await expireProPlans(admin);
+
   const optedIn = (profileRows ?? []).filter((row) => {
     const body = (row.body ?? {}) as { phone?: unknown; whatsappReminders?: unknown };
     return (
@@ -132,12 +136,12 @@ export async function GET(req: Request) {
     await sleep(250);
   }
 
-  return NextResponse.json({ ok: true, usersNotified, messagesSent, failures, debug });
+  return NextResponse.json({ ok: true, usersNotified, messagesSent, failures, expiredPlans, debug });
 }
 
 type EventItem = {
   key: string;
-  kind: "exam" | "work" | "presentation" | "class";
+  kind: "exam" | "work" | "presentation" | "class" | "cancelled" | "duel";
   day: "tomorrow" | "today";
   date: string;
   title: string;
@@ -244,6 +248,79 @@ async function upcomingEvents(
     }
   }
 
+  // Clases regulares suspendidas hoy o mañana (la clase sigue en el horario;
+  // el aviso es la suspensión, no la clase).
+  const { data: cancellations } = await db
+    .from("user_class_cancellations")
+    .select("id,schedule_id,class_date")
+    .eq("user_id", userId)
+    .in("class_date", [today, tomorrow]);
+  if (cancellations && cancellations.length > 0) {
+    const scheduleIds = [...new Set(cancellations.map((c) => c.schedule_id as string))];
+    const { data: schedules } = await db
+      .from("user_class_schedule")
+      .select("id,subject")
+      .eq("user_id", userId)
+      .in("id", scheduleIds);
+    const subjectById = new Map(
+      (schedules ?? []).map((s) => [s.id as string, (s.subject as string) ?? "Clase"]),
+    );
+    for (const c of cancellations) {
+      const subject = subjectById.get(c.schedule_id as string) ?? "Clase";
+      out.push({
+        key: `cancelled:${c.id}`,
+        kind: "cancelled",
+        day: c.class_date === tomorrow ? "tomorrow" : "today",
+        date: c.class_date,
+        title: subject,
+        subject: "",
+      });
+    }
+  }
+
+  // Duelos: tu retador ya jugó (eres el creador y el duelo terminó) o un
+  // duelo identificado espera tu turno. Solo duelos recientes (14 días);
+  // la fecha de creación en event_date hace el aviso único y no repetible.
+  const fourteenDaysAgo = new Date(Date.now() - 14 * 86_400_000).toISOString();
+  const { data: finishedDuels } = await db
+    .from("duels")
+    .select("id,code,subject,challenger_name,created_at")
+    .eq("creator_id", userId)
+    .eq("status", "done")
+    .gte("created_at", fourteenDaysAgo);
+  for (const d of finishedDuels ?? []) {
+    const created = (d.created_at as string).slice(0, 10);
+    out.push({
+      key: `duel-done:${d.id}`,
+      kind: "duel",
+      day: "today",
+      date: created,
+      title: (d.subject as string) ?? "Duelo",
+      subject: "",
+      detail: `${(d.challenger_name as string) || "Tu retador"} ya jugó · código ${d.code}`,
+    });
+  }
+  const { data: waitingDuels } = await db
+    .from("duels")
+    .select("id,code,subject,creator_name,created_at")
+    .eq("challenger_id", userId)
+    .eq("status", "waiting")
+    .is("challenger_score", null)
+    .not("creator_score", "is", null)
+    .gte("created_at", fourteenDaysAgo);
+  for (const d of waitingDuels ?? []) {
+    const created = (d.created_at as string).slice(0, 10);
+    out.push({
+      key: `duel-waiting:${d.id}`,
+      kind: "duel",
+      day: "today",
+      date: created,
+      title: (d.subject as string) ?? "Duelo",
+      subject: "",
+      detail: `espera tu turno · código ${d.code}`,
+    });
+  }
+
   return out;
 }
 
@@ -260,6 +337,8 @@ const KIND_LABEL: Record<EventItem["kind"], string> = {
   work: "Entrega",
   presentation: "Exposición",
   class: "Clase virtual",
+  cancelled: "Clase suspendida",
+  duel: "Duelo",
 };
 
 function buildEventLines(events: EventItem[]): string {
@@ -304,4 +383,47 @@ function caracasTimeOf(ms: number): string {
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Degrada a plan gratis las suscripciones Pro cuyo periodo ya venció. */
+async function expireProPlans(admin: SupabaseClient): Promise<number> {
+  const nowIso = new Date().toISOString();
+  const { data: expired } = await admin
+    .from("pro_subscriptions")
+    .select("id, user_id")
+    .eq("status", "active")
+    .lt("expires_at", nowIso)
+    .limit(200);
+  const rows = (expired ?? []) as Array<{ id: string; user_id: string }>;
+  let count = 0;
+  for (const row of rows) {
+    await admin
+      .from("pro_subscriptions")
+      .update({ status: "expired" })
+      .eq("id", row.id);
+    // Solo degradar si no le queda otra suscripción activa vigente.
+    const { data: stillActive } = await admin
+      .from("pro_subscriptions")
+      .select("id")
+      .eq("user_id", row.user_id)
+      .eq("status", "active")
+      .gt("expires_at", nowIso)
+      .limit(1);
+    if ((stillActive ?? []).length === 0) {
+      const { data: profileRow } = await admin
+        .from("profiles")
+        .select("body")
+        .eq("id", row.user_id)
+        .maybeSingle();
+      const body = (profileRow?.body ?? {}) as Record<string, unknown>;
+      if (body.plan === "premium") {
+        await admin
+          .from("profiles")
+          .update({ body: { ...body, plan: "free" } })
+          .eq("id", row.user_id);
+      }
+    }
+    count += 1;
+  }
+  return count;
 }
