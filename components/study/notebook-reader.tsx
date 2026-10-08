@@ -256,7 +256,7 @@ export function NotebookReader({ subjectSlug }: Props) {
     onDrop: (files) => void uploadMoreFiles(files),
   });
 
-  const emptyUploadLabel = calendarUploadMode ? "Subir apuntes de la clase" : "Subir primeros archivos";
+  const emptyUploadLabel = calendarUploadMode ? "Subir apuntes de la clase" : "Subir las fotos de tu cuaderno";
 
   async function signedDownload(doc: NotebookDocumentRow) {
     if (!authUserId) return;
@@ -784,7 +784,7 @@ export function NotebookReader({ subjectSlug }: Props) {
                         Descargar
                       </Button>
                       <Button type="button" size="sm" variant="secondary" disabled={!current} onClick={() => setTagOpen((v) => !v)}>
-                        Etiquetas
+                        Tema
                       </Button>
                       <Button
                         type="button"
@@ -824,6 +824,7 @@ export function NotebookReader({ subjectSlug }: Props) {
                   {tagOpen ? (
                     <div className="rounded-xl border border-indigo-400/25 bg-indigo-500/10 p-3">
                       <p className="text-xs font-medium text-indigo-100">Editar Tema, Punto y Ejercicios</p>
+                      <p className="mt-1 text-[11px] text-slate-400">El cuaderno es la materia; el Tema es el título de este material (ej. La Célula).</p>
                       <div className="mt-3 grid gap-2 sm:grid-cols-3">
                         <label className="space-y-1 text-[11px]">
                           <span className="text-slate-500">Tema</span>
@@ -862,8 +863,13 @@ export function NotebookReader({ subjectSlug }: Props) {
                   ) : null}
 
                   <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
-                    <p className="text-xs text-slate-500">Archivo</p>
-                    <p className="truncate text-sm font-medium text-slate-100">{current.filename}</p>
+                    <p className="text-xs text-slate-500">Tema</p>
+                    <p className="truncate text-sm font-medium text-slate-100">
+                      {(current.topic ?? "").trim() || (
+                        <span className="text-slate-400">Sin tema: pulsa «Tema» y ponle título a este material</span>
+                      )}
+                    </p>
+                    <p className="truncate text-[11px] text-slate-500">{current.filename}</p>
                   </div>
 
                   <NotebookPageFlipView
@@ -882,13 +888,13 @@ export function NotebookReader({ subjectSlug }: Props) {
                       href={`/study/library/rescue?subject=${encodeURIComponent(subjectLabel)}&notebook=${encodeURIComponent(subjectSlug)}`}
                       className="inline-flex items-center justify-center rounded-xl border border-emerald-400/25 bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-500/25"
                     >
-                      Kit de estudios con todo este cuaderno
+                      Estudiar con IA con todo el cuaderno
                     </Link>
                     <Link
                       href={`/study/library/rescue?subject=${encodeURIComponent(subjectLabel)}`}
                       className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-slate-100 hover:bg-white/10"
                     >
-                      Solo materia foco en el kit
+                      Estudiar con IA (solo esta materia)
                     </Link>
                   </div>
                 </div>

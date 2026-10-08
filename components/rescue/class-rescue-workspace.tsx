@@ -277,7 +277,7 @@ export function ClassRescueWorkspace() {
       const slug = subjectToPathSegment(filtered[0]!.subject);
       applyNotebookBundleDocs(filtered, slug);
       setGenHint(
-        `${filtered.length} hoja${filtered.length === 1 ? "" : "s"} cargadas. Marca las que quieras incluir en el kit y pulsa «Generar kit de estudios del cuaderno».`,
+        `${filtered.length} hoja${filtered.length === 1 ? "" : "s"} cargadas. Marca las que quieras incluir en el kit y pulsa «Generar mi kit de estudio».`,
       );
     } catch (e) {
       setGenHint(e instanceof Error ? e.message : "No pudimos cargar las hojas del cuaderno.");
@@ -447,7 +447,7 @@ export function ClassRescueWorkspace() {
         if (!cancelled) {
           applyNotebookBundleDocs(filtered, nb);
           setGenHint(
-            `Cuaderno enlazado: ${filtered.length} archivo${filtered.length === 1 ? "" : "s"}. Marca las hojas que quieras incluir y pulsa «Generar kit de estudios del cuaderno».`,
+            `Cuaderno enlazado: ${filtered.length} archivo${filtered.length === 1 ? "" : "s"}. Marca las hojas que quieras incluir y pulsa «Generar mi kit de estudio».`,
           );
         }
       } catch {
@@ -650,7 +650,7 @@ export function ClassRescueWorkspace() {
     <div className="space-y-8">
       <PageHeader
         eyebrow="Mis cuadernos"
-        title="Kit de estudios del cuaderno"
+        title="Estudiar con IA"
         description="Con la materia foco y las etiquetas (Tema, Punto, Ejercicios), elige qué hojas del cuaderno entran en el kit. También puedes subir archivos locales o un solo archivo guardado."
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -1027,7 +1027,7 @@ export function ClassRescueWorkspace() {
             disabled={packBusy || ((files?.length ?? 0) > 0 && extractBusy) || libraryExtractBusy}
           >
             <Wand2 className="h-4 w-4" />
-            {packBusy ? "Generando…" : "Generar kit de estudios del cuaderno"}
+            {packBusy ? "Generando…" : "Generar mi kit de estudio"}
           </Button>
           <Button
             type="button"

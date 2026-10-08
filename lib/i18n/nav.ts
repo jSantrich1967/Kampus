@@ -23,7 +23,7 @@ export const navCopy = {
       tutor: "Tutor IA",
       duelos: "Duelos",
       passMode: "Modo aprobar",
-      rescue: "Kit de estudios",
+      rescue: "Estudiar con IA",
       flashcards: "Tarjetas",
       library: "Mis cuadernos",
       convertir: "Convertir material",

@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { ClassRescueWorkspace } from "@/components/rescue/class-rescue-workspace";
 
 export const metadata: Metadata = {
-  title: "Kit de estudios del cuaderno",
+  title: "Estudiar con IA",
 };
 
 export default function LibraryRescuePage() {

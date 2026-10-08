@@ -49,7 +49,10 @@ export function NotebookStudyKitPanel({
   const autoKitRanForPage = useRef<string | null>(null);
   const { profile } = useKampus();
   const premium = profile.plan === "premium";
-  const [scope, setScope] = useState<Scope>("page");
+  // Por defecto se estudia con TODO el cuaderno: generar desde una sola
+  // hoja sin darse cuenta era la queja del usuario. El quiz de presión
+  // sigue forzando «solo esta hoja» vía autoGenerateKit.
+  const [scope, setScope] = useState<Scope>("notebook");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [pack, setPack] = useState<RescuePack | null>(null);
   const [packBusy, setPackBusy] = useState(false);
@@ -206,12 +209,12 @@ export function NotebookStudyKitPanel({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg text-indigo-100">
             <Sparkles className="h-5 w-5 text-indigo-300" />
-            Kit de estudio
+            Estudiar con IA
           </CardTitle>
           <CardDescription>
             {autoGenerateKit
               ? "Generando kit desde el apunte que repasas (viene del quiz de presión)…"
-              : "Genera un kit desde esta hoja, desde hojas que elijas, o desde todo el cuaderno. Para más filtros por etiquetas, usa «más opciones»."}
+              : "La IA lee tus hojas y te arma resumen, tarjetas, preguntas probables y quiz. Por defecto usa todo el cuaderno."}
           </CardDescription>
         </CardHeader>
         <div className="space-y-4 px-6 pb-6">
@@ -280,13 +283,13 @@ export function NotebookStudyKitPanel({
           <div className="flex flex-wrap items-center gap-3">
             <Button type="button" className="gap-2" onClick={() => void generateKit()} disabled={packBusy || noMatches}>
               <Wand2 className="h-4 w-4" />
-              {packBusy ? "Generando…" : "Generar kit de estudio"}
+              {packBusy ? "Generando tu kit…" : "Estudiar con IA"}
             </Button>
             <Link
               href={`/study/library/rescue?subject=${encodeURIComponent(subjectLabel)}&notebook=${encodeURIComponent(subjectSlug)}`}
               className="text-xs text-slate-400 underline-offset-2 hover:text-slate-200 hover:underline"
             >
-              Abrir kit de estudios del cuaderno (más opciones)
+              Más opciones del kit
             </Link>
           </div>
 

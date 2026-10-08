@@ -92,7 +92,7 @@ export const todayCopy: Record<
     },
     tagline: "Tu siguiente mejor paso, sin ruido.",
     passCta: "Abrir Modo aprobar",
-    rescueCta: "Kit de estudios del cuaderno",
+    rescueCta: "Estudiar con IA",
     deadlines: "Urgencias del calendario",
     deadlinesHint: "Exámenes más cercanos — prioriza estas materias en tu misión de hoy.",
     noDeadlines: "Añade fechas de examen en tu calendario para activar urgencia inteligente.",

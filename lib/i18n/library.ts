@@ -108,7 +108,7 @@ export const libraryCopy: Record<
     calendarUploadBanner: "Sube apuntes vinculados a la clase del calendario.",
     subjectHubTitle: "Resumen del cuaderno",
     subjectHubHint: "Material por clase, quiz y kit desde un solo lugar.",
-    subjectHubKit: "Generar kit",
+    subjectHubKit: "Estudiar con IA",
     subjectHubClasses: "Clases recientes",
     subjectHubUnlinkedHint: "Tienes apuntes pero ninguno vinculado a una clase. Súbelos desde el calendario o edita etiquetas.",
     subjectHubEmptyHint: "Sube tu primer apunte para empezar a agrupar por clases.",
