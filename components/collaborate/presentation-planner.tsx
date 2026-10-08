@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AiErrorNotice } from "@/components/ui/ai-error";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Check, Clock, Loader2, Mic2, Plus, RefreshCw, Sparkles, Trash2, Video, Users } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -464,9 +465,9 @@ export function PresentationPlanner() {
       if (!res.ok) {
         setTutorError(
           json.error ??
-            (raw.trim()
-              ? `${es ? "Error al transcribir" : "Transcribe error"} (HTTP ${res.status}): ${raw.slice(0, 160)}`
-              : `${es ? "Error al transcribir" : "Transcribe error"} (HTTP ${res.status}).`),
+            (es
+              ? "No pudimos transcribir el audio. Revisa el micrófono e inténtalo de nuevo."
+              : "We couldn't transcribe the audio. Check the microphone and try again."),
         );
         return;
       }
@@ -638,9 +639,9 @@ export function PresentationPlanner() {
       if (!res.ok) {
         setTutorError(
           json.error ??
-            (raw.trim()
-              ? `${es ? "Error del tutor" : "Tutor error"} (HTTP ${res.status}): ${raw.slice(0, 160)}`
-              : `${es ? "Error del tutor" : "Tutor error"} (HTTP ${res.status}).`),
+            (es
+              ? "El tutor de exposiciones no pudo responder. Inténtalo de nuevo."
+              : "The presentation tutor couldn't answer. Try again."),
         );
         return;
       }
@@ -1275,7 +1276,7 @@ export function PresentationPlanner() {
             {tutorLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             {tutorLoading ? (es ? "Calificando…" : "Grading…") : es ? "Pedir calificación y consejos" : "Get grade and tips"}
           </Button>
-          {tutorError ? <p className="text-sm text-rose-300">{tutorError}</p> : null}
+          {tutorError ? <AiErrorNotice message={tutorError} /> : null}
           {tutorFeedback ? (
             <div className="space-y-4 rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-sm text-slate-200">
               <div className="text-base font-semibold text-white">{tutorFeedback.overallScoreLabel}</div>

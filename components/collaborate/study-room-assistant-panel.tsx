@@ -1,6 +1,8 @@
 "use client";
 
 import { Bot, Loader2, Send } from "lucide-react";
+import { aiErrorMessage } from "@/lib/with-timeout";
+import { AiErrorNotice } from "@/components/ui/ai-error";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -58,8 +60,7 @@ export function StudyRoomAssistantPanel({ roomCode, state }: Props) {
         if (!reply) throw new Error(t.studyRoomAssistantEmptyReply);
         setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
       } catch (e) {
-        const msg = e instanceof Error ? e.message : t.studyRoomAssistantError;
-        setError(msg);
+        setError(aiErrorMessage(e, t.studyRoomAssistantError));
         setMessages((prev) => prev.slice(0, -1));
         setDraft(trimmed);
       } finally {
@@ -128,7 +129,13 @@ export function StudyRoomAssistantPanel({ roomCode, state }: Props) {
             {t.studyRoomAssistantSend}
           </Button>
         </div>
-        {error ? <p className="text-xs text-rose-200/90">{error}</p> : null}
+        {error ? (
+          <AiErrorNotice
+            message={error}
+            onRetry={draft.trim() ? () => void sendMessage(draft) : undefined}
+            retrying={busy}
+          />
+        ) : null}
         <p className="text-[11px] text-slate-500">{t.studyRoomAssistantFootnote}</p>
       </div>
     </Card>

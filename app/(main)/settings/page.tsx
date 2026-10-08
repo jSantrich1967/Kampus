@@ -175,6 +175,24 @@ export default function SettingsPage() {
         }
       />
 
+      <nav aria-label="Ir a una sección de Ajustes" className="flex flex-wrap gap-2">
+        {[
+          ["Cuenta", "#ajustes-cuenta"],
+          ["WhatsApp", "#ajustes-whatsapp"],
+          ["Materias", "#ajustes-materias"],
+          ["Plan", "#ajustes-plan"],
+          ["Datos de prueba", "#ajustes-datos"],
+        ].map(([label, href]) => (
+          <a
+            key={href}
+            href={href}
+            className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10"
+          >
+            {label}
+          </a>
+        ))}
+      </nav>
+
       {showAuthBypassUi ? (
         <div
           role="status"
@@ -212,7 +230,7 @@ export default function SettingsPage() {
         </button>
       ) : null}
 
-      <Card>
+      <Card id="ajustes-cuenta" className="scroll-mt-28">
         <CardHeader>
           <CardTitle>{tAuth.account}</CardTitle>
           <CardDescription>
@@ -267,7 +285,7 @@ export default function SettingsPage() {
 
       <MyOrganizations userId={authUserId} />
 
-      <Card>
+      <Card id="ajustes-whatsapp" className="scroll-mt-28">
         <CardHeader>
           <CardTitle>Avisos por WhatsApp</CardTitle>
           <CardDescription>
@@ -384,22 +402,6 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Idioma</CardTitle>
-          <CardDescription>La app está configurada solo en español.</CardDescription>
-        </CardHeader>
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={() => setProfile({ ...profile, preferredLanguage: "es" })}
-          >
-            ES
-          </Button>
-        </div>
-      </Card>
 
       {isAdmin ? (
       <Card>
@@ -428,7 +430,7 @@ export default function SettingsPage() {
       </Card>
       ) : null}
 
-      <Card>
+      <Card id="ajustes-materias" className="scroll-mt-28">
         <CardHeader>
           <CardTitle>Materias</CardTitle>
           <CardDescription>
@@ -529,7 +531,7 @@ export default function SettingsPage() {
       </Card>
       ) : null}
 
-      <Card>
+      <Card id="ajustes-plan" className="scroll-mt-28">
         <CardHeader>
           <CardTitle>Tu plan</CardTitle>
           <CardDescription>
@@ -554,7 +556,7 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      <Card>
+      <Card id="ajustes-datos" className="scroll-mt-28">
         <CardHeader>
           <CardTitle>Datos de prueba</CardTitle>
           <CardDescription>

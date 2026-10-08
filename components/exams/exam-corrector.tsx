@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { AiErrorNotice } from "@/components/ui/ai-error";
 import Link from "next/link";
 import { CheckCircle2, Loader2, Sparkles, Upload, XCircle } from "lucide-react";
 
@@ -324,9 +325,11 @@ export function ExamCorrector() {
         </div>
       </Card>
 
-      {error && (
-        <p className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</p>
-      )}
+      {error ? (
+        <div className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3">
+          <AiErrorNotice message={error} onRetry={() => void correct()} retrying={loading} />
+        </div>
+      ) : null}
 
       <Button onClick={correct} disabled={loading} className="gap-2">
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}

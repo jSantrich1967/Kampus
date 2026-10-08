@@ -34,7 +34,7 @@ export function CalendarAgendaEventChip({
   const isClass = ev.kind === "class";
 
   const chipClass = cn(
-    "block rounded px-1.5 py-1 text-[11px] leading-tight ring-1 transition hover:bg-white/5",
+    "block rounded px-1.5 py-1.5 text-[11px] leading-tight ring-1 transition hover:bg-white/5",
     ev.kind === "exam" && "bg-emerald-500/15 text-emerald-100 ring-emerald-400/20",
     ev.kind === "presentation" && "bg-indigo-500/15 text-indigo-100 ring-indigo-400/25",
     ev.kind === "class" && !selected && "bg-white/5 text-slate-200 ring-white/10",

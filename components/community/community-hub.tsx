@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -11,7 +12,7 @@ import { ShareLinkButton } from "@/components/growth/share-link-button";
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader } from "@/components/ui/card";
 import { StatBlock } from "@/components/ui/stat-block";
 import { useCommunityReplyNotifications } from "@/hooks/use-community-reply-notifications";
 import type { CommunityContext } from "@/lib/community-types";
@@ -148,7 +149,12 @@ export function CommunityHub() {
       ? `community_feed:${authUserId}:${selectedChannelId}`
       : null;
 
-  const { data: feedData, mutate: mutateFeed } = useSupabaseSWR<{
+  const {
+    data: feedData,
+    mutate: mutateFeed,
+    isLoading: feedLoading,
+    error: feedError,
+  } = useSupabaseSWR<{
     posts: CommunityPostRow[];
     answers: CommunityAnswerRow[];
     helpfulCounts: Record<string, number>;
@@ -358,6 +364,24 @@ export function CommunityHub() {
         onSelectChannel={selectChannel}
         es={es}
       />
+
+      {feedLoading && !feedData ? (
+        <Card className="border-white/10 bg-slate-950/40">
+          <div className="flex items-center gap-2 px-6 py-8 text-sm text-slate-400">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            Cargando la conversación…
+          </div>
+        </Card>
+      ) : feedError ? (
+        <Card className="border-rose-400/20 bg-rose-500/[0.04]">
+          <div className="flex flex-wrap items-center gap-3 px-6 py-6">
+            <p role="alert" className="text-sm text-rose-200">{feedError}</p>
+            <Button type="button" size="sm" variant="secondary" onClick={() => void mutateFeed()}>
+              Reintentar
+            </Button>
+          </div>
+        </Card>
+      ) : null}
 
       {selectedChannelId && !channelDisabled ? (
         <CommunityChannelFeed

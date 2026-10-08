@@ -106,7 +106,7 @@ export function LibraryHub() {
         <div>
         <p className="mb-2 text-xs font-bold tracking-[0.2em] text-purple-400 uppercase">{isTeacher ? "Enseñanza" : t.groups.learn}</p>
         <h1 className="mb-4 text-4xl font-bold text-white">{navLabelForRole(profile.role, "library")}</h1>
-        <p className="max-w-2xl text-gray-500">
+        <p className="max-w-2xl text-gray-400">
           {isTeacher
             ? "Tu material por materia: sube recursos, vincula clases del calendario y prepara contenido para tu alumnado."
             : "Tus apuntes por materia: sube, organiza y repasa con quizzes hechos de tu propio material."}
@@ -139,7 +139,7 @@ export function LibraryHub() {
             key={mode.id}
             type="button"
             className={cn(
-              "rounded-full px-4 py-1.5 text-sm font-semibold transition",
+              "rounded-full px-4 py-2 text-sm font-semibold transition",
               viewMode === mode.id
                 ? "bg-indigo-600 text-white"
                 : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10",
@@ -168,7 +168,7 @@ export function LibraryHub() {
                   key={f.id}
                   type="button"
                   className={cn(
-                    "rounded-full px-4 py-1.5 text-sm font-medium transition",
+                    "rounded-full px-4 py-2 text-sm font-medium transition",
                     filter === f.id
                       ? "bg-purple-600 text-white"
                       : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10",
@@ -185,7 +185,7 @@ export function LibraryHub() {
                   key={s.id}
                   type="button"
                   className={cn(
-                    "rounded-full px-3 py-1 text-xs font-medium transition",
+                    "rounded-full px-3 py-1.5 text-xs font-medium transition",
                     sortMode === s.id ? "bg-purple-600 text-white" : "text-slate-400 hover:text-white",
                   )}
                   onClick={() => setSortMode(s.id)}

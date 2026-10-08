@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { aiErrorMessage } from "@/lib/with-timeout";
+import { AiErrorNotice } from "@/components/ui/ai-error";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -278,7 +279,13 @@ export function SocraticTutorPanel() {
               {t.sendLabel}
             </Button>
           </div>
-          {error ? <p className="text-xs text-rose-200/90">{error}</p> : null}
+          {error ? (
+            <AiErrorNotice
+              message={error}
+              onRetry={draft.trim() ? () => void sendMessage(draft) : undefined}
+              retrying={busy}
+            />
+          ) : null}
           <p className="text-[11px] text-slate-500">{t.quotaNote}</p>
         </div>
       </Card>
