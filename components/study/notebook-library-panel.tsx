@@ -390,7 +390,10 @@ export function NotebookLibraryPanel({
               key={nb.subject}
               className="kampus-lumina-glass-card group relative flex min-h-[380px] flex-col overflow-hidden rounded-3xl p-6"
             >
-              <div className="relative z-10 flex items-start justify-between gap-2">
+              {/* z-30: el menú del cuaderno cuelga sobre el título de la tarjeta;
+                  con el mismo z que el título, el título lo tapaba y
+                  «Eliminar cuaderno» quedaba inalcanzable. */}
+              <div className="relative z-30 flex items-start justify-between gap-2">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-purple-400">
                   <SubjectIcon className="h-5 w-5" aria-hidden />
                 </div>
