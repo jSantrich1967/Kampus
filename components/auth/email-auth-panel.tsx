@@ -200,6 +200,9 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
   }
 
   const configured = isSupabaseConfigured();
+  // El botón de Google solo se muestra cuando el proveedor está activado
+  // en Supabase (si no, Supabase devuelve un error JSON crudo al usuario).
+  const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === "true";
   const nextQuery = searchParams.get("next");
   const loginHref = nextQuery ? `/login?next=${encodeURIComponent(nextQuery)}` : "/login";
   const registerHref = nextQuery ? `/register?next=${encodeURIComponent(nextQuery)}` : "/register";
@@ -225,25 +228,29 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
           <p className="text-sm text-amber-200/90">{t.supabaseMissing}</p>
         ) : (
           <div className="flex flex-col gap-6">
-            <Button
-              type="button"
-              variant="secondary"
-              className="w-full border-white/10 bg-white/5 py-3 hover:bg-white/10"
-              disabled={busy}
-              onClick={() => void signInWithGoogle()}
-            >
-              <GoogleIcon />
-              {t.continueWithGoogle}
-            </Button>
+            {googleEnabled ? (
+              <>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full border-white/10 bg-white/5 py-3 hover:bg-white/10"
+                  disabled={busy}
+                  onClick={() => void signInWithGoogle()}
+                >
+                  <GoogleIcon />
+                  {t.continueWithGoogle}
+                </Button>
+
+                <div className="relative flex items-center">
+                  <div className="h-px flex-1 border-t border-white/5" aria-hidden />
+                  <span className="px-4 text-xs uppercase tracking-widest text-gray-400">{t.orContinueWithEmail}</span>
+                  <div className="h-px flex-1 border-t border-white/5" aria-hidden />
+                </div>
+              </>
+            ) : null}
 
             {error ? <p className="text-sm text-rose-300">{error}</p> : null}
             {message ? <p className="text-sm text-teal-200/90">{message}</p> : null}
-
-            <div className="relative flex items-center">
-              <div className="h-px flex-1 border-t border-white/5" aria-hidden />
-              <span className="px-4 text-xs uppercase tracking-widest text-gray-400">{t.orContinueWithEmail}</span>
-              <div className="h-px flex-1 border-t border-white/5" aria-hidden />
-            </div>
 
             <form onSubmit={onSubmit} className="space-y-6">
               <label className="block space-y-2">
