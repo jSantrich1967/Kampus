@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { consumeDemoIpToken, isDemoCookieRequest } from "@/lib/demo/demo-request";
 import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
 import { extractResponsesOutputText } from "@/lib/openai/extract-responses-output-text";
 import { parseJsonFromModelText } from "@/lib/openai/parse-json-response";
@@ -49,7 +50,14 @@ export async function POST(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Inicia sesión para usar el modo examen." }, { status: 401 });
+    // La demo pública puede probar el diagnóstico una vez por IP y día;
+    // sin cookie demo o sin cupo, sí pedimos cuenta.
+    if (!isDemoCookieRequest(req) || !consumeDemoIpToken(req, "cram_diagnose")) {
+      return NextResponse.json(
+        { error: "Crea tu cuenta gratis para seguir usando el modo examen." },
+        { status: 401 },
+      );
+    }
   }
 
   try {

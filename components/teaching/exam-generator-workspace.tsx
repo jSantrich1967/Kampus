@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { GeneratedExam } from "@/lib/schemas/exam-generator";
+import { aiErrorMessage } from "@/lib/with-timeout";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
@@ -96,6 +97,7 @@ export function ExamGeneratorWorkspace() {
     try {
       const res = await fetch("/api/teaching/exam-generator", {
         method: "POST",
+        signal: AbortSignal.timeout(90_000),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subject: subject.trim(),
@@ -113,7 +115,7 @@ export function ExamGeneratorWorkspace() {
       setShowKey(false);
       setMessage({ ok: true, text: "Examen generado. Revísalo antes de usarlo en clase." });
     } catch (err) {
-      setMessage({ ok: false, text: err instanceof Error ? err.message : "No se pudo generar el examen." });
+      setMessage({ ok: false, text: aiErrorMessage(err, "No se pudo generar el examen.") });
     } finally {
       setGenerating(false);
     }

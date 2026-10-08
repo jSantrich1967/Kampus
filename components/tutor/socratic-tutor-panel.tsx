@@ -4,6 +4,7 @@ import { Bot, Loader2, Plus, Send, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
+import { aiErrorMessage } from "@/lib/with-timeout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -124,7 +125,7 @@ export function SocraticTutorPanel() {
         if (!reply) throw new Error(t.emptyReplyMessage);
         setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
       } catch (e) {
-        const msg = e instanceof Error ? e.message : t.errorMessage;
+        const msg = aiErrorMessage(e, t.errorMessage);
         setError(msg);
         setMessages((prev) => prev.slice(0, -1));
         setDraft(trimmed);

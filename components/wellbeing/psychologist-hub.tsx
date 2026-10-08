@@ -9,6 +9,7 @@ import { WellbeingSubnav } from "@/components/wellbeing/wellbeing-subnav";
 import { WellbeingHumanSupportPanel } from "@/components/wellbeing/wellbeing-human-support-panel";
 import { useDiaryInsights } from "@/hooks/use-diary-insights";
 import { useKampus } from "@/components/kampus/kampus-provider";
+import { aiErrorMessage } from "@/lib/with-timeout";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
@@ -199,6 +200,7 @@ export function PsychologistHub() {
       try {
         const res = await fetch("/api/wellbeing/psychologist/chat", {
           method: "POST",
+          signal: AbortSignal.timeout(90_000),
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             messages: nextHistory,
@@ -231,7 +233,7 @@ export function PsychologistHub() {
           ]);
         }
       } catch (e) {
-        const msg = e instanceof Error ? e.message : "No se pudo enviar el mensaje.";
+        const msg = aiErrorMessage(e, "No se pudo enviar el mensaje.");
         setError(msg);
         setMessages((prev) => prev.slice(0, -1));
         setInput(trimmed);
@@ -296,13 +298,13 @@ export function PsychologistHub() {
         const fd = new FormData();
         fd.append("file", blob, "habla.webm");
         try {
-          const res = await fetch("/api/presentation/transcribe", { method: "POST", body: fd });
+          const res = await fetch("/api/presentation/transcribe", { method: "POST", body: fd, signal: AbortSignal.timeout(120_000) });
           const data = (await res.json().catch(() => ({}))) as { transcript?: string; error?: string };
           if (!res.ok) throw new Error(data.error || "Transcripción fallida.");
           const t = (data.transcript ?? "").trim();
           if (t) setInput((prev) => (prev ? `${prev.trim()} ${t}` : t));
         } catch (e) {
-          setError(e instanceof Error ? e.message : "No se pudo transcribir el audio.");
+          setError(aiErrorMessage(e, "No se pudo transcribir el audio."));
         }
       };
       mr.start(200);

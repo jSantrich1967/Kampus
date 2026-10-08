@@ -299,7 +299,7 @@ export function NotebookReader({ subjectSlug }: Props) {
           const file = new File([blob], page.filename || "image", { type: blob.type || page.mime_type || "image/png" });
           const fd = new FormData();
           fd.append("files", file);
-          const ocr = await fetch("/api/rescue/extract", { method: "POST", body: fd });
+          const ocr = await fetch("/api/rescue/extract", { method: "POST", body: fd, signal: AbortSignal.timeout(120_000) });
           if (!ocr.ok) return null;
           const json = (await ocr.json()) as { combinedText?: string; error?: string };
           return json.combinedText?.trim() ? json.combinedText.trim() : null;

@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AutoGraderResult } from "@/lib/schemas/auto-grader";
+import { aiErrorMessage } from "@/lib/with-timeout";
 import { cn } from "@/lib/cn";
 
 type RubricQuestion = { question: string; maxPoints: number; answerKey: string };
@@ -96,6 +97,7 @@ export function AutoGrader() {
     try {
       const res = await fetch("/api/teaching/grade", {
         method: "POST",
+        signal: AbortSignal.timeout(90_000),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subject: subject.trim(),
@@ -117,7 +119,7 @@ export function AutoGrader() {
       if (!res.ok || !data.result) throw new Error(data.error || "No se pudo corregir. Inténtalo de nuevo.");
       setLastResult(data.result);
     } catch (e) {
-      setGradeError(e instanceof Error ? e.message : "No se pudo corregir. Inténtalo de nuevo.");
+      setGradeError(aiErrorMessage(e, "No se pudo corregir. Inténtalo de nuevo."));
     } finally {
       setGrading(false);
     }

@@ -13,9 +13,32 @@ test("the Pro price links to registration, not to a payment page", async ({ page
   const pro = page.locator("article").filter({ hasText: "$10,30" });
   await expect(pro).toBeVisible();
   await expect(pro).toContainText("Bs.");
+  await expect(pro).toContainText("Pago Móvil");
   const start = pro.getByRole("link", { name: "Empezar ahora" });
   await expect(start).toHaveAttribute("href", "/register");
   await expect(start).not.toHaveAttribute("href", /checkout|stripe|pay/i);
+});
+
+test("the privacy policy names processors, WhatsApp consent and contact", async ({ page }) => {
+  await page.goto("/privacidad");
+  await expect(page.getByRole("heading", { name: "Política de Privacidad" })).toBeVisible();
+  await expect(page.getByText("Supabase")).toBeVisible();
+  await expect(page.getByText("OpenAI").first()).toBeVisible();
+  await expect(page.getByText(/avisos por WhatsApp son opcionales/i)).toBeVisible();
+  await expect(page.getByRole("link", { name: "ventas@kampus.app" })).toBeVisible();
+});
+
+test("the guided demo opens Modo examen without a login wall", async ({ page }) => {
+  await page.goto("/demo");
+  await expect(page.getByText("Recorrido guiado de la demo")).toBeVisible({ timeout: 20_000 });
+  await page.getByRole("link", { name: /Modo examen/i }).click();
+  await expect(page).toHaveURL(/\/modo-examen/);
+  await expect(page.getByText("Crea tu cuenta gratis para seguir usando el modo examen")).toHaveCount(0);
+});
+
+test("the Pro page sends guests to login", async ({ page }) => {
+  await page.goto("/pro");
+  await expect(page).toHaveURL(/\/login/);
 });
 
 test("a wrong password stays on the login page", async ({ page }) => {

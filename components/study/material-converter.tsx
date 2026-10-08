@@ -199,7 +199,7 @@ export function MaterialConverter() {
       try {
         const fd = new FormData();
         for (const p of pdfs) fd.append("files", p);
-        const res = await fetch("/api/rescue/extract", { method: "POST", body: fd });
+        const res = await fetch("/api/rescue/extract", { method: "POST", body: fd, signal: AbortSignal.timeout(120_000) });
         const json = await readRescueExtractJson<{ combinedText?: string; error?: string }>(res);
         if (!res.ok || !json.combinedText?.trim()) {
           setError(json.error || "No se pudo extraer el texto del PDF.");
@@ -231,6 +231,7 @@ export function MaterialConverter() {
     try {
       const res = await fetch("/api/study/convert", {
         method: "POST",
+        signal: AbortSignal.timeout(90_000),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subject: subject.trim(),

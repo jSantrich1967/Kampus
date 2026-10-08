@@ -453,7 +453,7 @@ export function PresentationPlanner() {
     try {
       const fd = new FormData();
       fd.append("file", blob, recordedAudioBlob ? "rehearsal-audio.webm" : "rehearsal.webm");
-      const res = await fetch("/api/presentation/transcribe", { method: "POST", body: fd });
+      const res = await fetch("/api/presentation/transcribe", { method: "POST", body: fd, signal: AbortSignal.timeout(120_000) });
       const raw = await res.text();
       let json: { transcript?: string; error?: string } = {};
       try {
@@ -486,8 +486,8 @@ export function PresentationPlanner() {
     } catch {
       setTutorError(
         es
-          ? "No se pudo contactar al servidor para transcribir (fallo de red). Si estás en local, confirma que el servidor está corriendo y recarga."
-          : "Could not reach the server to transcribe (network failure). If running locally, ensure the dev server is up and reload.",
+          ? "No se pudo transcribir el audio. Revisa tu conexión e inténtalo otra vez; si tardó mucho, graba un fragmento más corto."
+          : "Could not transcribe the audio. Check your connection and try again; if it took too long, record a shorter clip.",
       );
     } finally {
       setTranscribing(false);
@@ -616,6 +616,7 @@ export function PresentationPlanner() {
     try {
       const res = await fetch("/api/presentation/tutor", {
         method: "POST",
+        signal: AbortSignal.timeout(90_000),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           level: tutorLevel,
