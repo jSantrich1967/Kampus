@@ -6,7 +6,7 @@
  * `configured: true`. Mientras `configured` sea false, la página /pro no
  * acepta reportes de pago y avisa que estamos activando el cobro.
  */
-export const PRO_PRICE_USD = 10.3;
+export const PRO_PRICE_USD = 5;
 
 export const PAYMENT_INFO = {
   configured: true,

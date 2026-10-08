@@ -29,7 +29,7 @@ export function ProRequiredCard({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Sparkles className="h-4 w-4" aria-hidden />
-            Activa Pro por $10,30 al mes
+            Activa Pro por $5 al mes
           </CardTitle>
           <CardDescription>
             Pagas por Pago Móvil o Zelle, reportas tu pago y te activamos el mismo día. Sin

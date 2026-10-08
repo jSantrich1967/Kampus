@@ -97,7 +97,7 @@ export default function ProPage() {
       <PageHeader
         eyebrow="Plan Pro"
         title="Pasarte a Pro"
-        description="Pro cuesta $10,30 al mes. Pagas por Pago Móvil o Zelle, reportas tu pago aquí y te activamos el mismo día."
+        description="Pro cuesta $5 al mes. Pagas por Pago Móvil o Zelle, reportas tu pago aquí y te activamos el mismo día."
       />
 
       {statusError ? <p className="text-sm text-rose-300">{statusError}</p> : null}

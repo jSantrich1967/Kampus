@@ -563,7 +563,7 @@ export default function SettingsPage() {
                 : "Eres Pro. Sin renovación automática: al vencer tu periodo vuelves a Estudiante sin perder nada."
               : billing?.pending
                 ? "Recibimos tu pago y lo estamos verificando. Te activamos en menos de 24 horas."
-                : "Estás en el plan Estudiante (gratis). Pro cuesta $10,30 al mes por Pago Móvil o Zelle."}
+                : "Estás en el plan Estudiante (gratis). Pro cuesta $5 al mes por Pago Móvil o Zelle."}
           </CardDescription>
         </CardHeader>
         <div className="flex flex-wrap items-center gap-3 px-6 pb-6">

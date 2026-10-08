@@ -10,7 +10,7 @@ async function waitUntilReactIsReady(page: Page, selector: string) {
 
 test("the Pro price links to registration, not to a payment page", async ({ page }) => {
   await page.goto("/");
-  const pro = page.locator("article").filter({ hasText: "$10,30" });
+  const pro = page.locator("article").filter({ hasText: "$5" });
   await expect(pro).toBeVisible();
   await expect(pro).toContainText("Bs.");
   await expect(pro).toContainText("Pago Móvil");

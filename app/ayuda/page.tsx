@@ -19,7 +19,7 @@ const FAQS = [
   },
   {
     q: "¿Cuánto cuesta el plan Pro?",
-    a: "El plan Pro cuesta $10,30 al mes (Bs. 8.788,93 a la tasa oficial del BCV del 23/09/2026). El plan Estudiante es gratis para siempre y el plan Institución se cotiza a medida.",
+    a: "El plan Pro cuesta $5 al mes (pagas el equivalente en bolívares a la tasa oficial del BCV del día, por Pago Móvil o Zelle). El plan Estudiante es gratis para siempre y el plan Institución se cotiza a medida.",
   },
   {
     q: "Olvidé mi contraseña, ¿qué hago?",
