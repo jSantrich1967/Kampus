@@ -32,7 +32,12 @@ export function fetchOpenAi(routeKey: string, url: string, init: RequestInit): P
     async () => {
       const blocked = await aiBudgetBlockResponse();
       if (blocked) return blocked;
-      const response = await fetch(url, init);
+      // Ninguna llamada a la IA puede esperar para siempre: si OpenAI no
+      // responde en 90 s, abortamos y la ruta devuelve un error visible en
+      // vez de dejar la interfaz en «Preparando…» indefinidamente.
+      const timeoutSignal = AbortSignal.timeout(90_000);
+      const signal = init.signal ? AbortSignal.any([init.signal, timeoutSignal]) : timeoutSignal;
+      const response = await fetch(url, { ...init, signal });
       await recordOpenAiResponse({ feature: routeKey, model, startedAt, response });
       return response;
     },

@@ -16,6 +16,7 @@ export const navCopy = {
       classes: "Clases",
       social: "Comunidad",
       followup: "Seguimiento",
+      tools: "Herramientas",
     },
     items: {
       today: "Hoy",

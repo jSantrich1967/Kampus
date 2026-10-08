@@ -111,6 +111,9 @@ export function CramMode() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ subject: subject.trim(), topics: topics.trim() }),
+        // Si la IA tarda demasiado, cortamos y mostramos error con reintento
+        // en vez de quedarnos en «Preparando diagnóstico…» para siempre.
+        signal: AbortSignal.timeout(90_000),
       });
       const data = (await res.json().catch(() => ({}))) as { questions?: DiagnoseQuestion[]; error?: string };
       if (!res.ok || !data.questions?.length) throw new Error(data.error || "No se pudo generar el diagnóstico.");
@@ -120,7 +123,13 @@ export function CramMode() {
       setPicked(null);
       setStep("diagnostic");
     } catch (e) {
-      setDiagError(e instanceof Error ? e.message : "No se pudo generar el diagnóstico.");
+      setDiagError(
+        e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError")
+          ? "La IA tardó demasiado en preparar el diagnóstico. Inténtalo de nuevo."
+          : e instanceof Error
+            ? e.message
+            : "No se pudo generar el diagnóstico.",
+      );
     } finally {
       setDiagLoading(false);
     }
@@ -159,6 +168,7 @@ export function CramMode() {
           topics: topics.trim(),
           diagnostic: topicScores,
         }),
+        signal: AbortSignal.timeout(90_000),
       });
       const data = (await res.json().catch(() => ({}))) as { plan?: Plan; error?: string };
       if (!res.ok || !data.plan) throw new Error(data.error || "No se pudo armar el plan.");
@@ -171,7 +181,13 @@ export function CramMode() {
       }
       setStep("plan");
     } catch (e) {
-      setPlanError(e instanceof Error ? e.message : "No se pudo armar el plan.");
+      setPlanError(
+        e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError")
+          ? "La IA tardó demasiado en armar tu plan. Inténtalo de nuevo."
+          : e instanceof Error
+            ? e.message
+            : "No se pudo armar el plan.",
+      );
       // Stay on diagnostic results even if the plan fails.
       setStep("plan");
     } finally {

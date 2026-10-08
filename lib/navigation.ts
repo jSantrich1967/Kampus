@@ -45,7 +45,7 @@ export type NavItem = {
 };
 
 export type NavGroup = {
-  id: "command" | "learn" | "evaluate" | "work" | "wellbeing" | "teach" | "org" | "system" | "classes" | "social" | "followup";
+  id: "command" | "learn" | "evaluate" | "work" | "wellbeing" | "teach" | "org" | "system" | "classes" | "social" | "followup" | "tools";
   items: NavItem[];
 };
 
@@ -133,17 +133,39 @@ export const navigationGroups: NavGroup[] = [
 ];
 
 /**
- * Menú estudiante simplificado: destinos directos, sin herramientas
- * plegadas en el menú (siguen vivas dentro de sus pantallas).
- * Principal → Estudiar → Exámenes → Clases → Comunidad → Bienestar → Sistema.
+ * Menú estudiante simplificado: los accesos del día a día quedan visibles
+ * (Hoy, Tutor, Modo examen, Cuadernos, Exámenes, Calendario, Clases,
+ * Comunidad, Bienestar, Ajustes) y el resto vive en «Herramientas»,
+ * plegado por defecto para que no compita con la misión diaria.
+ * Las herramientas siguen vivas dentro de sus pantallas.
  */
 const studentNavStructure: Array<{ id: NavGroup["id"]; keys: NavItemKey[] }> = [
   { id: "command", keys: ["today"] },
-  { id: "learn", keys: ["tutor", "duelos", "cramMode", "library", "convertir", "studyPlan", "myWorks", "myCourses", "studentNotices", "flashcards", "myCertificates", "familyReport"] },
+  { id: "learn", keys: ["tutor", "cramMode", "library"] },
   { id: "evaluate", keys: ["exams", "agendaCalendar"] },
   { id: "classes", keys: ["collaborate"] },
   { id: "social", keys: ["community"] },
   { id: "wellbeing", keys: ["wellbeing"] },
+  {
+    id: "tools",
+    keys: [
+      "duelos",
+      "passMode",
+      "risk",
+      "rescue",
+      "convertir",
+      "studyPlan",
+      "myWorks",
+      "myCourses",
+      "flashcards",
+      "studentNotices",
+      "myCertificates",
+      "familyReport",
+      "diary",
+      "psychologist",
+      "guide",
+    ],
+  },
   { id: "system", keys: ["settings"] },
 ];
 

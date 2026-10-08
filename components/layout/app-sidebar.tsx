@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ShieldCheck } from "lucide-react";
+import { ChevronDown, ShieldCheck } from "lucide-react";
 
 import { KampusLogo } from "@/components/brand/kampus-logo";
 import { useKampus } from "@/components/kampus/kampus-provider";
@@ -46,6 +46,36 @@ export function AppSidebar({ onNavigate, luminaMode = false }: AppSidebarProps) 
           ? "Autodidacta"
           : "Institución";
   const groups = filterNavForRole(profile.role);
+  const [toolsOpen, setToolsOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem("kampus.nav.toolsOpen") === "1") setToolsOpen(true);
+    } catch {
+      /* almacenamiento no disponible */
+    }
+  }, []);
+
+  // Si la ruta actual vive en «Herramientas», el grupo se abre solo.
+  useEffect(() => {
+    const toolsGroup = groups.find((g) => g.id === "tools");
+    if (toolsGroup?.items.some((item) => pathMatchesNavItem(item, pathname))) {
+      setToolsOpen(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  function toggleTools() {
+    setToolsOpen((open) => {
+      const next = !open;
+      try {
+        window.localStorage.setItem("kampus.nav.toolsOpen", next ? "1" : "0");
+      } catch {
+        /* almacenamiento no disponible */
+      }
+      return next;
+    });
+  }
   const shellTheme = shellThemeFromRole(profile.role);
   const pendingResearchCount = usePendingStudentWorksCount();
   const openExamsCount = useOpenExamsCount();
@@ -130,11 +160,39 @@ export function AppSidebar({ onNavigate, luminaMode = false }: AppSidebarProps) 
       </div>
 
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 pb-6">
-        {groups.map((group) => (
+        {groups.map((group) => {
+          const isTools = group.id === "tools";
+          const expanded = !isTools || toolsOpen;
+          return (
           <div key={group.id}>
-            <div className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-              {navGroupLabelForRole(profile.role, group.id)}
-            </div>
+            {isTools ? (
+              <button
+                type="button"
+                onClick={toggleTools}
+                aria-expanded={toolsOpen}
+                className="flex w-full items-center justify-between px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500 transition hover:text-slate-300"
+              >
+                <span>{navGroupLabelForRole(profile.role, group.id)}</span>
+                <span className="flex items-center gap-1.5">
+                  {!diaryStatusLoading && !diaryCheckedInToday ? (
+                    <span
+                      className="h-2 w-2 rounded-full bg-violet-400 ring-2 ring-violet-400/30"
+                      aria-label={wellbeingT.sidebarPendingCheckIn}
+                      title={wellbeingT.sidebarPendingCheckIn}
+                    />
+                  ) : null}
+                  <ChevronDown
+                    className={cn("h-3.5 w-3.5 transition-transform", toolsOpen && "rotate-180")}
+                    aria-hidden
+                  />
+                </span>
+              </button>
+            ) : (
+              <div className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                {navGroupLabelForRole(profile.role, group.id)}
+              </div>
+            )}
+            {expanded ? (
             <div className="space-y-1">
               {group.items.map((item) => {
                 const active = pathMatchesNavItem(item, pathname);
@@ -222,8 +280,10 @@ export function AppSidebar({ onNavigate, luminaMode = false }: AppSidebarProps) 
                 );
               })}
             </div>
+            ) : null}
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       <div className="border-t border-white/5 p-4">
