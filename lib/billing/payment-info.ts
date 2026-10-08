@@ -9,16 +9,16 @@
 export const PRO_PRICE_USD = 10.3;
 
 export const PAYMENT_INFO = {
-  configured: false,
+  configured: true,
   pagoMovil: {
-    bank: "",
-    phone: "",
-    idNumber: "",
-    holder: "",
+    bank: "Banco Mercantil",
+    phone: "0424-6509405",
+    idNumber: "9.722.930",
+    holder: "Joreg",
   },
   zelle: {
-    email: "",
-    holder: "",
+    email: "jsantrichu67@gmail.com",
+    holder: "Joreg",
   },
   binance: {
     note: "Envía USDT a nuestro correo de Binance Pay (te lo confirmamos al reportar).",
