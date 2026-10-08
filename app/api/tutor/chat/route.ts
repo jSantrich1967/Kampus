@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { planLimitMessage } from "@/lib/ai/ai-budget";
+import { consumeDemoIpToken, isDemoCookieRequest } from "@/lib/demo/demo-request";
 import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
 import { extractResponsesOutputText } from "@/lib/openai/extract-responses-output-text";
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
 import { socraticTutorRateLimits } from "@/lib/rate-limit/openai-defaults";
 import { consumeDailyUserQuota } from "@/lib/rate-limit/user-quota";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
@@ -67,21 +69,39 @@ export async function POST(req: Request) {
     );
   }
 
-  const quota = await consumeDailyUserQuota(
-    "socratic_tutor",
-    parseInt(process.env.API_DAILY_LIMIT_SOCRATIC_TUTOR ?? "25", 10),
-  );
-  if (!quota.ok) {
-    return NextResponse.json(
-      { error: quota.message },
-      {
-        status: quota.status,
-        headers:
-          quota.status === 429 && quota.retryAfterSec
-            ? { "Retry-After": String(quota.retryAfterSec) }
-            : undefined,
-      },
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let quota: { used: number; limit: number };
+  if (user) {
+    const q = await consumeDailyUserQuota(
+      "socratic_tutor",
+      parseInt(process.env.API_DAILY_LIMIT_SOCRATIC_TUTOR ?? "25", 10),
     );
+    if (!q.ok) {
+      return NextResponse.json(
+        { error: q.message },
+        {
+          status: q.status,
+          headers:
+            q.status === 429 && q.retryAfterSec
+              ? { "Retry-After": String(q.retryAfterSec) }
+              : undefined,
+        },
+      );
+    }
+    quota = { used: q.used, limit: q.limit };
+  } else {
+    // La demo pública puede probar el Tutor con cupo corto por IP y día.
+    if (!isDemoCookieRequest(req) || !consumeDemoIpToken(req, "tutor_chat")) {
+      return NextResponse.json(
+        { error: "Crea tu cuenta gratis para usar el Tutor IA." },
+        { status: 401 },
+      );
+    }
+    quota = { used: 0, limit: 0 };
   }
 
   try {
@@ -133,7 +153,7 @@ export async function POST(req: Request) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(openaiPayload),
-      });
+      }, { skipBudgetGate: !user });
 
       if (!res.ok) {
         let message = "";
