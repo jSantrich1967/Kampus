@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { formatShortDateEs } from "@/lib/format-date";
 
 import { whatsappShareUrl } from "@/lib/supabase/certificates-db";
 
@@ -36,7 +37,7 @@ export async function getWeeklyReport(
 function fmtDate(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
   if (!y || !m || !d) return iso;
-  return new Date(y, m - 1, d).toLocaleDateString("es-VE", { day: "numeric", month: "short" });
+  return formatShortDateEs(new Date(y, m - 1, d));
 }
 
 /** Texto del reporte semanal, listo para enviar por WhatsApp al representante. */

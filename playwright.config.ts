@@ -50,5 +50,12 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
+    {
+      // Validación móvil: los flujos públicos también deben funcionar con
+      // pantalla pequeña y toque (menús, demo y precios se rompen primero ahí).
+      name: "mobile",
+      use: { ...devices["Pixel 7"] },
+      testMatch: /public-flows\.spec\.ts/,
+    },
   ],
 });

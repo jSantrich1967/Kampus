@@ -1,3 +1,4 @@
+import { formatShortDateEs } from "@/lib/format-date";
 export type SubjectCategoryTone = "purple" | "orange" | "blue" | "teal";
 
 export function subjectCategory(subject: string): { label: string; tone: SubjectCategoryTone } {
@@ -45,7 +46,7 @@ export function formatShortEdit(iso: string | undefined): string {
   if (hours < 24) return `hace ${hours}h`;
   const days = Math.floor(hours / 24);
   if (days < 7) return `hace ${days}d`;
-  return date.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+  return formatShortDateEs(date);
 }
 
 export function cloudUsagePercent(documentCount: number, cap = 40): number {

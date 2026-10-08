@@ -222,6 +222,7 @@ export function MyCertificates() {
                       variant="ghost"
                       className="text-rose-200"
                       disabled={deletingId === cert.id}
+                      aria-label="Eliminar certificado"
                       onClick={() => void handleDelete(cert.id)}
                     >
                       {deletingId === cert.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}

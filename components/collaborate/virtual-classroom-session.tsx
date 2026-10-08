@@ -195,7 +195,7 @@ export function VirtualClassroomSession({ sessionId }: Props) {
   useVirtualClassAttendance(sessionId, Boolean(authUserId && session));
 
   if (!isSupabaseConfigured()) {
-    return <p className="text-sm text-amber-200/90">{es ? "Falta configurar Supabase." : "Supabase is not configured."}</p>;
+    return <p className="text-sm text-amber-200/90">{es ? "Falta configurar el servicio de clases." : "The class service is not configured."}</p>;
   }
 
   if (!authUserId && !demoMode) {

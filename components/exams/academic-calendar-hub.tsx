@@ -5,6 +5,7 @@ import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, RotateCcw, Trash2 } f
 import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CalendarTodayFocusPanel } from "@/components/exams/calendar-today-focus-panel";
+import { isDemoBrowser } from "@/lib/demo/demo-session";
 import { VirtualClassIcsExportButton } from "@/components/collaborate/virtual-class-ics-export-button";
 import { CalendarAgendaEventChip } from "@/components/exams/calendar-agenda-event-chip";
 import { CalendarCompactAgenda } from "@/components/exams/calendar-compact-agenda";
@@ -339,7 +340,7 @@ export function AcademicCalendarHub() {
 
   async function generateKitForClass(scheduleId: string, classDate: string, subject: string) {
     if (!useCloud || !authUserId) {
-      setKitError("Para generar el kit desde material del cuaderno, inicia sesión (usa Supabase).");
+      setKitError("Para generar el kit desde material del cuaderno, inicia sesión en tu cuenta.");
       return;
     }
     setKitBusy(true);
@@ -411,7 +412,7 @@ export function AcademicCalendarHub() {
 
   async function generateKitForSelectedClasses() {
     if (!useCloud || !authUserId) {
-      setKitError("Para generar el kit desde material del cuaderno, inicia sesión (usa Supabase).");
+      setKitError("Para generar el kit desde material del cuaderno, inicia sesión en tu cuenta.");
       return;
     }
     const keys = selectedClassKeys.slice();
@@ -506,7 +507,9 @@ export function AcademicCalendarHub() {
     try {
       if (useCloud) {
         const supabase = createSupabaseBrowserClient();
-        await ensureDemoExamsRemote(supabase, authUserId!, profile.subjects[0]);
+        if (isDemoBrowser()) {
+          await ensureDemoExamsRemote(supabase, authUserId!, profile.subjects[0]);
+        }
         const [examList, workList, classList, deckSummaries] = await Promise.all([
           fetchUserExams(supabase, authUserId!),
           fetchStudentWorksRemote(supabase, authUserId!),
@@ -988,7 +991,7 @@ export function AcademicCalendarHub() {
     : "Se guardan en este dispositivo. Si inicias sesión, también los verás en tus otros dispositivos.";
 
   const pageDescription = useCloud
-    ? "Exámenes, fecha de exposición y trabajos se sincronizan con Supabase cuando inicias sesión."
+    ? "Exámenes, fecha de exposición y trabajos se guardan en tu cuenta cuando inicias sesión."
     : "Un mismo calendario para Mis exámenes (con fecha de entrega), Mis exposiciones (fecha en Colaboración) y Mis investigaciones. Sin sesión, los datos de exámenes y trabajos quedan en el navegador.";
 
   return (
@@ -1377,9 +1380,23 @@ export function AcademicCalendarHub() {
           <span className="font-semibold text-slate-100">
             {selectedClassKeys.length} clase{selectedClassKeys.length === 1 ? "" : "s"}
           </span>
-          <span className="ml-2 text-xs text-slate-500">(clic para marcar en amarillo · Ctrl/Cmd clic para abrir)</span>
+          <span className="ml-2 text-xs text-slate-500">(toca una clase para marcarla; luego pulsa «Abrir cuaderno»)</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {selectedClassKeys.length > 0
+            ? (() => {
+                const firstKey = selectedClassKeys[0];
+                const [schedId, ...dateParts] = firstKey.split(":");
+                const ev = allEvents.find(
+                  (e) => e.kind === "class" && e.id === `class:${schedId}` && e.date === dateParts.join(":"),
+                );
+                return ev ? (
+                  <Link href={ev.href} className={buttonClasses({ variant: "secondary", size: "sm" })}>
+                    Abrir cuaderno
+                  </Link>
+                ) : null;
+              })()
+            : null}
           <Button type="button" size="sm" variant="ghost" onClick={() => setSelectedClassKeys([])} disabled={selectedClassKeys.length === 0}>
             Limpiar
           </Button>
@@ -1534,8 +1551,8 @@ export function AcademicCalendarHub() {
             <CardTitle>Mi horario de clases</CardTitle>
             <CardDescription>
               {useCloud
-                ? "Se guarda en tu cuenta (Supabase). Cada clase aparece en el calendario y abre el cuaderno de la materia."
-                : "Se guarda en este dispositivo. Con sesión y Supabase, se sincroniza en la nube."}
+                ? "Se guarda en tu cuenta y se sincroniza entre dispositivos. Cada clase aparece en el calendario y abre el cuaderno de la materia."
+                : "Se guarda en este dispositivo. Con sesión iniciada, también se guarda en tu cuenta."}
             </CardDescription>
           </CardHeader>
           <form className="space-y-3 px-6 pb-4" onSubmit={(e) => void submitClassSchedule(e)}>
@@ -1669,7 +1686,7 @@ export function AcademicCalendarHub() {
                         {c.classDate} · {c.reason?.trim() ? c.reason : "Sin justificación"}
                       </div>
                     </div>
-                    <Button type="button" size="sm" variant="ghost" onClick={() => void removeCancellation(c.id)}>
+                    <Button type="button" size="sm" variant="ghost" aria-label="Quitar aviso de clase suspendida" onClick={() => void removeCancellation(c.id)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </li>
@@ -1763,7 +1780,7 @@ export function AcademicCalendarHub() {
                   {kitDeleteBusy ? "Borrando…" : "Borrar apuntes de esta clase"}
                 </Button>
                 {!useCloud ? (
-                  <span className="text-[11px] text-slate-500">Para borrar en la nube, inicia sesión (Supabase).</span>
+                  <span className="text-[11px] text-slate-500">Para borrar también de tu cuenta, inicia sesión.</span>
                 ) : null}
               </div>
             ) : null}

@@ -16,6 +16,8 @@ import { authCopy } from "@/lib/i18n/auth";
 import { onboardingCopy } from "@/lib/i18n/onboarding";
 import type { UserRole } from "@/lib/schemas/profile";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { deleteDemoDataRemote } from "@/lib/supabase/agenda-db";
+import { loadExams, saveExams } from "@/lib/storage/exams-storage";
 import { isSupabaseConfigured, shouldShowAuthBypassWarning } from "@/lib/supabase/env";
 import { saveScreenRole } from "@/lib/storage/screen-role-storage";
 import {
@@ -81,6 +83,68 @@ export default function SettingsPage() {
       cancelled = true;
     };
   }, []);
+
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  async function deleteAccount() {
+    if (deletingAccount) return;
+    setDeletingAccount(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch("/api/account/delete", { method: "POST" });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(data.error || "No pudimos eliminar tu cuenta.");
+      try {
+        const supabase = createSupabaseBrowserClient();
+        await supabase.auth.signOut();
+      } catch {
+        /* la cuenta ya no existe; la sesión cae sola */
+      }
+      try {
+        window.localStorage.clear();
+        window.sessionStorage.clear();
+      } catch {
+        /* almacenamiento no disponible */
+      }
+      router.replace("/");
+      router.refresh();
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : "No pudimos eliminar tu cuenta.");
+      setDeletingAccount(false);
+    }
+  }
+
+  const [cleaningDemo, setCleaningDemo] = useState(false);
+  const [cleanDemoMsg, setCleanDemoMsg] = useState<string | null>(null);
+
+  async function resetDemoData() {
+    if (cleaningDemo) return;
+    setCleaningDemo(true);
+    setCleanDemoMsg(null);
+    try {
+      let total = 0;
+      if (isSupabaseConfigured() && authUserId) {
+        const supabase = createSupabaseBrowserClient();
+        const r = await deleteDemoDataRemote(supabase, authUserId);
+        total = r.exams + r.works + r.decks;
+      }
+      const local = loadExams(authUserId).filter(
+        (e) => !e.title.toLocaleLowerCase("es").includes("(demo)"),
+      );
+      saveExams(local, authUserId);
+      setCleanDemoMsg(
+        total > 0
+          ? `Listo: borramos ${total} elementos de ejemplo de tu cuenta. Tus datos reales no se tocaron.`
+          : "Tu cuenta ya no tenía datos de ejemplo.",
+      );
+    } catch {
+      setCleanDemoMsg("No pudimos borrar los datos de ejemplo. Inténtalo de nuevo.");
+    } finally {
+      setCleaningDemo(false);
+    }
+  }
 
   const phoneValue = profile.phone ?? "";
   const maskedPhone = phoneValue
@@ -295,6 +359,28 @@ export default function SettingsPage() {
               Revisa el número: debe empezar con + y el código de país.
             </p>
           ) : null}
+          <p className="text-xs leading-relaxed text-slate-500">
+            Al activar aceptas recibir mensajes de WhatsApp de Kampus solo con avisos de tu
+            propia actividad: máximo un mensaje al día (8:00 a. m.) que junta tus exámenes,
+            exposiciones, entregas, clases y duelos de hoy y mañana. Sin publicidad. Puedes
+            darte de baja cuando quieras apagando el interruptor o borrando tu número: la
+            baja es inmediata y no recibes más mensajes.
+          </p>
+          {phoneValue ? (
+            <div>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setProfile({ ...profile, phone: "", whatsappReminders: false });
+                  setPhoneVisible(false);
+                }}
+              >
+                Borrar mi número y darme de baja
+              </Button>
+            </div>
+          ) : null}
         </div>
       </Card>
 
@@ -346,7 +432,7 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle>Materias</CardTitle>
           <CardDescription>
-            Agrega o elimina materias del perfil. Esto controla las sugerencias que ves en “Mis cuadernos”, calendario y formularios.
+            Agrega o elimina materias del perfil. Esto controla las sugerencias que ves en “Mis cuadernos”, calendario y formularios. Si quitas una materia, tus cuadernos, clases y exámenes de esa materia no se borran: quedan guardados, pero dejan de contar en tu plan, tus sugerencias y tus avisos.
           </CardDescription>
         </CardHeader>
 
@@ -470,6 +556,22 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle>Datos de prueba</CardTitle>
+          <CardDescription>
+            Si tu cuenta trae exámenes o trabajos de ejemplo (los que dicen «demo»), bórralos aquí.
+            Tus datos reales no se tocan.
+          </CardDescription>
+        </CardHeader>
+        <div className="flex flex-wrap items-center gap-3 px-6 pb-6">
+          <Button type="button" size="sm" variant="secondary" disabled={cleaningDemo} onClick={() => void resetDemoData()}>
+            {cleaningDemo ? "Borrando…" : "Restablecer datos de prueba"}
+          </Button>
+          {cleanDemoMsg ? <span className="text-sm text-slate-300">{cleanDemoMsg}</span> : null}
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Rehacer onboarding</CardTitle>
           <CardDescription>Vuelve al asistente inicial.</CardDescription>
         </CardHeader>
@@ -486,6 +588,37 @@ export default function SettingsPage() {
         >
           Reiniciar
         </Button>
+      </Card>
+
+      <Card className="border-rose-400/20">
+        <CardHeader>
+          <CardTitle>Eliminar mi cuenta</CardTitle>
+          <CardDescription>
+            Borra tu cuenta, tu perfil y tus datos de estudio de Kampus. No se puede deshacer.
+            Los registros mínimos de pagos ya hechos se conservan por control contable, sin tu
+            perfil.
+          </CardDescription>
+        </CardHeader>
+        <div className="flex flex-col gap-3 px-6 pb-6">
+          {deleteError ? <p role="alert" className="text-sm text-rose-300">{deleteError}</p> : null}
+          {confirmingDelete ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-slate-300">¿Seguro? Se borra todo tu Kampus.</span>
+              <Button type="button" size="sm" variant="secondary" disabled={deletingAccount} onClick={() => setConfirmingDelete(false)}>
+                Cancelar
+              </Button>
+              <Button type="button" size="sm" disabled={deletingAccount} onClick={() => void deleteAccount()}>
+                {deletingAccount ? "Eliminando…" : "Sí, eliminar mi cuenta"}
+              </Button>
+            </div>
+          ) : (
+            <div>
+              <Button type="button" size="sm" variant="ghost" onClick={() => setConfirmingDelete(true)}>
+                Eliminar mi cuenta
+              </Button>
+            </div>
+          )}
+        </div>
       </Card>
 
       {enableSentryTest ? (

@@ -194,8 +194,40 @@ export async function fetchUserExams(client: SupabaseClient, userId: string): Pr
   });
 }
 
-export async function fetchExamById(client: SupabaseClient, userId: string, examId: string): Promise<Exam | null> {
-  const { data, error } = await client
+/**
+ * Borra SOLO los datos de ejemplo (demo) de la cuenta: exámenes "(demo)",
+ * trabajos "Kampus · …" y la exposición demo. Lo real del usuario no se toca.
+ */
+export async function deleteDemoDataRemote(
+  client: SupabaseClient,
+  userId: string,
+): Promise<{ exams: number; works: number; decks: number }> {
+  const { data: exams } = await client
+    .from("user_exams")
+    .delete()
+    .eq("user_id", userId)
+    .ilike("title", "%(demo)%")
+    .select("id");
+  const { data: works } = await client
+    .from("student_works")
+    .delete()
+    .eq("user_id", userId)
+    .or("title.ilike.Kampus ·%,title.ilike.%(demo)%")
+    .select("id");
+  const { data: decks } = await client
+    .from("user_presentation_decks")
+    .delete()
+    .eq("user_id", userId)
+    .eq("deck_title", "Kampus · Exposición demo")
+    .select("id");
+  return {
+    exams: (exams ?? []).length,
+    works: (works ?? []).length,
+    decks: (decks ?? []).length,
+  };
+}
+
+export async function fetchExamById(client: SupabaseClient, userId: string, examId: string): Promise<Exam | null> {  const { data, error } = await client
     .from("user_exams")
     .select("id,user_id,subject,title,description,status,due_date,questions,created_at")
     .eq("user_id", userId)

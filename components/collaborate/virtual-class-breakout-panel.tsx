@@ -150,6 +150,7 @@ export function VirtualClassBreakoutPanel({ sessionId, isCreator, courseTitle }:
                         variant="ghost"
                         disabled={busy === row.id}
                         onClick={() => void handleRemove(row.id)}
+                        aria-label="Eliminar sala"
                         className="text-rose-200"
                       >
                         {busy === row.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Trash2 className="h-3.5 w-3.5" />}

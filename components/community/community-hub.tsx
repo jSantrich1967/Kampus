@@ -414,12 +414,6 @@ export function CommunityHub() {
         </Card>
       ) : null}
 
-      <Card className="border-white/10 bg-slate-950/40">
-        <CardHeader>
-          <CardTitle>{t.roadmapTitle}</CardTitle>
-          <CardDescription>{t.roadmapHint}</CardDescription>
-        </CardHeader>
-      </Card>
     </div>
   );
 }

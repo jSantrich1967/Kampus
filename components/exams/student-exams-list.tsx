@@ -20,6 +20,7 @@ import { seedDemoExamsIfEmpty, loadExams } from "@/lib/storage/exams-storage";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { ensureDemoExamsRemote, fetchUserExams } from "@/lib/supabase/agenda-db";
+import { isDemoBrowser } from "@/lib/demo/demo-session";
 import type { Exam } from "@/lib/schemas/exams";
 
 function daysTone(days: number | null) {
@@ -47,7 +48,11 @@ export function StudentExamsList() {
     try {
       if (useCloud) {
         const supabase = createSupabaseBrowserClient();
-        await ensureDemoExamsRemote(supabase, authUserId!, profile.subjects[0]);
+        // Las cuentas reales arrancan limpias: los exámenes demo solo se
+        // siembran dentro de la sesión demo, nunca en una cuenta de verdad.
+        if (isDemoBrowser()) {
+          await ensureDemoExamsRemote(supabase, authUserId!, profile.subjects[0]);
+        }
         const list = await fetchUserExams(supabase, authUserId!);
         setExams(list.filter((e) => e.status !== "draft"));
       } else {

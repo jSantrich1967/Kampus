@@ -949,7 +949,7 @@ export function PresentationPlanner() {
                     }))
                   }
                 />
-                <Button type="button" variant="ghost" size="sm" className="justify-self-end" onClick={() => removeMember(m.id)}>
+                <Button type="button" variant="ghost" size="sm" className="justify-self-end" aria-label={es ? "Eliminar integrante" : "Remove member"} onClick={() => removeMember(m.id)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -1037,7 +1037,7 @@ export function PresentationPlanner() {
                     onChange={(e) => updateSection(s.id, { minutes: Number(e.target.value) })}
                   />
                 </label>
-                <Button type="button" variant="ghost" className="justify-self-end" onClick={() => removeSection(s.id)}>
+                <Button type="button" variant="ghost" className="justify-self-end" aria-label={es ? "Eliminar sección" : "Remove section"} onClick={() => removeSection(s.id)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>

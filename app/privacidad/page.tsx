@@ -51,6 +51,9 @@ export default function PrivacidadPage() {
           diagnósticos con IA, mostrarte tu progreso, operar la Comunidad y los duelos, y enviarte los
           avisos que tú actives. Nunca vendemos tus datos personales ni los usamos para publicidad de
           terceros.
+          La base de ese tratamiento es tu consentimiento y la prestación del servicio que nos
+          pides al crear tu cuenta; los avisos por WhatsApp y las funciones de IA solo se activan
+          cuando tú los usas o los enciendes.
         </P>
       </section>
 
@@ -102,7 +105,9 @@ export default function PrivacidadPage() {
         <P>
           Puedes pedir en cualquier momento el acceso, la corrección o la eliminación de tus datos
           escribiéndonos al correo de contacto. Respondemos las solicitudes en un máximo de 15 días
-          hábiles. Buena parte de tu información la puedes editar tú mismo desde Ajustes.
+          hábiles. Buena parte de tu información la puedes editar tú mismo desde Ajustes, y también
+          puedes eliminar tu cuenta completa por tu cuenta en Ajustes → Eliminar mi cuenta, sin
+          esperar a que lo hagamos nosotros.
         </P>
       </section>
 

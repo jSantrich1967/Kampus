@@ -242,7 +242,7 @@ export function VirtualClassroomHub() {
         <p className="text-sm text-amber-200/90">
           {es
             ? "Todavía no hay sesiones publicadas."
-            : "Supabase is not configured, so real sessions are unavailable."}
+            : "The class service is not configured, so real sessions are unavailable."}
         </p>
       ) : demoMode ? (
         <p className="rounded-xl border border-amber-300/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
