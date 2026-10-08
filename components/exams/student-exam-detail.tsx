@@ -5,6 +5,7 @@ import { CheckCircle2, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { ExamMaterialPanel } from "@/components/exams/exam-material-panel";
+import { ExamDetailLoading } from "@/components/exams/exam-detail-loading";
 import { ExamPracticePanel } from "@/components/exams/exam-practice-panel";
 import { ExamSuggestedTimer } from "@/components/exams/exam-suggested-timer";
 import { PageHeader } from "@/components/layout/page-header";
@@ -105,15 +106,10 @@ export function StudentExamDetail({ examId }: { examId: string }) {
     void loadAttempts();
   }, [loadAttempts]);
 
-  if (!hydrated) return <div className="text-sm text-slate-400">Cargando…</div>;
+  if (!hydrated) return <ExamDetailLoading />;
 
   if (loadingExam) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-slate-400">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        {t.loadingExam}
-      </div>
-    );
+    return <ExamDetailLoading />;
   }
 
   if (loadError && !exam) {

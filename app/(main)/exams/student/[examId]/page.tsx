@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { StudentExamDetail } from "@/components/exams/student-exam-detail";
+import { ExamDetailLoading } from "@/components/exams/exam-detail-loading";
 
 export const metadata: Metadata = { title: "Detalle de examen" };
 
@@ -9,7 +10,7 @@ export const metadata: Metadata = { title: "Detalle de examen" };
 export default async function StudentExamDetailPage({ params }: { params: Promise<{ examId: string }> }) {
   const { examId } = await params;
   return (
-    <Suspense fallback={<div className="text-sm text-slate-400">Cargando…</div>}>
+    <Suspense fallback={<ExamDetailLoading />}>
       <StudentExamDetail examId={examId} />
     </Suspense>
   );
