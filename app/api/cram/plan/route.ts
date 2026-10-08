@@ -23,28 +23,29 @@ export async function POST(req: Request) {
     );
   }
 
-  const quota = await consumeDailyUserQuota(
-    "cram_mode",
-    parseInt(process.env.API_DAILY_LIMIT_CRAM_MODE ?? "10", 10),
-  );
-  if (!quota.ok) {
-    return NextResponse.json(
-      { error: quota.message },
-      {
-        status: quota.status,
-        headers:
-          quota.status === 429 && quota.retryAfterSec
-            ? { "Retry-After": String(quota.retryAfterSec) }
-            : undefined,
-      },
-    );
-  }
-
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) {
+
+  if (user) {
+    const quota = await consumeDailyUserQuota(
+      "cram_mode",
+      parseInt(process.env.API_DAILY_LIMIT_CRAM_MODE ?? "10", 10),
+    );
+    if (!quota.ok) {
+      return NextResponse.json(
+        { error: quota.message },
+        {
+          status: quota.status,
+          headers:
+            quota.status === 429 && quota.retryAfterSec
+              ? { "Retry-After": String(quota.retryAfterSec) }
+              : undefined,
+        },
+      );
+    }
+  } else {
     // La demo pública puede generar su plan una vez por IP y día.
     if (!isDemoCookieRequest(req) || !consumeDemoIpToken(req, "cram_plan")) {
       return NextResponse.json(
