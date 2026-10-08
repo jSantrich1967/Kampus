@@ -158,7 +158,7 @@ export default function ProPage() {
               Pago reportado
             </CardTitle>
             <CardDescription>
-              Listo, {profile.displayName || "tu pago"} quedó registrado. Lo verificamos y activamos tu Pro en menos de 24 horas; te llega la confirmación por WhatsApp si tienes los avisos activos.
+              Listo, {profile.displayName || "tu pago"} quedó registrado. Verificamos cada pago a mano y activamos tu Pro el mismo día; te llega la confirmación por WhatsApp si tienes los avisos activos.
             </CardDescription>
           </CardHeader>
           <div className="px-6 pb-6">
@@ -287,6 +287,18 @@ export default function ProPage() {
                 <p className="text-xs text-slate-500">
                   Verificamos cada pago a mano antes de activar. Si la referencia no coincide, te
                   contactamos por tu WhatsApp registrado.
+                </p>
+                <p className="text-xs text-slate-400">
+                  ¿Tu examen es esta semana?{" "}
+                  <a
+                    href={`https://wa.me/${PAYMENT_INFO.whatsappIntl}?text=${encodeURIComponent("Hola, acabo de reportar mi pago de Kampus Pro y mi examen es esta semana. Mi referencia es: ")}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium text-emerald-300 underline underline-offset-2"
+                  >
+                    Escríbenos por WhatsApp
+                  </a>{" "}
+                  con tu referencia y priorizamos tu activación.
                 </p>
               </>
             )}

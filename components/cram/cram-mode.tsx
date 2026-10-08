@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AlarmClock, CheckCircle2, ChevronRight, ClipboardCheck, FlaskConical, Loader2, Sparkles, Swords } from "lucide-react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
+import { ProRequiredCard } from "@/components/billing/pro-required-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,6 +49,7 @@ export function CramMode() {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [planLoading, setPlanLoading] = useState(false);
   const [planError, setPlanError] = useState<string | null>(null);
+  const [proGate, setProGate] = useState<null | "taste" | "plan">(null);
   const [checked, setChecked] = useState<Record<number, boolean>>({});
 
   const loggedIn = Boolean(authUserId);
@@ -115,7 +117,16 @@ export function CramMode() {
         // en vez de quedarnos en «Preparando diagnóstico…» para siempre.
         signal: AbortSignal.timeout(90_000),
       });
-      const data = (await res.json().catch(() => ({}))) as { questions?: DiagnoseQuestion[]; error?: string };
+      const data = (await res.json().catch(() => ({}))) as {
+        questions?: DiagnoseQuestion[];
+        error?: string;
+        code?: string;
+      };
+      if (!res.ok && data.code === "TASTE_EXHAUSTED") {
+        // Ya usó su diagnóstico gratis de hoy: tarjeta de Pro, no error seco.
+        setProGate("taste");
+        return;
+      }
       if (!res.ok || !data.questions?.length) throw new Error(data.error || "No se pudo generar el diagnóstico.");
       setQuestions(data.questions);
       setAnswers(data.questions.map(() => null));
@@ -170,7 +181,12 @@ export function CramMode() {
         }),
         signal: AbortSignal.timeout(90_000),
       });
-      const data = (await res.json().catch(() => ({}))) as { plan?: Plan; error?: string };
+      const data = (await res.json().catch(() => ({}))) as { plan?: Plan; error?: string; code?: string };
+      if (!res.ok && data.code === "PRO_REQUIRED") {
+        // Ya vio su diagnóstico: el plan de estudio es el momento de Pro.
+        setProGate("plan");
+        return;
+      }
       if (!res.ok || !data.plan) throw new Error(data.error || "No se pudo armar el plan.");
       setPlan(data.plan);
       setChecked({});
@@ -201,6 +217,7 @@ export function CramMode() {
     setPlan(null);
     setDiagError(null);
     setPlanError(null);
+    setProGate(null);
   }
 
   if (!hydrated) return <div className="text-sm text-slate-400">Cargando…</div>;
@@ -216,6 +233,20 @@ export function CramMode() {
           </CardHeader>
         </Card>
       </div>
+    );
+  }
+
+  if (proGate) {
+    return (
+      <ProRequiredCard
+        eyebrow="Estudiar"
+        feature={proGate === "plan" ? "El plan de estudio" : "El Modo examen"}
+        description={
+          proGate === "plan"
+            ? "Tu diagnóstico ya está: sabes qué temas flojean. Con Pro te armo el plan completo: qué estudiar primero, cuánto tiempo y con qué ejercicios."
+            : "Ya usaste tu diagnóstico gratis de hoy. Con Pro tienes diagnósticos y planes sin límite, junto al Tutor IA y el Modo aprobar."
+        }
+      />
     );
   }
 

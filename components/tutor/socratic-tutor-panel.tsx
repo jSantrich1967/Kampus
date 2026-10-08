@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { aiErrorMessage } from "@/lib/with-timeout";
+import Link from "next/link";
+
 import { AiErrorNotice } from "@/components/ui/ai-error";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,6 +49,8 @@ export function SocraticTutorPanel() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [quota, setQuota] = useState<{ used: number; limit: number } | null>(null);
+  const [tasteMode, setTasteMode] = useState(false);
+  const [tasteOver, setTasteOver] = useState(false);
   const [hydratedLocal, setHydratedLocal] = useState(false);
   const manualSubjectRef = useRef(false);
   const listRef = useRef<HTMLDivElement>(null);
@@ -116,12 +120,21 @@ export function SocraticTutorPanel() {
         const data = (await res.json().catch(() => ({}))) as {
           reply?: string;
           error?: string;
+          code?: string;
+          plan?: string;
           quota?: { used: number; limit: number };
         };
+        if (!res.ok && data.code === "TASTE_EXHAUSTED") {
+          // Se acabó la probada gratis de hoy: tarjeta de Pro, no error seco.
+          setTasteOver(true);
+          setMessages((prev) => prev.slice(0, -1));
+          return;
+        }
         if (!res.ok) {
           throw new Error(data.error || `Error ${res.status}`);
         }
-        if (data.quota) setQuota(data.quota);
+        if (data.plan === "free") setTasteMode(true);
+        if (data.quota && data.quota.limit > 0) setQuota(data.quota);
         const reply = (data.reply ?? "").trim();
         if (!reply) throw new Error(t.emptyReplyMessage);
         setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
@@ -154,7 +167,7 @@ export function SocraticTutorPanel() {
             <Badge tone="accent">{t.socraticBadge}</Badge>
             {quota ? (
               <Badge tone="neutral">
-                {quota.used}/{quota.limit}
+                {tasteMode ? `Probada de hoy: ${quota.used}/${quota.limit}` : `${quota.used}/${quota.limit}`}
               </Badge>
             ) : null}
             <Button type="button" size="sm" variant="secondary" onClick={startNewChat} className="gap-1.5">
@@ -279,6 +292,15 @@ export function SocraticTutorPanel() {
               {t.sendLabel}
             </Button>
           </div>
+          {tasteOver ? (
+            <div className="rounded-xl border border-purple-400/25 bg-purple-500/[0.06] px-4 py-3 text-sm text-slate-200">
+              Ya usaste tu probada gratis de hoy. Con Pro el Tutor es tuyo sin ese límite,
+              junto al Modo examen y el Modo aprobar.{" "}
+              <Link href="/pro" className="font-medium text-purple-200 underline underline-offset-2">
+                Pasarme a Pro por $5/mes
+              </Link>
+            </div>
+          ) : null}
           {error ? (
             <AiErrorNotice
               message={error}

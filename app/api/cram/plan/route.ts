@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   if (user) {
     const plan = await getServerUserPlan(supabase, user.id);
     if (plan !== "premium") {
-      return NextResponse.json({ error: PRO_ONLY_MESSAGE }, { status: 403 });
+      return NextResponse.json({ error: PRO_ONLY_MESSAGE, code: "PRO_REQUIRED" }, { status: 403 });
     }
     const quota = await consumeDailyUserQuota(
       "cram_mode",

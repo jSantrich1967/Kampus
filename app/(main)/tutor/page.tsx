@@ -1,21 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { SocraticTutorPanel } from "@/components/tutor/socratic-tutor-panel";
-import { ProRequiredCard } from "@/components/billing/pro-required-card";
-import { isDemoBrowser } from "@/lib/demo/demo-session";
 
 function TutorPageContent() {
   const router = useRouter();
-  const { profile, hydrated, authUserId } = useKampus();
-  const [demo, setDemo] = useState(false);
-
-  useEffect(() => {
-    setDemo(isDemoBrowser());
-  }, []);
+  const { profile, hydrated } = useKampus();
 
   useEffect(() => {
     if (!hydrated) return;
@@ -34,19 +27,10 @@ function TutorPageContent() {
     );
   }
 
-  // El Tutor IA es del plan Pro. En vez de rebotar en silencio a Hoy, lo
-  // decimos aquí mismo y ofrecemos activarlo. La demo pública sí puede
-  // probarlo (la API aplica su cupo corto por IP).
-  if (profile.plan !== "premium" && !(demo && !authUserId)) {
-    return (
-      <ProRequiredCard
-        eyebrow="Tutor IA"
-        feature="El Tutor IA"
-        description="Tu plan Estudiante no incluye el Tutor IA. Con Pro lo tienes junto al Modo examen y el Modo aprobar."
-      />
-    );
-  }
-
+  // El Tutor IA es del plan Pro, pero con cuenta Estudiante hay probada
+  // gratis (3 preguntas al día): primero se siente el valor y la tarjeta
+  // de Pro aparece al agotarla, dentro del propio tutor. La API aplica el
+  // cupo en el servidor; aquí nadie queda bloqueado en seco.
   return <SocraticTutorPanel />;
 }
 

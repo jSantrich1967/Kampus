@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { consumeDemoIpToken, isDemoCookieRequest } from "@/lib/demo/demo-request";
-import { getServerUserPlan, PRO_ONLY_MESSAGE } from "@/lib/billing/server-plan";
+import { getServerUserPlan } from "@/lib/billing/server-plan";
 import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
 import { extractResponsesOutputText } from "@/lib/openai/extract-responses-output-text";
 import { parseJsonFromModelText } from "@/lib/openai/parse-json-response";
@@ -37,8 +37,19 @@ export async function POST(req: Request) {
   if (user) {
     const plan = await getServerUserPlan(supabase, user.id);
     if (plan !== "premium") {
-      return NextResponse.json({ error: PRO_ONLY_MESSAGE }, { status: 403 });
-    }
+      // Probada: 1 diagnóstico gratis al día con cuenta Estudiante. El plan
+      // de estudio que sigue sí es de Pro (lo cobra /api/cram/plan).
+      const taste = await consumeDailyUserQuota(
+        "cram_diagnose_free",
+        parseInt(process.env.API_FREE_CRAM_DIAGNOSES ?? "1", 10),
+      );
+      if (!taste.ok) {
+        return NextResponse.json(
+          { error: "Ya usaste tu diagnóstico gratis de hoy.", code: "TASTE_EXHAUSTED" },
+          { status: 403 },
+        );
+      }
+    } else {
     const quota = await consumeDailyUserQuota(
       "cram_mode",
       parseInt(process.env.API_DAILY_LIMIT_CRAM_MODE ?? "10", 10),
@@ -54,6 +65,7 @@ export async function POST(req: Request) {
               : undefined,
         },
       );
+    }
     }
   } else {
     // La demo pública puede probar el diagnóstico una vez por IP y día;

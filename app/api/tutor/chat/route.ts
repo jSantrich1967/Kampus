@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { planLimitMessage } from "@/lib/ai/ai-budget";
 import { consumeDemoIpToken, isDemoCookieRequest } from "@/lib/demo/demo-request";
-import { getServerUserPlan, PRO_ONLY_MESSAGE } from "@/lib/billing/server-plan";
+import { getServerUserPlan } from "@/lib/billing/server-plan";
 import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
 import { extractResponsesOutputText } from "@/lib/openai/extract-responses-output-text";
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
@@ -76,16 +76,26 @@ export async function POST(req: Request) {
   } = await supabase.auth.getUser();
 
   let quota: { used: number; limit: number };
+  let taste = false;
   if (user) {
     const plan = await getServerUserPlan(supabase, user.id);
-    if (plan !== "premium") {
-      return NextResponse.json({ error: PRO_ONLY_MESSAGE }, { status: 403 });
-    }
+    // Probada gratis: quien tiene cuenta y plan Estudiante puede sentir el
+    // Tutor antes de pagar (3 preguntas al día). Al agotarla, la interfaz
+    // muestra la tarjeta de Pro en vez de un error seco.
+    taste = plan !== "premium";
     const q = await consumeDailyUserQuota(
-      "socratic_tutor",
-      parseInt(process.env.API_DAILY_LIMIT_SOCRATIC_TUTOR ?? "25", 10),
+      taste ? "socratic_tutor_free" : "socratic_tutor",
+      taste
+        ? parseInt(process.env.API_FREE_TUTOR_DAILY ?? "3", 10)
+        : parseInt(process.env.API_DAILY_LIMIT_SOCRATIC_TUTOR ?? "25", 10),
     );
     if (!q.ok) {
+      if (taste) {
+        return NextResponse.json(
+          { error: "Ya usaste tu probada gratis del Tutor de hoy.", code: "TASTE_EXHAUSTED" },
+          { status: 403 },
+        );
+      }
       return NextResponse.json(
         { error: q.message },
         {
@@ -190,6 +200,7 @@ export async function POST(req: Request) {
       return NextResponse.json({
         reply: text.trim(),
         quota: { used: quota.used, limit: quota.limit },
+        plan: user ? (taste ? "free" : "premium") : "demo",
       });
     });
   } catch (err) {

@@ -259,6 +259,32 @@ export function TodayDashboard() {
             <StudentDeadlinesCard deadlines={deadlines} />
             <StudentRiskCard risks={risks} />
           </div>
+          {profile.plan !== "premium" && deadlines[0] && (deadlines[0].days ?? 99) <= 7 ? (
+            <Card className="border-purple-400/25 bg-purple-500/[0.06]">
+              <CardHeader>
+                <CardTitle className="text-base">
+                  Tu examen de {deadlines[0].subject} es{" "}
+                  {deadlines[0].days === 0
+                    ? "hoy"
+                    : deadlines[0].days === 1
+                      ? "mañana"
+                      : `en ${deadlines[0].days} días`}
+                </CardTitle>
+                <CardDescription>
+                  Haz tu diagnóstico gratis de 2 minutos y descubre qué temas flojean. El plan de
+                  estudio completo, día por día, es del plan Pro ($5/mes).
+                </CardDescription>
+              </CardHeader>
+              <div className="flex flex-wrap gap-2 px-6 pb-6">
+                <Link href="/modo-examen" className={buttonClasses({ size: "sm" })}>
+                  Probar el diagnóstico gratis
+                </Link>
+                <Link href="/pro" className={buttonClasses({ size: "sm", variant: "secondary" })}>
+                  Pasarme a Pro
+                </Link>
+              </div>
+            </Card>
+          ) : null}
           <TodayCollaboratePanel />
         </TodayStep>
       ) : (

@@ -20,6 +20,7 @@ export const PAYMENT_INFO = {
     email: "jsantrichu67@gmail.com",
     holder: "Joreg",
   },
+  whatsappIntl: "584246509405",
   binance: {
     note: "Envía USDT a nuestro correo de Binance Pay (te lo confirmamos al reportar).",
   },
