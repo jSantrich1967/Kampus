@@ -66,6 +66,22 @@ export default function SettingsPage() {
     };
   }, []);
 
+  // Los controles de prueba (rol demo, modo prueba premium) son internos:
+  // solo los ve un administrador de la app, nunca un usuario normal.
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data) setIsAdmin(Boolean((data as { isAdmin?: boolean }).isAdmin));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const phoneValue = profile.phone ?? "";
   const maskedPhone = phoneValue
     ? `${phoneValue.slice(0, 3)} ••• ••• ${phoneValue.slice(-4)}`
@@ -299,6 +315,7 @@ export default function SettingsPage() {
         </div>
       </Card>
 
+      {isAdmin ? (
       <Card>
         <CardHeader>
           <CardTitle>Rol (demo)</CardTitle>
@@ -323,6 +340,7 @@ export default function SettingsPage() {
           ))}
         </div>
       </Card>
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -395,6 +413,7 @@ export default function SettingsPage() {
         </div>
       </Card>
 
+      {isAdmin ? (
       <Card>
         <CardHeader>
           <CardTitle>Modo prueba completo</CardTitle>
@@ -422,6 +441,7 @@ export default function SettingsPage() {
           )}
         </div>
       </Card>
+      ) : null}
 
       <Card>
         <CardHeader>

@@ -36,6 +36,7 @@ type SubRow = {
   reported_at: string;
   starts_at: string | null;
   expires_at: string | null;
+  receipt_path: string | null;
 };
 
 /** GET: pagos Pro pendientes + activos recientes, con datos del estudiante. */
@@ -45,7 +46,7 @@ export async function GET() {
 
   const { data: subs, error } = await gate
     .admin!.from("pro_subscriptions")
-    .select("id, user_id, months, amount_usd, method, reference, status, reported_at, starts_at, expires_at")
+    .select("id, user_id, months, amount_usd, method, reference, status, reported_at, starts_at, expires_at, receipt_path")
     .in("status", ["pending", "active"])
     .order("reported_at", { ascending: false })
     .limit(100);
@@ -81,7 +82,7 @@ export async function GET() {
 
 const actionSchema = z.object({
   id: z.string().uuid(),
-  action: z.enum(["activate", "reject"]),
+  action: z.enum(["activate", "reject", "receipt"]),
 });
 
 const DAY_MS = 86_400_000;
@@ -100,13 +101,27 @@ export async function POST(req: Request) {
   const admin = gate.admin!;
   const { data: sub } = await admin
     .from("pro_subscriptions")
-    .select("id, user_id, months, status")
+    .select("id, user_id, months, status, receipt_path")
     .eq("id", id)
     .maybeSingle();
   if (!sub) {
     return NextResponse.json({ error: "Pago no encontrado." }, { status: 404 });
   }
-  const row = sub as { id: string; user_id: string; months: number; status: string };
+  const row = sub as { id: string; user_id: string; months: number; status: string; receipt_path: string | null };
+
+  if (action === "receipt") {
+    if (!row.receipt_path) {
+      return NextResponse.json({ error: "Este pago no tiene comprobante." }, { status: 404 });
+    }
+    const { data: signed, error: signErr } = await admin.storage
+      .from("payment-receipts")
+      .createSignedUrl(row.receipt_path, 3600);
+    if (signErr || !signed?.signedUrl) {
+      return NextResponse.json({ error: "No se pudo abrir el comprobante." }, { status: 500 });
+    }
+    return NextResponse.json({ url: signed.signedUrl });
+  }
+
   if (row.status !== "pending") {
     return NextResponse.json({ error: "Ese pago ya fue procesado." }, { status: 409 });
   }
@@ -158,6 +173,26 @@ export async function POST(req: Request) {
     .from("profiles")
     .update({ body: { ...body, plan: "premium" } })
     .eq("id", row.user_id);
+
+  // Confirmación por WhatsApp (best-effort: nunca bloquea la activación).
+  const phone = (body as { phone?: unknown }).phone;
+  if (typeof phone === "string" && /^\+[1-9]\d{7,14}$/.test(phone)) {
+    try {
+      const { sendWhatsAppMessage } = await import("@/lib/whatsapp/twilio");
+      const fecha = new Date(expiresAt).toLocaleDateString("es-VE", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        timeZone: "America/Caracas",
+      });
+      await sendWhatsAppMessage(
+        phone,
+        `✅ Tu plan Pro de Kampus ya está activo hasta el ${fecha}. ¡Gracias por tu apoyo!`,
+      );
+    } catch {
+      /* la activación ya quedó hecha; el aviso es un extra */
+    }
+  }
 
   return NextResponse.json({ ok: true, expiresAt });
 }

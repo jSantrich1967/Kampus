@@ -9,10 +9,11 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PAYMENT_INFO, PAYMENT_METHOD_LABELS, PRO_PRICE_USD, type PaymentMethod } from "@/lib/billing/payment-info";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { BillingStatus } from "@/app/api/billing/me/route";
 
 export default function ProPage() {
-  const { profile } = useKampus();
+  const { profile, authUserId } = useKampus();
   const [status, setStatus] = useState<BillingStatus | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [bcvRate, setBcvRate] = useState<number | null>(null);
@@ -22,6 +23,8 @@ export default function ProPage() {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptNote, setReceiptNote] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,11 +58,29 @@ export default function ProPage() {
     if (sending || reference.trim().length < 4) return;
     setSending(true);
     setSendError(null);
+    setReceiptNote(null);
     try {
+      // Comprobante opcional: se sube primero y su ruta viaja en el reporte.
+      // Si la subida falla, el reporte sale igual (no bloquea la venta).
+      let receiptPath: string | undefined;
+      if (receiptFile && authUserId) {
+        try {
+          const supabase = createSupabaseBrowserClient();
+          const safeName = receiptFile.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-60);
+          const path = `${authUserId}/${Date.now()}-${safeName}`;
+          const { error: upErr } = await supabase.storage
+            .from("payment-receipts")
+            .upload(path, receiptFile, { upsert: false });
+          if (!upErr) receiptPath = path;
+          else setReceiptNote("Tu reporte se envió sin la captura (no se pudo subir). Guárdala por si te la pedimos.");
+        } catch {
+          setReceiptNote("Tu reporte se envió sin la captura (no se pudo subir). Guárdala por si te la pedimos.");
+        }
+      }
       const res = await fetch("/api/billing/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ method, reference: reference.trim(), months }),
+        body: JSON.stringify({ method, reference: reference.trim(), months, receiptPath }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) throw new Error(data.error || "No pudimos registrar tu pago.");
@@ -108,6 +129,22 @@ export default function ProPage() {
             </CardTitle>
             <CardDescription>
               Recibimos tu reporte ({PAYMENT_METHOD_LABELS[status.pending.method as PaymentMethod] ?? status.pending.method} · ref. {status.pending.reference}). Te activamos en menos de 24 horas.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ) : null}
+
+      {status?.lastRejectedAt && !sent ? (
+        <Card className="border-rose-400/25 bg-rose-500/[0.06]">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-rose-100">
+              <Clock className="h-4 w-4" aria-hidden />
+              Tu último pago no se pudo verificar
+            </CardTitle>
+            <CardDescription>
+              Revisa que la referencia sea la de tu banco y repórtalo de nuevo aquí abajo. Si ya
+              pagaste y el dinero salió de tu cuenta, escríbenos por el formulario de contacto con
+              tu captura.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -221,7 +258,22 @@ export default function ProPage() {
                   </div>
                 </div>
 
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-300" htmlFor="pro-receipt">
+                    Comprobante (opcional)
+                  </label>
+                  <input
+                    id="pro-receipt"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)}
+                    className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-xs file:text-white"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">La captura de tu Pago Móvil o Zelle acelera la activación.</p>
+                </div>
+
                 {sendError ? <p role="alert" className="text-sm text-rose-300">{sendError}</p> : null}
+                {receiptNote ? <p className="text-sm text-amber-200">{receiptNote}</p> : null}
 
                 <Button onClick={submitReport} disabled={sending || reference.trim().length < 4}>
                   {sending ? (

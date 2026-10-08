@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { planLimitMessage } from "@/lib/ai/ai-budget";
 import { consumeDemoIpToken, isDemoCookieRequest } from "@/lib/demo/demo-request";
+import { getServerUserPlan, PRO_ONLY_MESSAGE } from "@/lib/billing/server-plan";
 import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
 import { extractResponsesOutputText } from "@/lib/openai/extract-responses-output-text";
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
@@ -76,6 +77,10 @@ export async function POST(req: Request) {
 
   let quota: { used: number; limit: number };
   if (user) {
+    const plan = await getServerUserPlan(supabase, user.id);
+    if (plan !== "premium") {
+      return NextResponse.json({ error: PRO_ONLY_MESSAGE }, { status: 403 });
+    }
     const q = await consumeDailyUserQuota(
       "socratic_tutor",
       parseInt(process.env.API_DAILY_LIMIT_SOCRATIC_TUTOR ?? "25", 10),

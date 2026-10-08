@@ -64,7 +64,7 @@ export const navigationGroups: NavGroup[] = [
     items: [
       { href: "/tutor", key: "tutor", icon: Bot, roles: ["student", "learner"], premium: true },
       { href: "/duelos", key: "duelos", icon: Swords, roles: ["student", "learner"] },
-      { href: "/modo-examen", key: "cramMode", icon: AlarmClock, roles: ["student", "learner"] },
+      { href: "/modo-examen", key: "cramMode", icon: AlarmClock, roles: ["student", "learner"], premium: true },
       { href: "/study/library", key: "library", icon: Library, roles: ["student", "teacher", "learner"] },
       { href: "/study/convertir", key: "convertir", icon: FileUp, roles: ["student", "learner"] },
       { href: "/study/plan", key: "studyPlan", icon: CalendarCheck, roles: ["student", "learner"] },

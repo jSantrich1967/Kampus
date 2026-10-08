@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { consumeDemoIpToken, isDemoCookieRequest } from "@/lib/demo/demo-request";
+import { getServerUserPlan, PRO_ONLY_MESSAGE } from "@/lib/billing/server-plan";
 import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
 import { extractResponsesOutputText } from "@/lib/openai/extract-responses-output-text";
 import { parseJsonFromModelText } from "@/lib/openai/parse-json-response";
@@ -29,6 +30,10 @@ export async function POST(req: Request) {
   } = await supabase.auth.getUser();
 
   if (user) {
+    const plan = await getServerUserPlan(supabase, user.id);
+    if (plan !== "premium") {
+      return NextResponse.json({ error: PRO_ONLY_MESSAGE }, { status: 403 });
+    }
     const quota = await consumeDailyUserQuota(
       "cram_mode",
       parseInt(process.env.API_DAILY_LIMIT_CRAM_MODE ?? "10", 10),

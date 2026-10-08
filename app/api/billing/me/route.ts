@@ -10,6 +10,7 @@ export type BillingStatus = {
   active: boolean;
   expiresAt: string | null;
   pending: { id: string; method: string; reference: string; reportedAt: string } | null;
+  lastRejectedAt: string | null;
 };
 
 /** GET: estado Pro del usuario autenticado (fuente: pro_subscriptions). */
@@ -44,6 +45,15 @@ export async function GET() {
     | { id: string; method: string; reference: string; reported_at: string }
     | undefined;
 
+  const { data: rejecteds } = await supabase
+    .from("pro_subscriptions")
+    .select("reported_at")
+    .eq("user_id", user.id)
+    .eq("status", "rejected")
+    .order("reported_at", { ascending: false })
+    .limit(1);
+  const rejectedAt = ((rejecteds ?? [])[0] as { reported_at: string } | undefined)?.reported_at ?? null;
+
   const body: BillingStatus = {
     priceUsd: PRO_PRICE_USD,
     active: Boolean(activeRow),
@@ -56,6 +66,7 @@ export async function GET() {
           reportedAt: pendingRow.reported_at,
         }
       : null,
+    lastRejectedAt: !pendingRow && !activeRow ? rejectedAt : null,
   };
   return NextResponse.json(body);
 }

@@ -18,6 +18,7 @@ type PaymentItem = {
   status: string;
   reported_at: string;
   expires_at: string | null;
+  receipt_path: string | null;
   studentName: string;
   studentPhone: string;
 };
@@ -60,6 +61,21 @@ export default function AdminPagosPage() {
   useEffect(() => {
     void load();
   }, []);
+
+  async function openReceipt(id: string) {
+    try {
+      const res = await fetch("/api/admin/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action: "receipt" }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (!res.ok || !data.url) throw new Error(data.error || "No se pudo abrir el comprobante.");
+      window.open(data.url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo abrir el comprobante.");
+    }
+  }
 
   async function act(id: string, action: "activate" | "reject") {
     setActing(id);
@@ -144,6 +160,11 @@ export default function AdminPagosPage() {
                 <XCircle className="h-3.5 w-3.5" aria-hidden />
                 Rechazar
               </Button>
+              {p.receipt_path ? (
+                <Button size="sm" variant="ghost" onClick={() => void openReceipt(p.id)} className="gap-1.5">
+                  Ver comprobante
+                </Button>
+              ) : null}
             </div>
           </Card>
         ))}

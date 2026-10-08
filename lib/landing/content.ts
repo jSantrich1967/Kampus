@@ -50,7 +50,7 @@ export const PRICING_PLANS = [
     description: "Pagas por Pago Móvil o Zelle y te activamos el mismo día. Sin renovación automática.",
     features: [
       "Todo lo del plan Estudiante",
-      "Tutor IA, Modo examen y Modo aprobar con cuota amplia",
+      "Tutor IA, Modo examen y Modo aprobar (solo en Pro)",
       "Avisos por WhatsApp de exámenes, clases y duelos",
       "Sin tarjeta: pagas en bolívares a la tasa BCV o por Zelle",
     ],
@@ -84,7 +84,7 @@ export const FAQS = [
   {
     question: "¿Kampus es gratis?",
     answer:
-      "Sí, el plan Estudiante es gratis y no pide tarjeta. Si quieres más, el plan Pro cuesta 10,30 USD al mes y se paga por Pago Móvil o Zelle.",
+      "Sí, el plan Estudiante es gratis y no pide tarjeta. El plan Pro cuesta 10,30 USD al mes (Pago Móvil o Zelle) e incluye el Tutor IA, el Modo examen y el Modo aprobar.",
   },
   {
     question: "¿Cómo se calcula el precio en bolívares?",

@@ -10,6 +10,7 @@ const reportSchema = z.object({
   method: z.enum(["pago_movil", "zelle", "binance", "otro"]),
   reference: z.string().trim().min(4).max(80),
   months: z.coerce.number().int().min(1).max(12).default(1),
+  receiptPath: z.string().trim().max(300).optional(),
 });
 
 /** POST: el usuario reporta un pago Pro; queda 'pending' hasta que el admin lo active. */
@@ -34,7 +35,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Revisa el método y la referencia del pago." }, { status: 400 });
   }
 
-  const { method, reference, months } = parsed.data;
+  const { method, reference, months, receiptPath } = parsed.data;
+  // El comprobante solo puede vivir en la carpeta del propio usuario.
+  const safeReceiptPath =
+    receiptPath && receiptPath.startsWith(`${user.id}/`) ? receiptPath : null;
   const { data, error } = await supabase
     .from("pro_subscriptions")
     .insert({
@@ -44,6 +48,7 @@ export async function POST(req: Request) {
       method,
       reference,
       status: "pending",
+      receipt_path: safeReceiptPath,
     })
     .select("id, status, reported_at")
     .single();
