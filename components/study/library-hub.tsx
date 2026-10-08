@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Plus } from "lucide-react";
 
 import { LibraryClassFeedPanel } from "@/components/study/library-class-feed-panel";
 import { LibraryCloudSyncWidget } from "@/components/study/library-cloud-sync-widget";
@@ -101,7 +102,8 @@ export function LibraryHub() {
     <div className="-mx-4 -mt-2 min-h-[calc(100dvh-6rem)] px-4 py-6 md:-mx-8 md:px-8 md:py-8">
       <LibraryLuminaTopBar search={search} onSearchChange={setSearch} />
 
-      <div className="mb-10">
+      <div className="mb-10 flex flex-wrap items-start justify-between gap-4">
+        <div>
         <p className="mb-2 text-xs font-bold tracking-[0.2em] text-purple-400 uppercase">{isTeacher ? "Enseñanza" : t.groups.learn}</p>
         <h1 className="mb-4 text-4xl font-bold text-white">{navLabelForRole(profile.role, "library")}</h1>
         <p className="max-w-2xl text-gray-500">
@@ -109,6 +111,18 @@ export function LibraryHub() {
             ? "Tu material por materia: sube recursos, vincula clases del calendario y prepara contenido para tu alumnado."
             : "Tus apuntes por materia: sube, organiza y repasa con quizzes hechos de tu propio material."}
         </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setViewMode("notebooks");
+            setCreateOpen(true);
+          }}
+          className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/25 transition hover:bg-indigo-500"
+        >
+          <Plus className="h-4 w-4" aria-hidden />
+          Crear cuaderno
+        </button>
       </div>
 
       {viewMode === "notebooks" ? (
