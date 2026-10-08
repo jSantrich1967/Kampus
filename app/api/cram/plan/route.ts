@@ -116,7 +116,7 @@ Sin texto antes ni después del JSON.`;
           temperature: 0.7,
           max_output_tokens: 2500,
         }),
-      });
+      }, { skipBudgetGate: !user });
 
       if (!res.ok) {
         console.error("cram plan openai error", res.status);

@@ -17,7 +17,12 @@ export function runOpenAiRoute<T>(routeKey: string, fn: () => Promise<T>): Promi
 }
 
 /** Child span for upstream OpenAI HTTP calls (latency visible under the route span). */
-export function fetchOpenAi(routeKey: string, url: string, init: RequestInit): Promise<Response> {
+export function fetchOpenAi(
+  routeKey: string,
+  url: string,
+  init: RequestInit,
+  opts?: { skipBudgetGate?: boolean },
+): Promise<Response> {
   const startedAt = Date.now();
   const model = modelFromRequestBody(init.body);
   return Sentry.startSpan(
@@ -30,7 +35,9 @@ export function fetchOpenAi(routeKey: string, url: string, init: RequestInit): P
       },
     },
     async () => {
-      const blocked = await aiBudgetBlockResponse();
+      // La demo pública (sin cuenta) no tiene plan que cobrar: sus rutas
+      // ya validaron cookie demo + cupo por IP antes de llegar aquí.
+      const blocked = opts?.skipBudgetGate ? null : await aiBudgetBlockResponse();
       if (blocked) return blocked;
       // Ninguna llamada a la IA puede esperar para siempre: si OpenAI no
       // responde en 90 s, abortamos y la ruta devuelve un error visible en
