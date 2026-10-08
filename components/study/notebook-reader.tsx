@@ -75,6 +75,7 @@ export function NotebookReader({ subjectSlug }: Props) {
   const calendarUploadMode = Boolean(scheduleIdFromUrl && classDateFromUrl);
   const lib = libraryCopy.es;
   const [pages, setPages] = useState<NotebookDocumentRow[]>([]);
+  const [canonicalSubject, setCanonicalSubject] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pageIndex, setPageIndex] = useState(0);
@@ -118,10 +119,14 @@ export function NotebookReader({ subjectSlug }: Props) {
   const uploadSubject = useMemo(() => {
     const fromPages = (pages[0]?.subject ?? "").trim();
     if (fromPages) return fromPages;
+    // Sin hojas todavía, usar el nombre real del cuaderno («Biología») y no
+    // la forma derivada del enlace («biologia»): así las subidas no crean
+    // una segunda variante de la misma materia.
+    if (canonicalSubject) return canonicalSubject;
     const slug = (subjectSlug ?? "").trim();
     if (!slug) return "General";
     return slug.replace(/_/g, " ");
-  }, [pages, subjectSlug]);
+  }, [pages, subjectSlug, canonicalSubject]);
 
   const { background, spine } = useMemo(() => notebookCoverGradient(subjectLabel), [subjectLabel]);
   const cover = useMemo(() => getNotebookSubjectCover(subjectLabel), [subjectLabel]);
@@ -153,6 +158,18 @@ export function NotebookReader({ subjectSlug }: Props) {
       if (qErr) throw qErr;
       const all = (data as NotebookDocumentRow[]) ?? [];
       const slug = (subjectSlug ?? "").trim();
+      try {
+        const { data: nbRows } = await supabase
+          .from("user_notebooks")
+          .select("subject")
+          .eq("user_id", authUserId);
+        const match = ((nbRows as { subject: string }[]) ?? []).find(
+          (r) => subjectToPathSegment((r.subject || "").trim() || "General") === slug,
+        );
+        setCanonicalSubject(match?.subject?.trim() || null);
+      } catch {
+        /* el nombre canónico es opcional */
+      }
       const filtered = slug ? all.filter((d) => subjectToPathSegment(d.subject) === slug) : [];
       setPages(filtered);
       const targetIdx = docIdFromUrl ? filtered.findIndex((d) => d.id === docIdFromUrl) : -1;

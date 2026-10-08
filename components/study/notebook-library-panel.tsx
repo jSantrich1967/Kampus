@@ -25,6 +25,7 @@ import {
   EmptyStateSecondaryCta,
 } from "@/components/ui/empty-state";
 
+import { subjectToPathSegment } from "@/lib/notebooks/paths";
 import { formatNotebookCloudError } from "@/lib/notebooks/storage-errors";
 import type { NotebookDocumentRow, UserNotebookRow } from "@/lib/notebooks/types";
 import { libraryCopy } from "@/lib/i18n/library";
@@ -99,6 +100,7 @@ export function NotebookLibraryPanel({
   const [newNotebookSubject, setNewNotebookSubject] = useState("");
   const [deletingNotebook, setDeletingNotebook] = useState<string | null>(null);
   const [openMenuForSubject, setOpenMenuForSubject] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ subject: string; files: number } | null>(null);
   const [demoBannerDismissed, setDemoBannerDismissed] = useState(false);
 
   useEffect(() => {
@@ -132,21 +134,45 @@ export function NotebookLibraryPanel({
       pagesBySubject.get(key)!.push(d);
     }
 
-    let list: string[];
     if (isDemoList) {
-      list = [...new Set(profile.subjects.filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
+      let list = [...new Set(profile.subjects.filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
       if (list.length === 0) list = ["General"];
-    } else {
-      list = notebooks
-        .map((n) => (n.subject || "General").trim() || "General")
-        .filter(Boolean)
-        .sort((a, b) => a.localeCompare(b, "es"));
+      return list.map((subjectKey) => ({
+        subject: subjectKey,
+        pages: pagesBySubject.get(subjectKey) ?? [],
+      }));
     }
 
-    return list.map((subjectKey) => ({
-      subject: subjectKey,
-      pages: pagesBySubject.get(subjectKey) ?? [],
-    }));
+    // Agrupar por slug (la misma normalización que usa el lector): una
+    // materia puede guardarse con variantes («Biología» al crear el
+    // cuaderno y «biologia» al subir desde el lector). Sin agrupar salían
+    // dos tarjetas del mismo cuaderno, una vacía y otra con los archivos.
+    const groups = new Map<
+      string,
+      { rowVariants: string[]; docVariants: string[]; pages: NotebookDocumentRow[] }
+    >();
+    const groupFor = (slug: string) => {
+      if (!groups.has(slug)) groups.set(slug, { rowVariants: [], docVariants: [], pages: [] });
+      return groups.get(slug)!;
+    };
+    notebooks.forEach((n) => {
+      const raw = (n.subject || "General").trim() || "General";
+      const g = groupFor(subjectToPathSegment(raw));
+      if (!g.rowVariants.includes(raw)) g.rowVariants.push(raw);
+    });
+    docs.forEach((d) => {
+      const raw = (d.subject || "General").trim() || "General";
+      const g = groupFor(subjectToPathSegment(raw));
+      if (!g.docVariants.includes(raw)) g.docVariants.push(raw);
+      g.pages.push(d);
+    });
+    const pickDisplay = (variants: string[]): string =>
+      // La variante «bonita» («Biología») manda sobre la derivada del slug («biologia»).
+      variants.find((v) => /[A-ZÀ-Þ]/.test(v)) ?? variants[0] ?? "General";
+
+    return [...groups.values()]
+      .map((g) => ({ subject: pickDisplay([...g.rowVariants, ...g.docVariants]), pages: g.pages }))
+      .sort((a, b) => a.subject.localeCompare(b.subject, "es"));
   }, [docs, notebooks, isDemoList, profile.subjects]);
 
   const filteredNotebooks = useMemo(() => {
@@ -262,13 +288,21 @@ export function NotebookLibraryPanel({
 
   async function deleteNotebook(subjectName: string) {
     if (!authUserId) return;
-    const s = subjectName.trim() || "General";
-    const ok = window.confirm(
-      `¿Eliminar el cuaderno “${s}”?\n\nEsto borrará también todos los archivos subidos a ese cuaderno.`,
-    );
-    if (!ok) return;
+    // Borrar TODAS las variantes de la misma materia (mismo slug): si solo
+    // se borra el nombre visible, los archivos guardados con la otra
+    // variante («biologia») quedan huérfanos y el cuaderno reaparece.
+    const slug = subjectToPathSegment(subjectName.trim() || "General");
+    const variants = new Set<string>();
+    const collect = (rawValue: string) => {
+      const v = (rawValue || "General").trim() || "General";
+      if (subjectToPathSegment(v) === slug) variants.add(v);
+    };
+    notebooks.forEach((n) => collect(n.subject));
+    docs.forEach((d) => collect(d.subject));
+    if (subjectName.trim()) variants.add(subjectName.trim());
+    const list = [...variants];
 
-    setDeletingNotebook(s);
+    setDeletingNotebook(subjectName);
     setError(null);
     try {
       const supabase = createSupabaseBrowserClient();
@@ -276,7 +310,7 @@ export function NotebookLibraryPanel({
         .from("notebook_documents")
         .select("id,storage_path")
         .eq("user_id", authUserId)
-        .eq("subject", s)
+        .in("subject", list)
         .order("created_at", { ascending: false })
         .limit(1000);
       if (qErr) throw qErr;
@@ -295,15 +329,18 @@ export function NotebookLibraryPanel({
           .from("notebook_documents")
           .delete()
           .eq("user_id", authUserId)
-          .eq("subject", s);
+          .in("subject", list);
         if (delDocsErr) throw delDocsErr;
       }
 
-      const { error: delNbErr } = await supabase.from("user_notebooks").delete().eq("user_id", authUserId).eq("subject", s);
+      const { error: delNbErr } = await supabase.from("user_notebooks").delete().eq("user_id", authUserId).in("subject", list);
       if (delNbErr) throw delNbErr;
 
-      setDocs((prev) => prev.filter((d) => d.subject !== s));
-      setNotebooks((prev) => prev.filter((n) => n.subject !== s));
+      const sameSlug = (rawValue: string) =>
+        subjectToPathSegment((rawValue || "General").trim() || "General") === slug;
+      setDocs((prev) => prev.filter((d) => !sameSlug(d.subject)));
+      setNotebooks((prev) => prev.filter((n) => !sameSlug(n.subject)));
+      setConfirmDelete(null);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "No se pudo eliminar el cuaderno.";
       setError(formatNotebookCloudError(msg));
@@ -438,7 +475,10 @@ export function NotebookLibraryPanel({
                           role="menuitem"
                           className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-rose-200 hover:bg-rose-500/10 disabled:opacity-60"
                           disabled={Boolean(deletingNotebook)}
-                          onClick={() => void deleteNotebook(nb.subject)}
+                          onClick={() => {
+                            setOpenMenuForSubject(null);
+                            setConfirmDelete({ subject: nb.subject, files: nb.pages.length });
+                          }}
                         >
                           <Trash2 className="h-4 w-4" />
                           Eliminar cuaderno
@@ -541,6 +581,46 @@ export function NotebookLibraryPanel({
             </>
           }
         />
+      ) : null}
+
+      {confirmDelete ? (
+        <div className="fixed inset-0 z-[110] flex items-end justify-center p-4 sm:items-center" role="presentation">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            aria-label="Cancelar"
+            onClick={() => {
+              if (!deletingNotebook) setConfirmDelete(null);
+            }}
+          />
+          <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-[#1b1b20] p-6 shadow-2xl" role="alertdialog" aria-modal="true">
+            <h3 className="mb-2 text-xl font-bold text-white">¿Eliminar el cuaderno “{confirmDelete.subject}”?</h3>
+            <p className="mb-6 text-sm text-gray-400">
+              {confirmDelete.files > 0
+                ? `Esto borrará también los ${confirmDelete.files} archivos subidos a ese cuaderno. No se puede deshacer.`
+                : "Este cuaderno no tiene archivos. No se puede deshacer."}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                className="flex-1"
+                disabled={Boolean(deletingNotebook)}
+                onClick={() => setConfirmDelete(null)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                className="flex-1 bg-rose-600 hover:bg-rose-500"
+                disabled={Boolean(deletingNotebook)}
+                onClick={() => void deleteNotebook(confirmDelete.subject)}
+              >
+                {deletingNotebook ? "Eliminando…" : "Eliminar"}
+              </Button>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {createOpen ? (
