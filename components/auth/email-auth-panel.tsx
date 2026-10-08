@@ -13,6 +13,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getSafeInternalRedirect } from "@/lib/supabase/safe-redirect";
 import { clearDemoModeClient } from "@/lib/storage/virtual-class-demo-storage";
+import { clearDemoBrowser } from "@/lib/demo/demo-session";
 
 const inputClassName =
   "w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition-all focus:ring-2 focus:ring-purple-500/80";
@@ -96,6 +97,7 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
           return;
         }
         clearDemoModeClient();
+        clearDemoBrowser();
         router.replace(nextPath);
         router.refresh();
         return;
@@ -118,6 +120,7 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
         setMessage(t.registerSuccess);
         setPendingEmailVerification(false);
         clearDemoModeClient();
+        clearDemoBrowser();
         router.replace(nextPath);
         router.refresh();
         return;

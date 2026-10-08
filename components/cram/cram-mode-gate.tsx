@@ -13,7 +13,7 @@ import { isDemoBrowser } from "@/lib/demo/demo-session";
  * La demo pública puede probarlo (la API aplica su cupo por IP).
  */
 export function CramModeGate() {
-  const { profile, hydrated } = useKampus();
+  const { profile, hydrated, authUserId } = useKampus();
   const [demo, setDemo] = useState(false);
 
   useEffect(() => {
@@ -24,7 +24,7 @@ export function CramModeGate() {
     return <div className="text-sm text-slate-400">Cargando…</div>;
   }
 
-  if (profile.plan !== "premium" && !demo) {
+  if (profile.plan !== "premium" && !(demo && !authUserId)) {
     return (
       <ProRequiredCard
         eyebrow="Modo examen"

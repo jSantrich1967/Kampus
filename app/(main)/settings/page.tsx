@@ -70,6 +70,25 @@ export default function SettingsPage() {
 
   // Los controles de prueba (rol demo, modo prueba premium) son internos:
   // solo los ve un administrador de la app, nunca un usuario normal.
+  const [accountEmail, setAccountEmail] = useState<string | null>(null);
+  useEffect(() => {
+    if (!authUserId) {
+      setAccountEmail(null);
+      return;
+    }
+    let cancelled = false;
+    const supabase = createSupabaseBrowserClient();
+    supabase.auth
+      .getUser()
+      .then(({ data }) => {
+        if (!cancelled) setAccountEmail(data.user?.email ?? null);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId]);
+
   const [isAdmin, setIsAdmin] = useState(false);
   useEffect(() => {
     let cancelled = false;
@@ -259,7 +278,10 @@ export default function SettingsPage() {
             <p className="text-sm text-amber-200/90">{tAuth.supabaseMissing}</p>
           ) : authUserId ? (
             <>
-              <p className="text-sm text-slate-300">{tAuth.sessionActive}</p>
+              <p className="text-sm text-slate-300">
+                {tAuth.sessionActive}
+                {accountEmail ? <span className="text-slate-400"> · {accountEmail}</span> : null}
+              </p>
               <Button
                 type="button"
                 variant="secondary"
@@ -378,11 +400,11 @@ export default function SettingsPage() {
             </p>
           ) : null}
           <p className="text-xs leading-relaxed text-slate-500">
-            Al activar aceptas recibir mensajes de WhatsApp de Kampus solo con avisos de tu
-            propia actividad: máximo un mensaje al día (8:00 a. m.) que junta tus exámenes,
-            exposiciones, entregas, clases y duelos de hoy y mañana. Sin publicidad. Puedes
-            darte de baja cuando quieras apagando el interruptor o borrando tu número: la
-            baja es inmediata y no recibes más mensajes.
+            Si registras tu número y activas el interruptor, aceptas recibir mensajes de
+            WhatsApp de Kampus solo con avisos de tu propia actividad: máximo un mensaje al
+            día (8:00 a. m.) que junta tus exámenes, exposiciones, entregas, clases y duelos
+            de hoy y mañana. Sin publicidad. Puedes darte de baja cuando quieras apagando el
+            interruptor o borrando tu número aquí mismo: la baja es inmediata.
           </p>
           {phoneValue ? (
             <div>
@@ -553,6 +575,9 @@ export default function SettingsPage() {
           <Button type="button" size="sm" onClick={() => router.push("/pro")}>
             {profile.plan === "premium" ? "Extender mi Pro" : "Pasarme a Pro"}
           </Button>
+          {profile.plan !== "premium" ? (
+            <span className="text-xs text-slate-400">Pro incluye: Tutor IA, Modo examen y Modo aprobar.</span>
+          ) : null}
         </div>
       </Card>
 

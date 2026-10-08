@@ -60,7 +60,6 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   deleteStudentWorkRemote,
-  ensureDemoExamsRemote,
   fetchPresentationDeckSummariesRemote,
   fetchClassScheduleRemote,
   fetchStudentWorksRemote,
@@ -507,9 +506,6 @@ export function AcademicCalendarHub() {
     try {
       if (useCloud) {
         const supabase = createSupabaseBrowserClient();
-        if (isDemoBrowser()) {
-          await ensureDemoExamsRemote(supabase, authUserId!, profile.subjects[0]);
-        }
         const [examList, workList, classList, deckSummaries] = await Promise.all([
           fetchUserExams(supabase, authUserId!),
           fetchStudentWorksRemote(supabase, authUserId!),

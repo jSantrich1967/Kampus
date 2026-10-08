@@ -12,7 +12,7 @@ import { useState } from "react";
 
 function PassModePageContent() {
   const router = useRouter();
-  const { profile, hydrated } = useKampus();
+  const { profile, hydrated, authUserId } = useKampus();
 
   useEffect(() => {
     if (!hydrated) return;
@@ -43,7 +43,7 @@ function PassModePageContent() {
   }
 
   // Modo aprobar es del plan Pro: explicación y activación, sin rebote.
-  if (profile.plan !== "premium" && !demo) {
+  if (profile.plan !== "premium" && !(demo && !authUserId)) {
     return (
       <ProRequiredCard
         eyebrow="Modo aprobar"

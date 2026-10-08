@@ -10,7 +10,7 @@ import { isDemoBrowser } from "@/lib/demo/demo-session";
 
 function TutorPageContent() {
   const router = useRouter();
-  const { profile, hydrated } = useKampus();
+  const { profile, hydrated, authUserId } = useKampus();
   const [demo, setDemo] = useState(false);
 
   useEffect(() => {
@@ -37,7 +37,7 @@ function TutorPageContent() {
   // El Tutor IA es del plan Pro. En vez de rebotar en silencio a Hoy, lo
   // decimos aquí mismo y ofrecemos activarlo. La demo pública sí puede
   // probarlo (la API aplica su cupo corto por IP).
-  if (profile.plan !== "premium" && !demo) {
+  if (profile.plan !== "premium" && !(demo && !authUserId)) {
     return (
       <ProRequiredCard
         eyebrow="Tutor IA"
