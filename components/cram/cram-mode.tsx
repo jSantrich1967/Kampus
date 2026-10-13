@@ -168,6 +168,20 @@ export function CramMode() {
   async function buildPlan() {
     setPlanLoading(true);
     setPlanError(null);
+    // Persistir el diagnóstico para que el plan y el Tutor lo reutilicen sin
+    // repetirlo (fire-and-forget: si falla, el plan se arma igual con los
+    // datos en memoria).
+    if (loggedIn) {
+      try {
+        void fetch("/api/cram/diagnose/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ subject: subject.trim(), topics: topicScores }),
+        });
+      } catch {
+        /* el guardado es un extra, no bloquea el plan */
+      }
+    }
     try {
       const res = await fetch("/api/cram/plan", {
         method: "POST",
@@ -448,7 +462,7 @@ export function CramMode() {
               })}
 
               <div className="flex flex-wrap gap-2">
-                <Link href="/tutor" className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20">
+                <Link href={`/tutor?subject=${encodeURIComponent(subject.trim())}`} className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20">
                   <Sparkles className="h-4 w-4" aria-hidden /> Reforzar con el Tutor IA
                 </Link>
                 <Link href="/duelos/practica?autostart=1" className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20">

@@ -6,6 +6,7 @@ import {
   type UsageTotals,
 } from "@/lib/ai/ai-budget";
 import { licenseCoversMember, type LicenseStatus } from "@/lib/ai/organization-license";
+import { getServerUserPlan } from "@/lib/billing/server-plan";
 import { readStoredContext, type ActiveContext, type ContextMembership } from "@/lib/context/active-context";
 import { resolveUserEntitlements, type PlanSnapshot } from "@/lib/context/entitlements";
 import { listMyOrganizations } from "@/lib/supabase/organizations-db";
@@ -91,14 +92,13 @@ async function loadPersonalPlan(
   admin: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
   userId: string,
 ): Promise<{ ok: true; value: PlanSnapshot } | { ok: false }> {
-  const { data: assignment, error: assignmentError } = await admin
-    .from("user_plans")
-    .select("plan_id")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (assignmentError) return { ok: false };
-
-  const planId = typeof assignment?.plan_id === "string" ? assignment.plan_id : "free";
+  // FUENTE DE VERDAD ÚNICA: profiles.body.plan vía getServerUserPlan.
+  // La activación de Pro (POST /api/admin/payments) y el cron de
+  // vencimiento escriben ahí; la tabla legacy `user_plans` ya no se lee
+  // porque nunca se actualizaba y dejaba a los Pro pagados con los
+  // límites del plan "free" en el presupuesto de IA.
+  const serverPlan = await getServerUserPlan(admin, userId);
+  const planId = serverPlan === "premium" ? "pro" : "free";
   const limits = await loadPlanLimits(admin, planId);
   if (!limits.ok || !limits.value) return { ok: false };
   return { ok: true, value: { planId, limits: limits.value } };

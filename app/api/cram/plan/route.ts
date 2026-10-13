@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { consumeDemoIpToken, isDemoCookieRequest } from "@/lib/demo/demo-request";
 import { getServerUserPlan, PRO_ONLY_MESSAGE } from "@/lib/billing/server-plan";
+import { getLatestDiagnosis } from "@/lib/cram/diagnoses";
 import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
 import { extractResponsesOutputText } from "@/lib/openai/extract-responses-output-text";
 import { parseJsonFromModelText } from "@/lib/openai/parse-json-response";
@@ -82,6 +83,19 @@ export async function POST(req: Request) {
         body = planRequestSchema.parse(await req.json().catch(() => ({})));
       } catch {
         return NextResponse.json({ error: "Faltan datos del diagnóstico para armar el plan." }, { status: 400 });
+      }
+
+      // Pre-llenar: si el cliente no trae el diagnóstico (p. ej. recargó la
+      // página), usar el último guardado en la materia.
+      if (body.diagnostic.length === 0 && user) {
+        const latest = await getLatestDiagnosis(supabase, user.id, body.subject);
+        if (latest) body = { ...body, diagnostic: latest.topics };
+      }
+      if (body.diagnostic.length === 0) {
+        return NextResponse.json(
+          { error: "Completa primero el diagnóstico para armar el plan." },
+          { status: 400 },
+        );
       }
 
       const totalMinutes = Math.round(body.daysLeft * body.hoursPerDay * 60);

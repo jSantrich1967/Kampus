@@ -2,6 +2,7 @@
 
 import { Bot, Loader2, Plus, Send, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { aiErrorMessage } from "@/lib/with-timeout";
@@ -13,11 +14,61 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { tutorCopy } from "@/lib/i18n/tutor";
+import { combineNotebookExtractedTextForPack } from "@/lib/notebooks/document-tags";
+import { subjectToPathSegment } from "@/lib/notebooks/paths";
+import type { NotebookDocumentRow } from "@/lib/notebooks/types";
+import { isUsefulExtractedText } from "@/lib/rescue/extract-text-quality";
 import { preferredProfileSubject } from "@/lib/study/preferred-subject";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type ChatTurn = { role: "user" | "assistant"; content: string };
+type DiagnosisTopic = { topic: string; correct: number; total: number };
 
 const STORAGE_KEY = "kampus_socratic_tutor_v1";
+/** Texto de cuaderno que viaja al Tutor (el servidor recorta a 4000). */
+const NOTEBOOK_CONTEXT_CHARS = 4000;
+
+/** Texto extraído cacheado del cuaderno indicado por ?notebook=<slug>.
+ * Solo usa lo ya extraído (sin disparar OCR ni gastar cuota). */
+async function loadNotebookContext(authUserId: string, slug: string): Promise<string | null> {
+  try {
+    const supabase = createSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from("notebook_documents")
+      .select("filename, subject, topic, lesson_point, extracted_text")
+      .eq("user_id", authUserId);
+    if (error) return null;
+    const docs = ((data as NotebookDocumentRow[]) ?? []).filter(
+      (d) =>
+        subjectToPathSegment((d.subject ?? "").trim() || "General") === slug &&
+        isUsefulExtractedText(d.extracted_text ?? ""),
+    );
+    if (docs.length === 0) return null;
+    const combined = combineNotebookExtractedTextForPack(docs).trim();
+    if (!combined) return null;
+    return combined.length > NOTEBOOK_CONTEXT_CHARS
+      ? `${combined.slice(0, NOTEBOOK_CONTEXT_CHARS)}\n\n…`
+      : combined;
+  } catch {
+    return null;
+  }
+}
+
+/** Último diagnóstico guardado para la materia (el servidor también lo
+ * busca solo si el cliente no lo envía). */
+async function loadLatestDiagnosis(subject: string): Promise<DiagnosisTopic[] | null> {
+  try {
+    const res = await fetch(`/api/cram/diagnoses/latest?subject=${encodeURIComponent(subject)}`);
+    if (!res.ok) return null;
+    const data = (await res.json().catch(() => null)) as {
+      diagnosis?: { topics?: DiagnosisTopic[] };
+    };
+    const topics = data?.diagnosis?.topics;
+    return Array.isArray(topics) && topics.length > 0 ? topics : null;
+  } catch {
+    return null;
+  }
+}
 
 function loadStored(): { subject: string; messages: ChatTurn[] } | null {
   try {
@@ -41,7 +92,8 @@ function loadStored(): { subject: string; messages: ChatTurn[] } | null {
 }
 
 export function SocraticTutorPanel() {
-  const { profile } = useKampus();
+  const { profile, authUserId } = useKampus();
+  const searchParams = useSearchParams();
   const t = tutorCopy.es;
   const [subject, setSubject] = useState("");
   const [messages, setMessages] = useState<ChatTurn[]>([]);
@@ -52,16 +104,33 @@ export function SocraticTutorPanel() {
   const [tasteMode, setTasteMode] = useState(false);
   const [tasteOver, setTasteOver] = useState(false);
   const [hydratedLocal, setHydratedLocal] = useState(false);
+  const [notebookActive, setNotebookActive] = useState(false);
   const manualSubjectRef = useRef(false);
   const listRef = useRef<HTMLDivElement>(null);
+  // Cache por materia del diagnóstico guardado (para no pedirlo en cada mensaje).
+  const diagnosisCache = useRef<Record<string, DiagnosisTopic[] | null>>({});
+  // Texto del cuaderno cuando el Tutor se abre con ?notebook=<slug>.
+  const notebookContextRef = useRef<string | null>(null);
 
   useEffect(() => {
     const stored = loadStored();
+    const paramSubject = (searchParams.get("subject") ?? "").trim();
+    const notebookSlug = (searchParams.get("notebook") ?? "").trim();
     if (stored) {
       setSubject(stored.subject);
       setMessages(stored.messages);
+    } else if (paramSubject) {
+      // El Tutor se abrió desde un cuaderno u otro módulo con materia.
+      setSubject(paramSubject.slice(0, 120));
+      manualSubjectRef.current = true;
     } else if (profile.subjects?.[0]) {
       setSubject(profile.subjects[0]);
+    }
+    if (notebookSlug && authUserId) {
+      void loadNotebookContext(authUserId, notebookSlug).then((ctx) => {
+        notebookContextRef.current = ctx;
+        setNotebookActive(Boolean(ctx));
+      });
     }
     setHydratedLocal(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -105,6 +174,16 @@ export function SocraticTutorPanel() {
       setDraft("");
 
       try {
+        // Contexto real para el Tutor: último diagnóstico guardado de la
+        // materia (cacheado) + texto del cuaderno si se abrió con ?notebook=.
+        const subjectKey = subject.trim().toLowerCase();
+        let diagnostic: DiagnosisTopic[] | null = null;
+        if (subjectKey) {
+          if (!(subjectKey in diagnosisCache.current)) {
+            diagnosisCache.current[subjectKey] = await loadLatestDiagnosis(subject.trim());
+          }
+          diagnostic = diagnosisCache.current[subjectKey];
+        }
         const res = await fetch("/api/tutor/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -112,6 +191,8 @@ export function SocraticTutorPanel() {
             messages: nextHistory,
             subject: subject.trim(),
             level: "university",
+            ...(diagnostic ? { diagnostic } : {}),
+            ...(notebookContextRef.current ? { notebookContext: notebookContextRef.current } : {}),
           }),
           // La IA puede tardar, pero nunca debe colgar la interfaz:
           // a los 90 s soltamos con error visible.
@@ -165,6 +246,7 @@ export function SocraticTutorPanel() {
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone="accent">{t.socraticBadge}</Badge>
+            {notebookActive ? <Badge tone="accent">Con material del cuaderno</Badge> : null}
             {quota ? (
               <Badge tone="neutral">
                 {tasteMode ? `Probada de hoy: ${quota.used}/${quota.limit}` : `${quota.used}/${quota.limit}`}

@@ -553,6 +553,8 @@ export function ClassRescueWorkspace() {
           link,
           uploadedFileCount: librarySelection ? 1 : fromNotebookBundle ? bundleSelectedCount : list.length,
           seedText: f.seed && !extractedForApi && !notesForApi && !link ? f.seed : "",
+          // Sugerencia: el servidor decide el modo final según el plan real
+          // (una cuenta gratis siempre recibe "lite", aunque esto diga "full").
           packMode: premium ? ("full" as const) : ("lite" as const),
         },
         { seedText: finalSeedText, subjectHint, sourceLabel, sourceKind: kind },

@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { planLimitMessage } from "@/lib/ai/ai-budget";
+import { getServerUserPlan } from "@/lib/billing/server-plan";
 import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
 import { rescuePackSchema } from "@/lib/schemas/rescue-pack";
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
 import { rescuePackRateLimits } from "@/lib/rate-limit/openai-defaults";
 import { consumeDailyUserQuota } from "@/lib/rate-limit/user-quota";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 /** Vercel Pro: up to 60s. Required for OpenAI kit generation in production. */
@@ -241,7 +243,16 @@ export async function POST(req: Request) {
     const extractUseful = !looksLikeNoUsefulExtract(extracted);
     const hasNotes = notes.length > 0;
     const hasLink = link.length > 0;
-    const packMode = body.packMode === "lite" ? "lite" : "full";
+    // El corte full/lite lo decide el SERVIDOR según el plan real
+    // (profiles.body.plan). El cliente solo sugiere: una cuenta gratis
+    // siempre recibe "lite", aunque manipule el packMode del request.
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user: planUser },
+    } = await supabase.auth.getUser();
+    const serverPlan = planUser ? await getServerUserPlan(supabase, planUser.id) : "free";
+    const packMode =
+      serverPlan === "premium" ? (body.packMode === "lite" ? "lite" : "full") : "lite";
 
     let groundingMode = "";
     if (hasUploadedFiles && extractUseful) {
@@ -435,7 +446,7 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json({ pack });
+    return NextResponse.json({ pack, packMode });
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

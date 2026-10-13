@@ -913,6 +913,12 @@ export function NotebookReader({ subjectSlug }: Props) {
                     >
                       Estudiar con IA (solo esta materia)
                     </Link>
+                    <Link
+                      href={`/tutor?notebook=${encodeURIComponent(subjectSlug)}&subject=${encodeURIComponent(subjectLabel)}`}
+                      className="inline-flex items-center justify-center rounded-xl border border-indigo-400/25 bg-indigo-500/15 px-3 py-2 text-xs font-semibold text-indigo-100 hover:bg-indigo-500/25"
+                    >
+                      Preguntar al Tutor con este cuaderno
+                    </Link>
                   </div>
                 </div>
               </div>

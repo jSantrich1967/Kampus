@@ -23,7 +23,9 @@ export const planRequestSchema = z.object({
   daysLeft: z.number().int().min(1).max(14),
   hoursPerDay: z.number().min(0.5).max(12),
   topics: z.string().trim().max(600).default(""),
-  diagnostic: z.array(topicScoreSchema).min(1).max(20),
+  // Puede venir vacío: el servidor intenta pre-llenarlo con el último
+  // diagnóstico guardado de la materia (tabla cram_diagnoses).
+  diagnostic: z.array(topicScoreSchema).min(0).max(20),
 });
 
 export const planBlockSchema = z.object({

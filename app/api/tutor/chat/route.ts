@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { planLimitMessage } from "@/lib/ai/ai-budget";
+import { getLatestDiagnosis } from "@/lib/cram/diagnoses";
 import { consumeDemoIpToken, isDemoCookieRequest } from "@/lib/demo/demo-request";
 import { getServerUserPlan } from "@/lib/billing/server-plan";
 import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
@@ -9,6 +10,7 @@ import { extractResponsesOutputText } from "@/lib/openai/extract-responses-outpu
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
 import { socraticTutorRateLimits } from "@/lib/rate-limit/openai-defaults";
 import { consumeDailyUserQuota } from "@/lib/rate-limit/user-quota";
+import { topicScoreSchema } from "@/lib/schemas/cram";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -22,6 +24,11 @@ const requestSchema = z.object({
   messages: z.array(messageSchema).min(1).max(24),
   subject: z.string().max(120).default(""),
   level: z.enum(["school", "university"]).default("university"),
+  /** Opcional: el cliente puede enviar el último diagnóstico guardado; si no,
+   * el servidor lo busca en cram_diagnoses para la materia indicada. */
+  diagnostic: z.array(topicScoreSchema).max(20).optional(),
+  /** Opcional: texto extraído del cuaderno (máx 6000 chars; el servidor lo recorta). */
+  notebookContext: z.string().max(6000).optional(),
 });
 
 function clip(text: string, max: number): string {
@@ -30,7 +37,38 @@ function clip(text: string, max: number): string {
   return `${t.slice(0, max)}\n\n…`;
 }
 
-function buildSystemPrompt(subject: string, level: string): string {
+function buildStudyContext(
+  subject: string,
+  diagnostic: Array<{ topic: string; correct: number; total: number }> | null,
+  notebookContext: string,
+): string {
+  const parts: string[] = [];
+  if (diagnostic && diagnostic.length > 0) {
+    const lines = diagnostic.map((d) => {
+      const weak = d.correct < d.total ? " — TEMA DÉBIL" : "";
+      return `- ${d.topic}: ${d.correct}/${d.total} correctas${weak}`;
+    });
+    parts.push(
+      [
+        `CONTEXTO DEL ÚLTIMO DIAGNÓSTICO${subject ? ` (${subject})` : ""}:`,
+        ...lines,
+        "Úsalo para enfocar tus preguntas socráticas primero en los temas débiles y solo repasar ligero lo dominado.",
+      ].join("\n"),
+    );
+  }
+  if (notebookContext) {
+    parts.push(
+      [
+        "MATERIAL DEL CUADERNO DEL ESTUDIANTE (extracto de sus apuntes):",
+        clip(notebookContext, 4000),
+        "Cuando sea relevante, basa tus ejemplos, analogías y preguntas en este material.",
+      ].join("\n"),
+    );
+  }
+  return parts.join("\n\n");
+}
+
+function buildSystemPrompt(subject: string, level: string, studyContext: string): string {
   const subjectLine = subject
     ? `MATERIA ACTUAL: ${subject}.`
     : "MATERIA ACTUAL: no indicada — pregúntala si hace falta para contextualizar.";
@@ -54,8 +92,8 @@ MÉTODO SOCRÁTICO (obligatorio):
 - No sustituyes apoyo emocional profesional: si detectas angustia fuerte, sugiere pausar y hablar con alguien de confianza.
 
 ${subjectLine}
-${levelLine}`,
-    8000,
+${levelLine}${studyContext ? `\n\n${studyContext}` : ""}`,
+    14000,
   );
 }
 
@@ -138,7 +176,18 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "El último mensaje debe ser del usuario." }, { status: 400 });
       }
 
-      const systemText = buildSystemPrompt(body.subject.trim(), body.level);
+      // Contexto real: diagnóstico guardado (el del request, o el último de
+      // la materia en BD) + texto del cuaderno si el cliente lo envía.
+      let diagnostic = body.diagnostic ?? null;
+      if (!diagnostic && user && body.subject.trim()) {
+        diagnostic = (await getLatestDiagnosis(supabase, user.id, body.subject.trim()))?.topics ?? null;
+      }
+      const studyContext = buildStudyContext(
+        body.subject.trim(),
+        diagnostic,
+        (body.notebookContext ?? "").trim(),
+      );
+      const systemText = buildSystemPrompt(body.subject.trim(), body.level, studyContext);
 
       const openaiUrl = "https://api.openai.com/v1/responses";
       const openaiPayload = {
