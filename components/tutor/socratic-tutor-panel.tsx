@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
+import { TopicVisualizer } from "@/components/study/topic-visualizer";
 import { tutorCopy } from "@/lib/i18n/tutor";
 import { combineNotebookExtractedTextForPack } from "@/lib/notebooks/document-tags";
 import { subjectToPathSegment } from "@/lib/notebooks/paths";
@@ -256,6 +257,7 @@ export function SocraticTutorPanel() {
               <Plus className="h-3.5 w-3.5" aria-hidden />
               {t.newChatLabel}
             </Button>
+            <TopicVisualizer subject={subject} label="Simular este tema" />
           </div>
         }
       />

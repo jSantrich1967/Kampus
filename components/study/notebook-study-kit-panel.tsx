@@ -8,6 +8,7 @@ import { buildPassModeSubjectHref } from "@/lib/today/block-action-href";
 import { ShareLinkButton } from "@/components/growth/share-link-button";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { NotebookPagePicker } from "@/components/study/notebook-page-picker";
+import { TopicVisualizer } from "@/components/study/topic-visualizer";
 import { RescuePackDisplay } from "@/components/rescue/rescue-pack-display";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -319,6 +320,12 @@ export function NotebookStudyKitPanel({
               <Link href={buildPassModeSubjectHref(subjectLabel.trim() || "General", "kit")} className={buttonClasses({ variant: "secondary", size: "sm" })}>
                   Llevar esto a Modo aprobar
                 </Link>
+              <TopicVisualizer
+                subject={subjectLabel.trim() || "General"}
+                defaultTopic={pack.subjectLine.slice(0, 80)}
+                context={pack.subjectLine.slice(0, 200)}
+                label="Simular un tema del kit"
+              />
             </>
           }
         />
