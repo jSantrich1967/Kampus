@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Plus } from "lucide-react";
+import Link from "next/link";
+import { Mic, Plus } from "lucide-react";
 
 import { LibraryClassFeedPanel } from "@/components/study/library-class-feed-panel";
 import { LibraryCloudSyncWidget } from "@/components/study/library-cloud-sync-widget";
@@ -112,6 +113,14 @@ export function LibraryHub() {
             : "Tus apuntes por materia: sube, organiza y repasa con quizzes hechos de tu propio material."}
         </p>
         </div>
+        <div className="flex flex-wrap gap-2">
+        <Link
+          href="/study/grabar"
+          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-white/10"
+        >
+          <Mic className="h-4 w-4" aria-hidden />
+          Grabar clase
+        </Link>
         <button
           type="button"
           onClick={() => {
@@ -123,6 +132,7 @@ export function LibraryHub() {
           <Plus className="h-4 w-4" aria-hidden />
           Crear cuaderno
         </button>
+        </div>
       </div>
 
       {viewMode === "notebooks" ? (

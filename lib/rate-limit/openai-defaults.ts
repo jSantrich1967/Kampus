@@ -57,6 +57,13 @@ export function presentationTranscribeRateLimits(): { max: number; windowMs: num
   };
 }
 
+export function lectureTranscribeRateLimits(): { max: number; windowMs: number } {
+  return {
+    max: parseInt(process.env.API_RL_MAX_LECTURE_TRANSCRIBE ?? "15", 10),
+    windowMs: parseInt(process.env.API_RL_LECTURE_TRANSCRIBE_WINDOW_MS ?? String(60 * 60 * 1000), 10),
+  };
+}
+
 export function examCorrectorRateLimits(): { max: number; windowMs: number } {
   return {
     max: parseInt(process.env.API_RL_MAX_EXAM_CORRECTOR ?? "20", 10),
