@@ -17,17 +17,23 @@ type ExtractAttempt = {
   hint: string | null;
 };
 
+/** Límite por documento: sin esto, una extracción lenta deja la UI colgada en "Generando tu kit…" para siempre. */
+const EXTRACT_TIMEOUT_MS = 60_000;
+
 async function runNotebookExtract(documentId: string, force: boolean): Promise<{
   combinedText: string | null;
   useful: boolean;
   error: string | null;
   hint: string | null;
 }> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), EXTRACT_TIMEOUT_MS);
   try {
     const res = await fetch("/api/notebooks/extract", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ documentId, force }),
+      signal: controller.signal,
     });
     const json = (await res.json()) as NotebookExtractApiResponse;
 
@@ -51,12 +57,19 @@ async function runNotebookExtract(documentId: string, force: boolean): Promise<{
           : "OpenAI no encontró texto legible. Prueba una foto más nítida o un PDF con texto seleccionable."),
     };
   } catch (e) {
+    const timedOut = e instanceof Error && e.name === "AbortError";
     return {
       combinedText: null,
       useful: false,
-      error: e instanceof Error ? e.message : "Error de red al extraer el texto.",
+      error: timedOut
+        ? "La lectura del apunte tardó demasiado (más de 60 segundos). Revisa tu conexión e inténtalo de nuevo."
+        : e instanceof Error
+          ? e.message
+          : "Error de red al extraer el texto.",
       hint: null,
     };
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -94,25 +107,25 @@ export async function resolveNotebookDocumentsExtractedTextWithHint(
   client: SupabaseClient,
   docs: NotebookDocumentRow[],
 ): Promise<{ docs: NotebookDocumentRow[]; extractHint: string | null }> {
-  const attempts: ExtractAttempt[] = [];
-
-  for (const doc of docs) {
-    const result = await runNotebookExtract(doc.id, true);
-    if (result.combinedText && result.useful) {
-      attempts.push({
-        doc: { ...doc, extracted_text: result.combinedText },
-        error: null,
-        hint: null,
-      });
-      continue;
-    }
-
-    attempts.push({
-      doc,
-      error: result.error,
-      hint: result.hint,
-    });
-  }
+  // Usa el texto ya extraído cuando es útil: re-hacer el OCR de cada hoja en
+  // secuencia (y sin timeout) dejaba "Generando tu kit…" colgado por minutos.
+  // Solo se fuerza la extracción en los docs sin texto útil, en paralelo.
+  const attempts: ExtractAttempt[] = await Promise.all(
+    docs.map(async (doc): Promise<ExtractAttempt> => {
+      if (isUsefulExtractedText(doc.extracted_text ?? "")) {
+        return { doc, error: null, hint: null };
+      }
+      const result = await runNotebookExtract(doc.id, true);
+      if (result.combinedText && result.useful) {
+        return {
+          doc: { ...doc, extracted_text: result.combinedText },
+          error: null,
+          hint: null,
+        };
+      }
+      return { doc, error: result.error, hint: result.hint };
+    }),
+  );
 
   const resolved = attempts.map((a) => a.doc);
   const errors = attempts.filter((a) => a.error).map((a) => `${a.doc.filename}: ${a.error}`);

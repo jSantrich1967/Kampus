@@ -252,15 +252,25 @@ export function CramMode() {
 
   if (proGate) {
     return (
-      <ProRequiredCard
-        eyebrow="Estudiar"
-        feature={proGate === "plan" ? "El plan de estudio" : "El Modo examen"}
-        description={
-          proGate === "plan"
-            ? "Tu diagnóstico ya está: sabes qué temas flojean. Con Pro te armo el plan completo: qué estudiar primero, cuánto tiempo y con qué ejercicios."
-            : "Ya usaste tu diagnóstico gratis de hoy. Con Pro tienes diagnósticos y planes sin límite, junto al Tutor IA y el Modo aprobar."
-        }
-      />
+      <div className="space-y-4">
+        <ProRequiredCard
+          eyebrow="Estudiar"
+          feature={proGate === "plan" ? "El plan de estudio" : "El Modo examen"}
+          description={
+            proGate === "plan"
+              ? "Tu diagnóstico ya está: sabes qué temas flojean. Con Pro te armo el plan completo: qué estudiar primero, cuánto tiempo y con qué ejercicios."
+              : "Ya usaste tu diagnóstico gratis de hoy. Con Pro tienes diagnósticos y planes sin límite, junto al Tutor IA y el Modo aprobar."
+          }
+        />
+        {proGate === "plan" ? (
+          <Link
+            href={`/tutor?subject=${encodeURIComponent(subject.trim())}`}
+            className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20"
+          >
+            <Sparkles className="h-4 w-4" aria-hidden /> Reforzar con el Tutor IA
+          </Link>
+        ) : null}
+      </div>
     );
   }
 
