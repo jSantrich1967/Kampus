@@ -19,6 +19,8 @@ import { consumeDailyUserQuota, refundDailyUserQuotaForCurrentUser } from "@/lib
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
+// Transcribir + generar apuntes puede tardar; igual que /api/rescue/pack.
+export const maxDuration = 60;
 
 /**
  * Gating de "Grabar clase" (decidido en servidor):

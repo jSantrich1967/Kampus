@@ -17,6 +17,9 @@ import {
 } from "@/lib/visualize/normalize";
 
 export const runtime = "nodejs";
+// La generación (hasta 6000 tokens de salida) tarda más que el timeout
+// por defecto de la función; igual que /api/rescue/pack.
+export const maxDuration = 60;
 
 /**
  * Gating de "Simular" (decidido en servidor):
