@@ -5,7 +5,7 @@ import { planLimitMessage } from "@/lib/ai/ai-budget";
 import { getServerUserPlan } from "@/lib/billing/server-plan";
 import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
 import { extractResponsesOutputText } from "@/lib/openai/extract-responses-output-text";
-import { consumeDailyUserQuota } from "@/lib/rate-limit/user-quota";
+import { consumeDailyUserQuota, refundDailyUserQuotaForCurrentUser } from "@/lib/rate-limit/user-quota";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -31,8 +31,11 @@ export const maxDuration = 60;
  * (0 = sin simulaciones gratis) o la rama de premium.
  */
 const FREE_DAILY_VISUALIZATIONS = parseInt(process.env.API_DAILY_LIMIT_VISUALIZE_FREE ?? "1", 10);
-/** Tope de tokens de salida: ~15KB de HTML pedidas + margen. */
-const MAX_OUTPUT_TOKENS = 6000;
+/**
+ * Tope de tokens de salida: la generación debe caber en los 60s de maxDuration.
+ * ~10KB de HTML pedidas + margen (a ~80 tok/s, 4000 tokens ≈ 50s como máximo).
+ */
+const MAX_OUTPUT_TOKENS = 4000;
 
 const requestSchema = z.object({
   subject: z.string().trim().min(1).max(80),
@@ -96,7 +99,7 @@ function buildUserPrompt(subject: string, topic: string, context: string): strin
     `- Controles interactivos REALES que cambien la simulación: al menos sliders, botones o play/pausa que modifiquen lo que se ve.\n` +
     `- Etiquetas claras en español y, dentro del propio HTML, una breve explicación de qué se observa y cómo interactuar.\n` +
     `- Diseño limpio y legible (fondo claro u oscuro con buen contraste), responsive.\n` +
-    `- Máximo ~15KB de HTML. Nada de texto fuera del HTML.`
+    `- Máximo ~10KB de HTML. Nada de texto fuera del HTML.`
   );
 }
 
@@ -201,6 +204,8 @@ export async function POST(req: Request) {
             { status: 429 },
           );
         }
+        // La generación falló: devolver la cuota para no quemar la del día.
+        await refundDailyUserQuotaForCurrentUser("visualize_free");
         return NextResponse.json(
           { error: `No pudimos generar la simulación (OpenAI ${res.status}). ${message}`.trim() },
           { status: 502 },
@@ -211,12 +216,14 @@ export async function POST(req: Request) {
       const raw = extractResponsesOutputText(payload);
       const html = extractHtml(raw);
       if (!html || !isValidSimulationHtml(html)) {
+        await refundDailyUserQuotaForCurrentUser("visualize_free");
         return NextResponse.json(
           { error: "La IA no devolvió una simulación válida. Inténtalo de nuevo con un tema más específico." },
           { status: 502 },
         );
       }
       if (htmlByteSize(html) > VISUALIZE_MAX_HTML_BYTES) {
+        await refundDailyUserQuotaForCurrentUser("visualize_free");
         return NextResponse.json(
           { error: "La simulación generada excede el tamaño máximo. Inténtalo de nuevo." },
           { status: 502 },
@@ -228,6 +235,7 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Error desconocido";
+    await refundDailyUserQuotaForCurrentUser("visualize_free");
     return NextResponse.json(
       { error: `No pudimos generar la simulación ahora. ${message}` },
       { status: 502 },
