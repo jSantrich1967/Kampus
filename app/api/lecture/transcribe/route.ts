@@ -56,18 +56,20 @@ async function transcribeAudio(apiKey: string, model: string, file: File): Promi
   });
 
   if (!res.ok) {
+    // planLimitMessage clona la respuesta: debe llamarse ANTES de leer el
+    // body, o el mensaje específico del límite se pierde (genérico).
+    const planLimit = await planLimitMessage(res);
+    if (planLimit) {
+      const err = new Error(planLimit) as Error & { status?: number };
+      err.status = 429;
+      throw err;
+    }
     let message = "";
     try {
       const json = (await res.json()) as { error?: { message?: string } };
       message = json.error?.message ?? "";
     } catch {
       message = (await res.text()).slice(0, 400);
-    }
-    const planLimit = await planLimitMessage(res);
-    if (planLimit) {
-      const err = new Error(planLimit) as Error & { status?: number };
-      err.status = 429;
-      throw err;
     }
     const err = new Error(
       res.status === 429

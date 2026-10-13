@@ -179,16 +179,18 @@ export async function POST(req: Request) {
       );
 
       if (!res.ok) {
+        // planLimitMessage clona la respuesta: debe llamarse ANTES de leer el
+        // body, o el mensaje específico del límite se pierde (genérico).
+        const planLimit = await planLimitMessage(res);
+        if (planLimit) {
+          return NextResponse.json({ error: planLimit }, { status: 429 });
+        }
         let message = "";
         try {
           const json = (await res.json()) as { error?: { message?: string } };
           message = json.error?.message ?? "";
         } catch {
           message = (await res.text()).slice(0, 400);
-        }
-        const planLimit = await planLimitMessage(res);
-        if (planLimit) {
-          return NextResponse.json({ error: planLimit }, { status: 429 });
         }
         if (res.status === 429) {
           return NextResponse.json(

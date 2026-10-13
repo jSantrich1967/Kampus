@@ -5,6 +5,7 @@ import {
   aiBudgetExceededResponse,
   aiBudgetUnavailableResponse,
   isAiBudgetResponse,
+  planLimitMessage,
 } from "@/lib/ai/ai-budget";
 
 const limits = {
@@ -54,5 +55,23 @@ describe("ai budget response", () => {
     const response = aiBudgetUnavailableResponse();
     expect(response.status).toBe(503);
     expect(isAiBudgetResponse(response)).toBe(true);
+  });
+});
+
+describe("planLimitMessage", () => {
+  it("returns the specific limit message when called before the body is read", async () => {
+    const specific = "Alcanzaste los tokens de IA de hoy para tu plan.";
+    const response = aiBudgetExceededResponse(specific);
+    // Contrato: llamar ANTES de consumir el body; la función clona internamente.
+    expect(await planLimitMessage(response)).toBe(specific);
+    // El body original sigue disponible para el resto del manejo de errores.
+    const body = (await response.json()) as { error?: { message?: string } };
+    expect(body.error?.message).toBe(specific);
+  });
+
+  it("returns null for non-budget responses without touching the body", async () => {
+    const response = new Response(JSON.stringify({ error: "x" }), { status: 429 });
+    expect(await planLimitMessage(response)).toBeNull();
+    expect(await response.text()).toContain("x");
   });
 });
