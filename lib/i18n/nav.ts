@@ -49,6 +49,7 @@ export const navCopy = {
       examGenerator: "Generador de exámenes",
       autoGrader: "Corrección automática",
       cramMode: "Modo examen",
+      repasos: "Repasos",
       issueCertificates: "Acreditar logros",
       myCertificates: "Mis logros",
       familyReport: "Reporte familiar",

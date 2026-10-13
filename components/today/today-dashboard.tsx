@@ -21,6 +21,7 @@ import { TodayAuthBypassNote } from "@/components/today/today-auth-bypass-note";
 import { TeacherFirstSteps } from "@/components/today/teacher-first-steps";
 import { TodayContextPanel } from "@/components/today/today-context-panel";
 import { TodayCollaboratePanel } from "@/components/today/today-collaborate-panel";
+import { TodayReviewsCard } from "@/components/today/today-reviews-card";
 import { TodayWellbeingPanel } from "@/components/today/today-wellbeing-panel";
 import { TodayMissionPanel } from "@/components/today/today-mission-panel";
 import { TodayMomentumPanel } from "@/components/today/today-momentum-panel";
@@ -285,6 +286,7 @@ export function TodayDashboard() {
               </div>
             </Card>
           ) : null}
+          <TodayReviewsCard />
           <TodayCollaboratePanel />
         </TodayStep>
       ) : (

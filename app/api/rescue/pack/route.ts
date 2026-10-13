@@ -8,6 +8,7 @@ import { rescuePackSchema } from "@/lib/schemas/rescue-pack";
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
 import { rescuePackRateLimits } from "@/lib/rate-limit/openai-defaults";
 import { consumeDailyUserQuota } from "@/lib/rate-limit/user-quota";
+import { registerPackReviewItems } from "@/lib/study/review-items";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -444,6 +445,24 @@ export async function POST(req: Request) {
         "La IA devolvió un formato inválido. Reintenta en unos segundos o usa el modo «lite» (más rápido)." +
           (lastParseError ? ` (${lastParseError})` : ""),
       );
+    }
+
+    // Repetición espaciada: registra las tarjetas del kit para repasarlas
+    // después (dedupe por hash). Acotado a ~1.5s para no bloquear la
+    // respuesta; si la tabla no existe se omite en silencio.
+    const reviewUserId = planUser?.id ?? null;
+    if (reviewUserId && pack.flashcards.length > 0) {
+      try {
+        await Promise.race([
+          registerPackReviewItems(supabase, reviewUserId, {
+            subject,
+            cards: pack.flashcards,
+          }),
+          new Promise((resolve) => setTimeout(resolve, 1500)),
+        ]);
+      } catch {
+        // degradación silenciosa: el kit ya se generó y se entrega igual
+      }
     }
 
     return NextResponse.json({ pack, packMode });
