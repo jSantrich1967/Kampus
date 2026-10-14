@@ -16,6 +16,7 @@ import {
   topicHash,
   validateSimulationHtml,
 } from "@/lib/visualize/normalize";
+import { smokeTestSimulationHtml } from "@/lib/visualize/smoke";
 
 export const runtime = "nodejs";
 // La generación (hasta 6000 tokens de salida) tarda más que el timeout
@@ -102,7 +103,8 @@ function buildUserPrompt(subject: string, topic: string, context: string): strin
     `- Controles REALES (sliders, botones, play/pausa): cada uno con addEventListener (o oninput/onclick) que actualice al instante la etiqueta del valor Y el diagrama. Sin localStorage ni fetch.\n` +
     `- El botón Iniciar/Pausar alterna la animación y cambia su texto.\n` +
     `- Etiquetas en español y breve explicación dentro del HTML de qué se observa.\n` +
-    `- El JavaScript debe quedar ENTERO y sin errores: ante falta de espacio, simplifica la decoración, nunca recortes código. Nada de texto fuera del HTML.`
+    `- El JavaScript debe quedar ENTERO y sin errores: ante falta de espacio, simplifica la decoración, nunca recortes código. ` +
+    `Cada id usado en getElementById o querySelector debe existir en el HTML. Nada de texto fuera del HTML.`
   );
 }
 
@@ -235,6 +237,17 @@ export async function POST(req: Request) {
         await refundDailyUserQuotaForCurrentUser("visualize_free");
         return NextResponse.json(
           { error: "La simulación generada excede el tamaño máximo. Inténtalo de nuevo." },
+          { status: 502 },
+        );
+      }
+      // Smoke test: ejecuta el JS en un DOM simulado. Si el código se cae
+      // al cargar (id inexistente, error de sintaxis, variable indefinida),
+      // se caería igual en el navegador: se rechaza con reembolso.
+      const smoke = smokeTestSimulationHtml(html);
+      if (!smoke.ok) {
+        await refundDailyUserQuotaForCurrentUser("visualize_free");
+        return NextResponse.json(
+          { error: "La simulación generada tenía un error interno y no se mostró. Inténtalo de nuevo." },
           { status: 502 },
         );
       }
