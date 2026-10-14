@@ -98,13 +98,20 @@ function buildUserPrompt(subject: string, topic: string, context: string): strin
     `SIN recursos externos, SIN llamadas de red, SIN imágenes externas) con una simulación ` +
     `interactiva EN ESPAÑOL del tema "${topic}" (materia: ${subject}). Usa solo fuentes del sistema (sin Google Fonts ni fuentes externas).` +
     (context ? ` Contexto del material del estudiante: ${context}.` : "") +
-    `\n\nRequisitos (código compacto: todo debe caber en ~10KB):\n` +
-    `- Diagrama o animación con SVG o <canvas>, diseño atractivo y profesional (paleta armoniosa, sin formas planas toscas), legible y responsive.\n` +
-    `- Controles REALES (sliders, botones, play/pausa): cada uno con addEventListener (o oninput/onclick) que actualice al instante la etiqueta del valor Y el diagrama. Sin localStorage ni fetch.\n` +
-    `- El botón Iniciar/Pausar alterna la animación y cambia su texto.\n` +
-    `- Etiquetas en español y breve explicación dentro del HTML de qué se observa.\n` +
+    `\n\nREGLA DE ORO: cada control debe funcionar de verdad. Un control sin su addEventListener invalida toda la simulación.\n` +
+    `Estructura obligatoria (adáptala al tema, sin cambiar el cableado):\n` +
+    `- Exactamente 2 sliders (input type=range) + 1 botón Iniciar/Pausar. Nada más.\n` +
+    `- En el script, primero: const $ = (id) => document.getElementById(id);\n` +
+    `- Cada slider con id (ej. s1) y su etiqueta de valor (ej. s1v):\n` +
+    `  const s1 = $("s1"), s1v = $("s1v");\n` +
+    `  s1.addEventListener("input", () => { s1v.textContent = s1.value; dibujar(); });\n` +
+    `- El botón (id btn):\n` +
+    `  const btn = $("btn"); let corriendo = false;\n` +
+    `  btn.addEventListener("click", () => { corriendo = !corriendo; btn.textContent = corriendo ? "Pausar" : "Iniciar"; });\n` +
+    `- Una función dibujar() que redibuja el SVG o canvas según los valores actuales; los sliders la llaman en cada input.\n` +
+    `- Diagrama SVG (preferido) o <canvas>: diseño atractivo y profesional, paleta armoniosa, responsive. Etiquetas en español y breve explicación de qué se observa.\n` +
     `- El JavaScript debe quedar ENTERO y sin errores: ante falta de espacio, simplifica la decoración, nunca recortes código. ` +
-    `Cada id usado en getElementById o querySelector debe existir en el HTML. Nada de texto fuera del HTML.`
+    `Cada id usado en getElementById debe existir en el HTML. Sin localStorage, sin fetch. Nada de texto fuera del HTML.`
   );
 }
 
