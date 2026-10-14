@@ -102,7 +102,10 @@ function buildUserPrompt(subject: string, topic: string, context: string): strin
     `- CADA control debe funcionar de verdad: conéctalo con addEventListener (o un atributo oninput/onclick) a una función que actualice el estado Y lo visible (etiqueta del valor y diagrama). Verifica que cada getElementById use un id que exista en el HTML y que el script no tenga errores: si un slider se mueve, su etiqueta y el diagrama deben cambiar al instante.\n` +
     `- El botón Iniciar/Pausar alterna la animación (requestAnimationFrame o setInterval) y cambia su propio texto.\n` +
     `- Etiquetas claras en español y, dentro del propio HTML, una breve explicación de qué se observa y cómo interactuar.\n` +
-    `- Diseño limpio y legible (fondo claro u oscuro con buen contraste), responsive.\n` +
+    `- DISEÑO DE ALTA CALIDAD, nivel libro de texto moderno: paleta armoniosa y profesional (prohibidos los colores primarios planos y los óvalos de un solo color), gradientes sutiles, sombras suaves, bordes redondeados, tipografía clara con jerarquía visual.\n` +
+    `- Diagrama RICO en detalle y con profundidad: formas con gradiente, elementos etiquetados con líneas guía cuando ayude, fondo en escena (gradiente o contexto), animaciones suaves y profesionales.\n` +
+    `- Controles con estilo moderno (sliders y botones bien diseñados, con estados hover/active) coherentes con la paleta.\n` +
+    `- Legible con buen contraste, responsive.\n` +
     `- Máximo ~10KB de HTML. Nada de texto fuera del HTML.`
   );
 }
