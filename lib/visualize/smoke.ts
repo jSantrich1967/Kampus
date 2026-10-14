@@ -312,6 +312,14 @@ function fireControlHandlers(elements: Map<string, StubElement>, m: Mutations): 
  * Sin <script> inline no hay nada que romper: se acepta.
  */
 export function smokeTestSimulationHtml(html: string): SmokeResult {
+  // Un <script> sin cerrar (salida truncada del modelo) mataría el script
+  // en el navegador; y sin este cheque el test pasaría en vacío.
+  const openScripts = html.match(/<script(?![^>]*\bsrc\b)[^>]*>/gi)?.length ?? 0;
+  const closeScripts = html.match(/<\/script\s*>/gi)?.length ?? 0;
+  if (openScripts > closeScripts) {
+    return { ok: false, detail: "el <script> quedó sin cerrar (código truncado)" };
+  }
+
   const scripts = extractInlineScripts(html);
   if (scripts.length === 0) return { ok: true };
 

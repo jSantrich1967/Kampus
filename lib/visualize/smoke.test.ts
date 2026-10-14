@@ -17,6 +17,17 @@ describe("extractInlineScripts", () => {
   it("devuelve vacío si no hay scripts", () => {
     expect(extractInlineScripts("<html><body><svg></svg></body></html>")).toEqual([]);
   });
+
+  it("rechaza un <script> sin cerrar (código truncado)", () => {
+    const html =
+      `<!DOCTYPE html><html><body>` +
+      `<button id="btn">Iniciar</button>` +
+      `<script>const btn = document.getElementById("btn");` +
+      `btn.addEventListener("click", () => { btn.textContent = "Pausar"; });`;
+    const result = smokeTestSimulationHtml(html);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.detail).toContain("sin cerrar");
+  });
 });
 
 describe("smokeTestSimulationHtml", () => {
