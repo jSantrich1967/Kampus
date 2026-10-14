@@ -225,6 +225,24 @@ export async function POST(req: Request) {
       }
 
       const payload = (await res.json()) as unknown;
+      // Si OpenAI cortó la salida por límite de tokens, el HTML viene
+      // truncado (script sin cerrar): rechazar con reembolso en vez de
+      // guardar/mostrar algo roto.
+      const status = (payload as { status?: string })?.status;
+      const incompleteReason = (payload as { incomplete_details?: { reason?: string } })
+        ?.incomplete_details?.reason;
+      if (status === "incomplete") {
+        await refundDailyUserQuotaForCurrentUser("visualize_free");
+        return NextResponse.json(
+          {
+            error:
+              incompleteReason === "max_output_tokens"
+                ? "La simulación quedó cortada al generarse. Inténtalo de nuevo."
+                : "La generación no se completó. Inténtalo de nuevo.",
+          },
+          { status: 502 },
+        );
+      }
       const raw = extractResponsesOutputText(payload);
       const html = sanitizeSimulationHtml(extractHtml(raw));
       const validation = validateSimulationHtml(html);
