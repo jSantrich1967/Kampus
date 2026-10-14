@@ -80,6 +80,35 @@ describe("isValidSimulationHtml", () => {
       isValidSimulationHtml("<html><head><style>@import url('https://x.com/a.css');</style></head><svg></svg></html>"),
     ).toBe(false);
   });
+
+  it("rechaza sliders sin cablear (controles decorativos)", () => {
+    expect(
+      isValidSimulationHtml("<html><body><svg></svg><input type='range' id='luz'><script>var x=1;</script></body></html>"),
+    ).toBe(false);
+  });
+
+  it("rechaza botones sin cablear", () => {
+    expect(
+      isValidSimulationHtml("<html><body><svg></svg><button>Iniciar</button><script>var x=1;</script></body></html>"),
+    ).toBe(false);
+  });
+
+  it("acepta controles con addEventListener", () => {
+    expect(
+      isValidSimulationHtml(
+        "<html><body><svg></svg><input type='range' id='luz'><button>Iniciar</button>" +
+          "<script>document.getElementById('luz').addEventListener('input', function(){});</script></body></html>",
+      ),
+    ).toBe(true);
+  });
+
+  it("acepta controles con atributos on*", () => {
+    expect(
+      isValidSimulationHtml(
+        "<html><body><svg></svg><input type='range' oninput='cambia(this.value)'><script>function cambia(){}</script></body></html>",
+      ),
+    ).toBe(true);
+  });
 });
 
 describe("htmlByteSize", () => {

@@ -19,9 +19,17 @@ export function normalizeTopicKey(subject: string, topic: string): string {
   return `${norm(subject)}|${norm(topic)}`;
 }
 
+/**
+ * Versión del prompt de generación. Al cambiar el prompt (requisitos, modelo,
+ * temperatura), se sube este número y el caché anterior caduca solo.
+ */
+export const VISUALIZE_PROMPT_VERSION = 2;
+
 /** Hash estable para la columna topic_hash (caché compartido). */
 export function topicHash(subject: string, topic: string): string {
-  return createHash("sha256").update(normalizeTopicKey(subject, topic), "utf8").digest("hex");
+  return createHash("sha256")
+    .update(`${VISUALIZE_PROMPT_VERSION}|${normalizeTopicKey(subject, topic)}`, "utf8")
+    .digest("hex");
 }
 
 /**
@@ -39,6 +47,8 @@ export function extractHtml(raw: string): string {
  * - Debe ser un documento HTML o contener SVG/Canvas (algo visual).
  * - No puede cargar recursos externos (el iframe ya va sandboxed, pero
  *   no guardamos HTML que llame a la red).
+ * - Si trae controles interactivos (sliders, botones), deben estar cableados
+ *   (addEventListener o atributos on*): controles decorativos no cuentan.
  */
 export function isValidSimulationHtml(html: string): boolean {
   const lower = html.toLowerCase();
@@ -49,6 +59,9 @@ export function isValidSimulationHtml(html: string): boolean {
   if (/@import/i.test(html)) return false;
   if (/\b(src|href)\s*=\s*["']https?:\/\//i.test(html)) return false;
   if (/url\(\s*["']?https?:\/\//i.test(html)) return false;
+  const hasControls = /<input[^>]+type\s*=\s*["']?range/i.test(html) || /<button/i.test(html);
+  const hasWiring = /addEventListener/i.test(html) || /\son\w+\s*=/i.test(html);
+  if (hasControls && !hasWiring) return false;
   return true;
 }
 

@@ -84,7 +84,9 @@ function buildSystemPrompt(): string {
   return (
     "Eres un generador de simulaciones educativas interactivas. " +
     "Respondes ÚNICAMENTE con un archivo HTML completo y auto-contenido: " +
-    "sin texto fuera del HTML, sin markdown, sin backticks, sin explicaciones."
+    "sin texto fuera del HTML, sin markdown, sin backticks, sin explicaciones. " +
+    "El HTML se muestra en un iframe sandboxed (solo scripts, sin mismo origen): " +
+    "NO uses localStorage, sessionStorage, cookies, fetch, XMLHttpRequest ni ningún acceso a red."
   );
 }
 
@@ -97,6 +99,8 @@ function buildUserPrompt(subject: string, topic: string, context: string): strin
     `\n\nRequisitos:\n` +
     `- Diagrama o animación con SVG o <canvas> y JavaScript inline.\n` +
     `- Controles interactivos REALES que cambien la simulación: al menos sliders, botones o play/pausa que modifiquen lo que se ve.\n` +
+    `- CADA control debe funcionar de verdad: conéctalo con addEventListener (o un atributo oninput/onclick) a una función que actualice el estado Y lo visible (etiqueta del valor y diagrama). Verifica que cada getElementById use un id que exista en el HTML y que el script no tenga errores: si un slider se mueve, su etiqueta y el diagrama deben cambiar al instante.\n` +
+    `- El botón Iniciar/Pausar alterna la animación (requestAnimationFrame o setInterval) y cambia su propio texto.\n` +
     `- Etiquetas claras en español y, dentro del propio HTML, una breve explicación de qué se observa y cómo interactuar.\n` +
     `- Diseño limpio y legible (fondo claro u oscuro con buen contraste), responsive.\n` +
     `- Máximo ~10KB de HTML. Nada de texto fuera del HTML.`
@@ -177,7 +181,7 @@ export async function POST(req: Request) {
               { role: "system", content: [{ type: "input_text", text: buildSystemPrompt() }] },
               { role: "user", content: [{ type: "input_text", text: buildUserPrompt(subject, topic, context) }] },
             ],
-            temperature: 0.7,
+            temperature: 0.3,
             max_output_tokens: MAX_OUTPUT_TOKENS,
           }),
         },
