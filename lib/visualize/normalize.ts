@@ -57,6 +57,21 @@ export type SimulationInvalidReason =
   | "controls-not-wired";
 
 /**
+ * Sanea el HTML del modelo: elimina recursos externos (scripts con src,
+ * @import como Google Fonts, src/href http, url(http...)) en vez de
+ * rechazar la simulación completa. El diseño cae a fuentes del sistema,
+ * pero la simulación sigue funcionando.
+ */
+export function sanitizeSimulationHtml(html: string): string {
+  let out = html;
+  out = out.replace(/<script[^>]+src\s*=[^>]*>[\s\S]*?<\/script\s*>/gi, "");
+  out = out.replace(/@import\s+[^;]+;/gi, "");
+  out = out.replace(/\s(?:src|href)\s*=\s*["']https?:\/\/[^"']*["']/gi, "");
+  out = out.replace(/url\(\s*["']?https?:\/\/[^)"']*["']?\s*\)/gi, "url()");
+  return out;
+}
+
+/**
  * Valida y explica QUÉ falló (para mensajes de error específicos).
  */
 export function validateSimulationHtml(html: string): { ok: true } | { ok: false; reason: SimulationInvalidReason } {

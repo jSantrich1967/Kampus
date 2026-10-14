@@ -12,6 +12,7 @@ import {
   VISUALIZE_MAX_HTML_BYTES,
   extractHtml,
   htmlByteSize,
+  sanitizeSimulationHtml,
   topicHash,
   validateSimulationHtml,
 } from "@/lib/visualize/normalize";
@@ -94,7 +95,7 @@ function buildUserPrompt(subject: string, topic: string, context: string): strin
   return (
     `Genera UN SOLO archivo HTML auto-contenido (todo el CSS y JavaScript inline; ` +
     `SIN recursos externos, SIN llamadas de red, SIN imágenes externas) con una simulación ` +
-    `interactiva EN ESPAÑOL del tema "${topic}" (materia: ${subject}).` +
+    `interactiva EN ESPAÑOL del tema "${topic}" (materia: ${subject}). Usa solo fuentes del sistema (sin Google Fonts ni fuentes externas).` +
     (context ? ` Contexto del material del estudiante: ${context}.` : "") +
     `\n\nRequisitos (código compacto: todo debe caber en ~10KB):\n` +
     `- Diagrama o animación con SVG o <canvas>, diseño atractivo y profesional (paleta armoniosa, sin formas planas toscas), legible y responsive.\n` +
@@ -216,7 +217,7 @@ export async function POST(req: Request) {
 
       const payload = (await res.json()) as unknown;
       const raw = extractResponsesOutputText(payload);
-      const html = extractHtml(raw);
+      const html = sanitizeSimulationHtml(extractHtml(raw));
       const validation = validateSimulationHtml(html);
       if (!validation.ok) {
         await refundDailyUserQuotaForCurrentUser("visualize_free");

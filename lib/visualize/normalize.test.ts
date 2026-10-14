@@ -8,6 +8,7 @@ import {
   htmlByteSize,
   isValidSimulationHtml,
   normalizeTopicKey,
+  sanitizeSimulationHtml,
   topicHash,
 } from "./normalize";
 
@@ -151,5 +152,36 @@ describe("validateSimulationHtml", () => {
     expect(
       validateSimulationHtml("<html><svg></svg><button onclick=\"go()\">Ir</button><script>function go(){}</script></html>"),
     ).toEqual({ ok: true });
+  });
+});
+
+describe("sanitizeSimulationHtml", () => {
+  it("elimina scripts externos pero conserva el inline", () => {
+    const out = sanitizeSimulationHtml(
+      "<html><head><script src=\"https://x.com/a.js\"></script></head><body><script>var x=1;</script></body></html>",
+    );
+    expect(out).not.toContain("https://x.com/a.js");
+    expect(out).toContain("var x=1;");
+  });
+
+  it("elimina @import (p. ej. Google Fonts)", () => {
+    const out = sanitizeSimulationHtml(
+      "<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Roboto');body{color:#fff}</style></head></html>",
+    );
+    expect(out).not.toContain("fonts.googleapis.com");
+    expect(out).toContain("body{color:#fff}");
+  });
+
+  it("elimina src/href externos", () => {
+    const out = sanitizeSimulationHtml("<html><body><img src=\"https://x.com/a.png\"><a href=\"https://x.com\">x</a></body></html>");
+    expect(out).not.toContain("https://");
+  });
+
+  it("lo saneado pasa la validación", () => {
+    const out = sanitizeSimulationHtml(
+      "<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Roboto');</style></head>" +
+        "<body><svg></svg><button onclick=\"go()\">Ir</button></body></html>",
+    );
+    expect(validateSimulationHtml(out)).toEqual({ ok: true });
   });
 });
