@@ -96,18 +96,12 @@ function buildUserPrompt(subject: string, topic: string, context: string): strin
     `SIN recursos externos, SIN llamadas de red, SIN imágenes externas) con una simulación ` +
     `interactiva EN ESPAÑOL del tema "${topic}" (materia: ${subject}).` +
     (context ? ` Contexto del material del estudiante: ${context}.` : "") +
-    `\n\nRequisitos:\n` +
-    `- Diagrama o animación con SVG o <canvas> y JavaScript inline.\n` +
-    `- Controles interactivos REALES que cambien la simulación: al menos sliders, botones o play/pausa que modifiquen lo que se ve.\n` +
-    `- CADA control debe funcionar de verdad: conéctalo con addEventListener (o un atributo oninput/onclick) a una función que actualice el estado Y lo visible (etiqueta del valor y diagrama). Verifica que cada getElementById use un id que exista en el HTML y que el script no tenga errores: si un slider se mueve, su etiqueta y el diagrama deben cambiar al instante.\n` +
-    `- El botón Iniciar/Pausar alterna la animación (requestAnimationFrame o setInterval) y cambia su propio texto.\n` +
-    `- Etiquetas claras en español y, dentro del propio HTML, una breve explicación de qué se observa y cómo interactuar.\n` +
-    `- DISEÑO DE ALTA CALIDAD, nivel libro de texto moderno: paleta armoniosa y profesional (prohibidos los colores primarios planos y los óvalos de un solo color), gradientes sutiles, sombras suaves, bordes redondeados, tipografía clara con jerarquía visual.\n` +
-    `- Diagrama RICO en detalle y con profundidad: formas con gradiente, elementos etiquetados con líneas guía cuando ayude, fondo en escena (gradiente o contexto), animaciones suaves y profesionales.\n` +
-    `- Controles con estilo moderno (sliders y botones bien diseñados, con estados hover/active) coherentes con la paleta.\n` +
-    `- Legible con buen contraste, responsive.\n` +
-    `- Máximo ~10KB de HTML. Nada de texto fuera del HTML.\n` +
-    `- Código COMPACTO pero COMPLETO: el JavaScript debe quedar entero y funcional. Ante límite de espacio, simplifica la decoración antes que recortar código; un diagrama más simple pero 100% funcional vale más que uno vistoso a medias.`
+    `\n\nRequisitos (código compacto: todo debe caber en ~10KB):\n` +
+    `- Diagrama o animación con SVG o <canvas>, diseño atractivo y profesional (paleta armoniosa, sin formas planas toscas), legible y responsive.\n` +
+    `- Controles REALES (sliders, botones, play/pausa): cada uno con addEventListener (o oninput/onclick) que actualice al instante la etiqueta del valor Y el diagrama. Sin localStorage ni fetch.\n` +
+    `- El botón Iniciar/Pausar alterna la animación y cambia su texto.\n` +
+    `- Etiquetas en español y breve explicación dentro del HTML de qué se observa.\n` +
+    `- El JavaScript debe quedar ENTERO y sin errores: ante falta de espacio, simplifica la decoración, nunca recortes código. Nada de texto fuera del HTML.`
   );
 }
 

@@ -23,7 +23,7 @@ export function normalizeTopicKey(subject: string, topic: string): string {
  * Versión del prompt de generación. Al cambiar el prompt (requisitos, modelo,
  * temperatura), se sube este número y el caché anterior caduca solo.
  */
-export const VISUALIZE_PROMPT_VERSION = 2;
+export const VISUALIZE_PROMPT_VERSION = 3;
 
 /** Hash estable para la columna topic_hash (caché compartido). */
 export function topicHash(subject: string, topic: string): string {
