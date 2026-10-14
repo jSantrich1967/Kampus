@@ -106,7 +106,8 @@ function buildUserPrompt(subject: string, topic: string, context: string): strin
     `- Diagrama RICO en detalle y con profundidad: formas con gradiente, elementos etiquetados con líneas guía cuando ayude, fondo en escena (gradiente o contexto), animaciones suaves y profesionales.\n` +
     `- Controles con estilo moderno (sliders y botones bien diseñados, con estados hover/active) coherentes con la paleta.\n` +
     `- Legible con buen contraste, responsive.\n` +
-    `- Máximo ~10KB de HTML. Nada de texto fuera del HTML.`
+    `- Máximo ~10KB de HTML. Nada de texto fuera del HTML.\n` +
+    `- Código COMPACTO pero COMPLETO: el JavaScript debe quedar entero y funcional. Ante límite de espacio, simplifica la decoración antes que recortar código; un diagrama más simple pero 100% funcional vale más que uno vistoso a medias.`
   );
 }
 
