@@ -12,8 +12,8 @@ import {
   VISUALIZE_MAX_HTML_BYTES,
   extractHtml,
   htmlByteSize,
-  isValidSimulationHtml,
   topicHash,
+  validateSimulationHtml,
 } from "@/lib/visualize/normalize";
 
 export const runtime = "nodejs";
@@ -217,12 +217,18 @@ export async function POST(req: Request) {
       const payload = (await res.json()) as unknown;
       const raw = extractResponsesOutputText(payload);
       const html = extractHtml(raw);
-      if (!html || !isValidSimulationHtml(html)) {
+      const validation = validateSimulationHtml(html);
+      if (!validation.ok) {
         await refundDailyUserQuotaForCurrentUser("visualize_free");
-        return NextResponse.json(
-          { error: "La IA no devolvió una simulación válida. Inténtalo de nuevo con un tema más específico." },
-          { status: 502 },
-        );
+        const reasonMessage =
+          validation.reason === "empty"
+            ? "La IA no devolvió contenido. Inténtalo de nuevo."
+            : validation.reason === "no-visual"
+              ? "La IA no devolvió un diagrama válido. Inténtalo de nuevo con un tema más específico."
+              : validation.reason === "controls-not-wired"
+                ? "La simulación generada tenía controles que no funcionaban. Inténtalo de nuevo."
+                : "La simulación generada no pasó la validación. Inténtalo de nuevo.";
+        return NextResponse.json({ error: reasonMessage }, { status: 502 });
       }
       if (htmlByteSize(html) > VISUALIZE_MAX_HTML_BYTES) {
         await refundDailyUserQuotaForCurrentUser("visualize_free");

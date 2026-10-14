@@ -50,19 +50,33 @@ export function extractHtml(raw: string): string {
  * - Si trae controles interactivos (sliders, botones), deben estar cableados
  *   (addEventListener o atributos on*): controles decorativos no cuentan.
  */
-export function isValidSimulationHtml(html: string): boolean {
+export type SimulationInvalidReason =
+  | "empty"
+  | "no-visual"
+  | "external-resource"
+  | "controls-not-wired";
+
+/**
+ * Valida y explica QUÉ falló (para mensajes de error específicos).
+ */
+export function validateSimulationHtml(html: string): { ok: true } | { ok: false; reason: SimulationInvalidReason } {
+  if (!html || !html.trim()) return { ok: false, reason: "empty" };
   const lower = html.toLowerCase();
   const hasDoc = lower.includes("<html") || lower.includes("<!doctype");
   const hasVisual = lower.includes("<svg") || lower.includes("<canvas");
-  if (!hasDoc && !hasVisual) return false;
-  if (/<script[^>]+src\s*=/i.test(html)) return false;
-  if (/@import/i.test(html)) return false;
-  if (/\b(src|href)\s*=\s*["']https?:\/\//i.test(html)) return false;
-  if (/url\(\s*["']?https?:\/\//i.test(html)) return false;
+  if (!hasDoc && !hasVisual) return { ok: false, reason: "no-visual" };
+  if (/<script[^>]+src\s*=/i.test(html)) return { ok: false, reason: "external-resource" };
+  if (/@import/i.test(html)) return { ok: false, reason: "external-resource" };
+  if (/\b(src|href)\s*=\s*["']https?:\/\//i.test(html)) return { ok: false, reason: "external-resource" };
+  if (/url\(\s*["']?https?:\/\//i.test(html)) return { ok: false, reason: "external-resource" };
   const hasControls = /<input[^>]+type\s*=\s*["']?range/i.test(html) || /<button/i.test(html);
   const hasWiring = /addEventListener/i.test(html) || /\son\w+\s*=/i.test(html);
-  if (hasControls && !hasWiring) return false;
-  return true;
+  if (hasControls && !hasWiring) return { ok: false, reason: "controls-not-wired" };
+  return { ok: true };
+}
+
+export function isValidSimulationHtml(html: string): boolean {
+  return validateSimulationHtml(html).ok;
 }
 
 export function htmlByteSize(html: string): number {

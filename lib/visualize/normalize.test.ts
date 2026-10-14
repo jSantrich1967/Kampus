@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { validateSimulationHtml } from "@/lib/visualize/normalize";
+
 import {
   VISUALIZE_MAX_HTML_BYTES,
   extractHtml,
@@ -119,5 +121,35 @@ describe("htmlByteSize", () => {
 
   it("el límite es 20 KB", () => {
     expect(VISUALIZE_MAX_HTML_BYTES).toBe(20 * 1024);
+  });
+});
+
+describe("validateSimulationHtml", () => {
+  it("explica vacío", () => {
+    expect(validateSimulationHtml("   ")).toEqual({ ok: false, reason: "empty" });
+  });
+
+  it("explica sin visual", () => {
+    expect(validateSimulationHtml("<p>hola</p>")).toEqual({ ok: false, reason: "no-visual" });
+  });
+
+  it("explica recurso externo", () => {
+    expect(validateSimulationHtml("<html><svg></svg><script src=\"https://x.com/a.js\"></script></html>")).toEqual({
+      ok: false,
+      reason: "external-resource",
+    });
+  });
+
+  it("explica controles sin cablear", () => {
+    expect(validateSimulationHtml("<html><svg></svg><button>Ir</button></html>")).toEqual({
+      ok: false,
+      reason: "controls-not-wired",
+    });
+  });
+
+  it("ok cuando todo pasa", () => {
+    expect(
+      validateSimulationHtml("<html><svg></svg><button onclick=\"go()\">Ir</button><script>function go(){}</script></html>"),
+    ).toEqual({ ok: true });
   });
 });
