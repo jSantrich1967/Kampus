@@ -74,4 +74,65 @@ describe("smokeTestSimulationHtml", () => {
     );
     expect(smokeTestSimulationHtml(html)).toEqual({ ok: true });
   });
+
+  it("rechaza un handler vacío que no muta nada", () => {
+    const html = wrap(
+      `<input type="range" id="s1"><span id="s1v"></span>`,
+      `const s1 = document.getElementById("s1");` +
+        `s1.addEventListener("input", () => {});`,
+    );
+    const result = smokeTestSimulationHtml(html);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.detail).toContain("s1");
+  });
+
+  it("rechaza un handler que lanza al dispararse", () => {
+    const html = wrap(
+      `<button id="btn">Iniciar</button>`,
+      `const btn = document.getElementById("btn");` +
+        `btn.addEventListener("click", () => { explota(); });`,
+    );
+    expect(smokeTestSimulationHtml(html).ok).toBe(false);
+  });
+
+  it("rechaza un botón cuyo click no hace nada", () => {
+    const html = wrap(
+      `<button id="btn">Iniciar</button>`,
+      `const btn = document.getElementById("btn");` +
+        `btn.addEventListener("click", () => { const x = 1 + 1; });`,
+    );
+    const result = smokeTestSimulationHtml(html);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.detail).toContain("btn");
+  });
+
+  it("acepta cableado dentro de DOMContentLoaded", () => {
+    const html = wrap(
+      `<input type="range" id="s1"><span id="s1v"></span>`,
+      `document.addEventListener("DOMContentLoaded", () => {` +
+        `const s1 = document.getElementById("s1");` +
+        `const s1v = document.getElementById("s1v");` +
+        `s1.addEventListener("input", () => { s1v.textContent = s1.value; });` +
+        `});`,
+    );
+    expect(smokeTestSimulationHtml(html)).toEqual({ ok: true });
+  });
+
+  it("acepta el patrón del prompt (esqueleto con dibujar)", () => {
+    const html = wrap(
+      `<svg id="svg"></svg>` +
+        `<input type="range" id="s1" value="1000"><span id="s1v">1000</span>` +
+        `<input type="range" id="s2" value="400"><span id="s2v">400</span>` +
+        `<button id="btn">Iniciar</button>`,
+      `const $ = (id) => document.getElementById(id);` +
+        `const s1 = $("s1"), s1v = $("s1v");` +
+        `const s2 = $("s2"), s2v = $("s2v");` +
+        `const btn = $("btn"); let corriendo = false;` +
+        `function dibujar() { s1v.textContent = s1.value; }` +
+        `s1.addEventListener("input", () => { s1v.textContent = s1.value; dibujar(); });` +
+        `s2.addEventListener("input", () => { s2v.textContent = s2.value; dibujar(); });` +
+        `btn.addEventListener("click", () => { corriendo = !corriendo; btn.textContent = corriendo ? "Pausar" : "Iniciar"; });`,
+    );
+    expect(smokeTestSimulationHtml(html)).toEqual({ ok: true });
+  });
 });
