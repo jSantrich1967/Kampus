@@ -37,6 +37,14 @@ export const libraryCopy: Record<
     quickUploadDragActive: string;
     quickUploadFormats: string;
     quickUploadProgress: string;
+    writeSheetTab: string;
+    uploadFileTab: string;
+    writeSheetTitleLabel: string;
+    writeSheetTitlePlaceholder: string;
+    writeSheetBodyLabel: string;
+    writeSheetBodyPlaceholder: string;
+    writeSheetSaveCta: string;
+    writeSheetEmptyError: string;
     quickUploadSuccessTitle: string;
     quickUploadSuccessBody: (count: number, subject: string) => string;
     quickUploadClose: string;
@@ -97,6 +105,14 @@ export const libraryCopy: Record<
     quickUploadDragActive: "Suelta para subir",
     quickUploadFormats: "PDF · PNG · JPG · TXT · hasta 50 MB",
     quickUploadProgress: "Subiendo…",
+    writeSheetTab: "Escribir hoja",
+    uploadFileTab: "Subir archivo",
+    writeSheetTitleLabel: "Título de la hoja",
+    writeSheetTitlePlaceholder: "Ej.: Resumen fotosíntesis",
+    writeSheetBodyLabel: "Contenido",
+    writeSheetBodyPlaceholder: "Escribe tus apuntes aquí…",
+    writeSheetSaveCta: "Guardar hoja",
+    writeSheetEmptyError: "Escribe un título y algo de contenido para guardar la hoja.",
     quickUploadSuccessTitle: "¡Listo!",
     quickUploadSuccessBody: (count, subject) =>
       `${count} archivo${count === 1 ? "" : "s"} en “${subject}”. Ya puedes abrir el lector o generar un kit.`,

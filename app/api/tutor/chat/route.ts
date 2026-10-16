@@ -9,7 +9,7 @@ import { fetchOpenAi, runOpenAiRoute } from "@/lib/observability/openai-sentry";
 import { extractResponsesOutputText } from "@/lib/openai/extract-responses-output-text";
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
 import { socraticTutorRateLimits } from "@/lib/rate-limit/openai-defaults";
-import { consumeDailyUserQuota } from "@/lib/rate-limit/user-quota";
+import { consumeDailyUserQuota, refundDailyUserQuotaForCurrentUser } from "@/lib/rate-limit/user-quota";
 import { topicScoreSchema } from "@/lib/schemas/cram";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -115,14 +115,18 @@ export async function POST(req: Request) {
 
   let quota: { used: number; limit: number };
   let taste = false;
+  // Clave de cuota usada en esta petición (para reembolsar si la IA falla
+  // después de consumir: la cuota cuenta respuestas, no intentos).
+  let quotaKey: string | null = null;
   if (user) {
     const plan = await getServerUserPlan(supabase, user.id);
     // Probada gratis: quien tiene cuenta y plan Estudiante puede sentir el
     // Tutor antes de pagar (3 preguntas al día). Al agotarla, la interfaz
     // muestra la tarjeta de Pro en vez de un error seco.
     taste = plan !== "premium";
+    quotaKey = taste ? "socratic_tutor_free" : "socratic_tutor";
     const q = await consumeDailyUserQuota(
-      taste ? "socratic_tutor_free" : "socratic_tutor",
+      quotaKey,
       taste
         ? parseInt(process.env.API_FREE_TUTOR_DAILY ?? "3", 10)
         : parseInt(process.env.API_DAILY_LIMIT_SOCRATIC_TUTOR ?? "25", 10),
@@ -224,6 +228,7 @@ export async function POST(req: Request) {
         // body, o el mensaje específico del límite se pierde (genérico).
         const planLimit = await planLimitMessage(res);
         if (planLimit) {
+          if (quotaKey) await refundDailyUserQuotaForCurrentUser(quotaKey);
           return NextResponse.json({ error: planLimit }, { status: 429 });
         }
         let message = "";
@@ -234,17 +239,20 @@ export async function POST(req: Request) {
           message = (await res.text()).slice(0, 400);
         }
         if (res.status === 429) {
+          if (quotaKey) await refundDailyUserQuotaForCurrentUser(quotaKey);
           return NextResponse.json(
             { error: "Sin cuota OpenAI ahora (429). Revisa facturación e inténtalo de nuevo." },
             { status: 429 },
           );
         }
+        if (quotaKey) await refundDailyUserQuotaForCurrentUser(quotaKey);
         return NextResponse.json({ error: `OpenAI error (HTTP ${res.status}): ${message || "Unknown"}` }, { status: 502 });
       }
 
       const payload = (await res.json()) as unknown;
       const text = extractResponsesOutputText(payload);
       if (!text.trim()) {
+        if (quotaKey) await refundDailyUserQuotaForCurrentUser(quotaKey);
         return NextResponse.json({ error: "La respuesta del modelo llegó vacía." }, { status: 502 });
       }
 
@@ -257,8 +265,10 @@ export async function POST(req: Request) {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     if (err instanceof z.ZodError) {
+      if (quotaKey) await refundDailyUserQuotaForCurrentUser(quotaKey);
       return NextResponse.json({ error: "Petición no válida.", details: err.flatten() }, { status: 400 });
     }
+    if (quotaKey) await refundDailyUserQuotaForCurrentUser(quotaKey);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

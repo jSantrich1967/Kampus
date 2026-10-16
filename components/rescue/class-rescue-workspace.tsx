@@ -677,13 +677,11 @@ export function ClassRescueWorkspace() {
           <CardTitle>Material y filtros del cuaderno</CardTitle>
           <CardDescription>
             Indica <strong>Materia foco</strong> (cuaderno) y las <strong>etiquetas</strong> que ya usas en Mis cuadernos
-            (Tema, Punto, Ejercicios): con sesión y Supabase verás <strong>listas desplegables</strong> con tus materias y
+            (Tema, Punto, Ejercicios): al iniciar sesión verás <strong>listas desplegables</strong> con tus materias y
             el contenido etiquetado de tus hojas.             Al <strong>cambiar de cuaderno</strong> aquí, Tema / Punto / Ejercicios se
             rellenan solos con la primera etiqueta disponible en tus hojas de esa materia (puedes cambiarlas en los desplegables). Si pulsas «Guardar material de entrada», en el cuaderno solo se guarda lo
             que <strong>entraste</strong> (texto extraído, apuntes, enlace), no el kit generado por la IA. También puedes
-            subir archivos locales, elegir un archivo abajo, o abrir{" "}
-            <code className="rounded bg-white/10 px-1 py-0.5 text-[11px]">/study/library/rescue?notebook=econometria</code>{" "}
-            para cargar <strong>todo</strong> el cuaderno.
+            subir archivos locales, elegir un archivo abajo, o seleccionar un cuaderno arriba para trabajar con <strong>todo</strong> su material.
           </CardDescription>
         </CardHeader>
 
@@ -788,7 +786,7 @@ export function ClassRescueWorkspace() {
             subjectHint.trim() &&
             notebookTagRows.length === 0 ? (
               <p className="mb-3 text-[11px] text-slate-500">
-                No hay hojas indexadas en Supabase para tu cuenta, o aún no termina la sesión. Las listas de Tema / Punto
+                No hay hojas con etiquetas en este cuaderno todavía, o tu sesión aún está cargando. Las listas de Tema / Punto
                 solo se rellenan con archivos que veas en <strong className="text-slate-400">Mis cuadernos</strong> para
                 esa materia.
               </p>

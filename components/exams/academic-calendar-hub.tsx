@@ -17,6 +17,7 @@ import { RescuePackDisplay } from "@/components/rescue/rescue-pack-display";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DateTextInput } from "@/components/ui/date-text-input";
 import {
   buildAgendaEvents,
   LOCAL_ONLY_PRESENTATION_ID,
@@ -113,6 +114,67 @@ function eventsOnDay(events: AgendaEvent[], year: number, monthIndex0: number, d
   return events.filter((e) => e.date === iso);
 }
 
+const SUBJECT_OTHER = "__otra__";
+
+/**
+ * Selector de materia con elección explícita: nunca autocompleta en silencio
+ * con la primera materia del perfil. Incluye "Otra…" para escribir una nueva.
+ */
+function SubjectPicker({
+  value,
+  onChange,
+  subjects,
+  required,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  subjects: string[];
+  required?: boolean;
+}) {
+  const [otherOpen, setOtherOpen] = useState(false);
+
+  useEffect(() => {
+    if (value === "") setOtherOpen(false);
+  }, [value]);
+
+  return (
+    <span className="block space-y-2">
+      <select
+        required={required}
+        className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
+        value={otherOpen ? SUBJECT_OTHER : value}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === SUBJECT_OTHER) {
+            setOtherOpen(true);
+            onChange("");
+          } else {
+            setOtherOpen(false);
+            onChange(v);
+          }
+        }}
+      >
+        <option value="">Elige la materia…</option>
+        {subjects.map((s) => (
+          <option key={s} value={s}>
+            {s}
+          </option>
+        ))}
+        <option value={SUBJECT_OTHER}>Otra…</option>
+      </select>
+      {otherOpen ? (
+        <input
+          className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm outline-none ring-indigo-400/30 focus:ring"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Escribe la materia"
+          required={required}
+        />
+      ) : null}
+    </span>
+  );
+}
+
 export function AcademicCalendarHub() {
   const { profile, hydrated, authUserId } = useKampus();
   const useCloud = Boolean(isSupabaseConfigured() && authUserId);
@@ -127,6 +189,14 @@ export function AcademicCalendarHub() {
   const [loading, setLoading] = useState(false);
   const firstCalendarLoad = useRef(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function showNotice(text: string) {
+    setNotice(text);
+    if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    noticeTimer.current = setTimeout(() => setNotice(null), 4000);
+  }
 
   const [exams, setExams] = useState<Exam[]>([]);
   const [works, setWorks] = useState<StudentWork[]>([]);
@@ -712,15 +782,15 @@ export function AcademicCalendarHub() {
   const upcoming = useMemo(() => {
     const today = localIsoDate();
     const seen = new Set<string>();
-    return allEvents
-      .filter((e) => {
-        if (e.date < today) return false;
-        const key = `${e.kind}|${e.title}|${e.subject}|${e.date}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      })
-      .slice(0, 12);
+    // Misma fuente que la cuadrícula (allEvents): solo se excluye el pasado.
+    // El deduplicado es por id (no por contenido) para no ocultar exámenes
+    // distintos que coincidan en título/materia/fecha, y sin tope arbitrario.
+    return allEvents.filter((e) => {
+      if (e.date < today) return false;
+      if (seen.has(e.id)) return false;
+      seen.add(e.id);
+      return true;
+    });
   }, [allEvents]);
 
   const unscheduledExams = useMemo(
@@ -801,9 +871,9 @@ export function AcademicCalendarHub() {
 
   async function submitClassSchedule(e: FormEvent) {
     e.preventDefault();
-    const subject = classSubject.trim() || profile.subjects[0] || "";
-    if (!subject.trim()) {
-      setLoadError("Escribe la materia para la clase.");
+    const subject = classSubject.trim();
+    if (!subject) {
+      setLoadError("Elige la materia para la clase.");
       return;
     }
     const input = {
@@ -846,10 +916,10 @@ export function AcademicCalendarHub() {
 
   async function submitWork(e: FormEvent) {
     e.preventDefault();
-    if (!workTitle.trim() || !workDue) return;
+    if (!workTitle.trim() || !workDue || !workSubject.trim()) return;
     const row = {
       title: workTitle.trim(),
-      subject: workSubject.trim() || profile.subjects[0] || "General",
+      subject: workSubject.trim(),
       dueDate: workDue,
       notes: workNotes.trim(),
     };
@@ -872,7 +942,7 @@ export function AcademicCalendarHub() {
 
   async function submitExam(e: FormEvent) {
     e.preventDefault();
-    if (!examTitle.trim() || !examDue) return;
+    if (!examTitle.trim() || !examDue || !examSubject.trim()) return;
     if (!useCloud || !authUserId) {
       setLoadError("Inicia sesión para registrar tus exámenes en el calendario.");
       return;
@@ -881,7 +951,7 @@ export function AcademicCalendarHub() {
       const supabase = createSupabaseBrowserClient();
       await insertUserExamRemote(supabase, authUserId, {
         title: examTitle.trim(),
-        subject: examSubject.trim() || profile.subjects[0] || "General",
+        subject: examSubject.trim(),
         dueDate: examDue,
       });
       setExamTitle("");
@@ -894,6 +964,9 @@ export function AcademicCalendarHub() {
   }
 
   async function removeWork(id: string) {
+    // Optimista: la fila desaparece de inmediato; si el servidor falla,
+    // el refresh la restaura y se muestra el error.
+    setWorks((prev) => prev.filter((w) => w.id !== id));
     try {
       if (useCloud) {
         const supabase = createSupabaseBrowserClient();
@@ -903,7 +976,9 @@ export function AcademicCalendarHub() {
       }
       refresh();
       notifyStudentWorksChanged();
+      showNotice("Trabajo eliminado.");
     } catch (err) {
+      refresh();
       setLoadError(formatAgendaCloudError(err instanceof Error ? err.message : "Error al eliminar."));
     }
   }
@@ -922,16 +997,6 @@ export function AcademicCalendarHub() {
       setLoadError(formatAgendaCloudError(err instanceof Error ? err.message : "Error al actualizar el trabajo."));
     }
   }
-
-  useEffect(() => {
-    if (!hydrated) return;
-    if (!workSubject.trim() && profile.subjects[0]) setWorkSubject(profile.subjects[0]!);
-  }, [hydrated, profile.subjects, workSubject]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    if (!classSubject.trim() && profile.subjects[0]) setClassSubject(profile.subjects[0]!);
-  }, [hydrated, profile.subjects, classSubject]);
 
   useEffect(() => {
     if (cancelDate.trim()) return;
@@ -1042,21 +1107,15 @@ export function AcademicCalendarHub() {
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="space-y-1 text-xs">
                 <span className="text-slate-500">Materia</span>
-                <input
-                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm outline-none ring-indigo-400/30 focus:ring"
-                  value={examSubject}
-                  onChange={(e) => setExamSubject(e.target.value)}
-                  placeholder="Ej. Cálculo"
-                />
+                <SubjectPicker value={examSubject} onChange={setExamSubject} subjects={profile.subjects} required />
               </label>
               <label className="space-y-1 text-xs">
                 <span className="text-slate-500">Fecha del examen</span>
-                <input
+                <DateTextInput
                   required
-                  type="date"
                   className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
                   value={examDue}
-                  onChange={(e) => setExamDue(e.target.value)}
+                  onChange={setExamDue}
                 />
               </label>
             </div>
@@ -1085,21 +1144,15 @@ export function AcademicCalendarHub() {
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="space-y-1 text-xs">
                 <span className="text-slate-500">Materia</span>
-                <input
-                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm outline-none ring-indigo-400/30 focus:ring"
-                  value={workSubject}
-                  onChange={(e) => setWorkSubject(e.target.value)}
-                  placeholder="Ej. Historia"
-                />
+                <SubjectPicker value={workSubject} onChange={setWorkSubject} subjects={profile.subjects} required />
               </label>
               <label className="space-y-1 text-xs">
                 <span className="text-slate-500">Fecha límite</span>
-                <input
+                <DateTextInput
                   required
-                  type="date"
                   className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
                   value={workDue}
-                  onChange={(e) => setWorkDue(e.target.value)}
+                  onChange={setWorkDue}
                 />
               </label>
             </div>
@@ -1169,6 +1222,11 @@ export function AcademicCalendarHub() {
       </div>
 
       {loadError ? <p className="text-sm text-rose-300">{loadError}</p> : null}
+      {notice ? (
+        <p className="text-sm text-emerald-300" role="status">
+          {notice}
+        </p>
+      ) : null}
 
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-slate-400">
@@ -1571,12 +1629,7 @@ export function AcademicCalendarHub() {
               </label>
               <label className="space-y-1 text-xs">
                 <span className="text-slate-500">Materia</span>
-                <input
-                  className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm outline-none ring-indigo-400/30 focus:ring"
-                  value={classSubject}
-                  onChange={(e) => setClassSubject(e.target.value)}
-                  placeholder={profile.subjects[0] || "Ej. Econometría"}
-                />
+                <SubjectPicker value={classSubject} onChange={setClassSubject} subjects={profile.subjects} required />
               </label>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -1651,12 +1704,11 @@ export function AcademicCalendarHub() {
                 </label>
                 <label className="space-y-1 text-xs">
                   <span className="text-slate-500">Fecha</span>
-                  <input
+                  <DateTextInput
                     required
-                    type="date"
                     className="w-full rounded-lg border border-white/10 bg-slate-950/80 px-2 py-2 text-sm text-slate-200 outline-none ring-indigo-400/30 focus:ring"
                     value={cancelDate}
-                    onChange={(e) => setCancelDate(e.target.value)}
+                    onChange={setCancelDate}
                   />
                 </label>
               </div>

@@ -8,21 +8,24 @@ import { SocraticTutorPanel } from "@/components/tutor/socratic-tutor-panel";
 
 function TutorPageContent() {
   const router = useRouter();
-  const { profile, hydrated } = useKampus();
+  const { profile, hydrated, authReady } = useKampus();
 
   useEffect(() => {
-    if (!hydrated) return;
+    // Esperar a authReady: el perfil local inicial puede ser de otro rol
+    // (demo/sesión anterior) y redirigiría a /today por error antes de que
+    // cargue el perfil real del usuario.
+    if (!hydrated || !authReady) return;
     if (!profile.onboardingFinished) {
       router.replace("/onboarding");
       return;
     }
     if (profile.role !== "student" && profile.role !== "learner") router.replace("/today");
-  }, [hydrated, profile.onboardingFinished, profile.role, router]);
+  }, [hydrated, authReady, profile.onboardingFinished, profile.role, router]);
 
-  if (!hydrated || (profile.role !== "student" && profile.role !== "learner") || !profile.onboardingFinished) {
+  if (!hydrated || !authReady || (profile.role !== "student" && profile.role !== "learner") || !profile.onboardingFinished) {
     return (
       <div className="text-sm text-slate-400">
-        {!hydrated ? "Cargando…" : "Redirigiendo…"}
+        {!hydrated || !authReady ? "Cargando…" : "Redirigiendo…"}
       </div>
     );
   }

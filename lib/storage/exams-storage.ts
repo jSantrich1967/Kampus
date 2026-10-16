@@ -67,7 +67,12 @@ function writeJson(key: string, value: unknown) {
 }
 
 /** Marca del título que identifica los exámenes demo sembrados automáticamente. */
-const DEMO_TITLE_MARK = "(demo)";
+export const DEMO_TITLE_MARK = "(demo)";
+
+/** true si el examen es uno de los demos sembrados automáticamente (no un examen real del usuario). */
+export function isDemoExamTitle(title: string): boolean {
+  return title.includes(DEMO_TITLE_MARK);
+}
 
 /** Preguntas demo por materia para que el examen de prueba tenga sentido. */
 const DEMO_QUESTIONS_BY_SUBJECT: Record<string, string[]> = {

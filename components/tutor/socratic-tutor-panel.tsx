@@ -108,6 +108,10 @@ export function SocraticTutorPanel() {
   const [notebookActive, setNotebookActive] = useState(false);
   const manualSubjectRef = useRef(false);
   const listRef = useRef<HTMLDivElement>(null);
+  // Guardia sincrónica contra doble envío: `busy` es estado de React y dos
+  // activaciones rápidas (doble clic, Enter + clic) pueden leerlo en false
+  // antes del re-render y disparar 2 POSTs que el servidor cuenta doble.
+  const busyRef = useRef(false);
   // Cache por materia del diagnóstico guardado (para no pedirlo en cada mensaje).
   const diagnosisCache = useRef<Record<string, DiagnosisTopic[] | null>>({});
   // Texto del cuaderno cuando el Tutor se abre con ?notebook=<slug>.
@@ -166,7 +170,8 @@ export function SocraticTutorPanel() {
   const sendMessage = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
-      if (!trimmed || busy) return;
+      if (!trimmed || busyRef.current) return;
+      busyRef.current = true;
 
       setError(null);
       setBusy(true);
@@ -226,6 +231,7 @@ export function SocraticTutorPanel() {
         setMessages((prev) => prev.slice(0, -1));
         setDraft(trimmed);
       } finally {
+        busyRef.current = false;
         setBusy(false);
       }
     },

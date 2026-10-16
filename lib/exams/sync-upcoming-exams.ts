@@ -1,4 +1,5 @@
 import type { Exam } from "@/lib/schemas/exams";
+import { isDemoExamTitle } from "@/lib/storage/exams-storage";
 
 type UpcomingExamEntry = { subject: string; date: string };
 
@@ -6,13 +7,17 @@ function upcomingKey(entry: UpcomingExamEntry): string {
   return `${entry.subject.trim().toLowerCase()}|${entry.date}`;
 }
 
-/** Merge agenda exam due dates into profile.upcomingExams (agenda wins on conflict). */
+/**
+ * Merge agenda exam due dates into profile.upcomingExams (agenda wins on conflict).
+ * Los exámenes demo sembrados automáticamente ("(demo)") NO entran al perfil:
+ * /today no debe presentarlos como exámenes reales del usuario.
+ */
 export function mergeUpcomingExamsIntoProfile(
   profileExams: UpcomingExamEntry[],
   agendaExams: Exam[],
 ): UpcomingExamEntry[] {
   const fromAgenda = agendaExams
-    .filter((e) => e.status !== "draft" && e.dueDate?.trim())
+    .filter((e) => e.status !== "draft" && e.dueDate?.trim() && !isDemoExamTitle(e.title ?? ""))
     .map((e) => ({ subject: e.subject.trim(), date: e.dueDate!.trim() }));
 
   if (fromAgenda.length === 0) return profileExams;

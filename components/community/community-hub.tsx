@@ -37,6 +37,7 @@ import {
   fetchHelpfulCounts,
   fetchMyHelpfulPostIds,
   fetchMyReportedPostIds,
+  deleteCommunityPost,
   insertCommunityAnswer,
   insertCommunityPost,
   insertPostReport,
@@ -46,7 +47,7 @@ import {
 } from "@/lib/supabase/community-db";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { loadSavedPostIds, toggleSavedPostId } from "@/lib/storage/community-saved-storage";
-import { withTimeout } from "@/lib/with-timeout";
+import { withTimeout, withTimeoutSignal } from "@/lib/with-timeout";
 
 export function CommunityHub() {
   const router = useRouter();
@@ -66,6 +67,7 @@ export function CommunityHub() {
   const [resourceKind, setResourceKind] = useState<CommunityResourceKind | null>(null);
   const [postBusy, setPostBusy] = useState(false);
   const [postError, setPostError] = useState<string | null>(null);
+  const [postSuccess, setPostSuccess] = useState(false);
 
   const [answerDrafts, setAnswerDrafts] = useState<Record<string, string>>({});
   const [answerBusyId, setAnswerBusyId] = useState<string | null>(null);
@@ -202,25 +204,36 @@ export function CommunityHub() {
     }
     setPostBusy(true);
     setPostError(null);
+    setPostSuccess(false);
     try {
       const supabase = createSupabaseBrowserClient();
-      await withTimeout(
-        insertCommunityPost(supabase, {
-          userId: authUserId,
-          channelId: selectedChannelId,
-          body,
-          resourceUrl: resourceUrl.trim() || undefined,
-          resourceLabel: resourceLabel.trim() || undefined,
-          resourceKind: resourceKind ?? undefined,
-        }),
+      // El timeout ABORTA la petición: si es lenta, no se completa en el
+      // servidor después del error (evita posts "fantasma").
+      await withTimeoutSignal(
+        (signal) =>
+          insertCommunityPost(
+            supabase,
+            {
+              userId: authUserId,
+              channelId: selectedChannelId,
+              body,
+              resourceUrl: resourceUrl.trim() || undefined,
+              resourceLabel: resourceLabel.trim() || undefined,
+              resourceKind: resourceKind ?? undefined,
+            },
+            signal,
+          ),
       );
       setPostBody("");
       setResourceUrl("");
       setResourceLabel("");
       setResourceKind(null);
-      // La publicación ya se guardó: soltamos el botón y refrescamos el
-      // feed en segundo plano para que la espera nunca cuelgue la interfaz.
+      // La publicación ya se guardó: soltamos el botón, mostramos
+      // confirmación visible y refrescamos el feed en segundo plano para que
+      // la espera nunca cuelgue la interfaz.
       setPostBusy(false);
+      setPostSuccess(true);
+      window.setTimeout(() => setPostSuccess(false), 4000);
       void mutateFeed();
     } catch (e) {
       const msg = e instanceof Error ? e.message : t.postError;
@@ -282,6 +295,25 @@ export function CommunityHub() {
     const supabase = createSupabaseBrowserClient();
     await insertPostReport(supabase, { userId: authUserId, postId, reason, detail });
     await mutateFeed();
+  }
+
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+  const [deletePostError, setDeletePostError] = useState<string | null>(null);
+
+  async function handleDeletePost(postId: string) {
+    if (!authUserId) return;
+    if (!window.confirm(t.deleteConfirm)) return;
+    setDeletingPostId(postId);
+    setDeletePostError(null);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      await withTimeout(deleteCommunityPost(supabase, postId));
+      await mutateFeed();
+    } catch (e) {
+      setDeletePostError(e instanceof Error ? e.message : t.deleteError);
+    } finally {
+      setDeletingPostId(null);
+    }
   }
 
   function clearChannelLink() {
@@ -408,6 +440,10 @@ export function CommunityHub() {
           }}
           postBusy={postBusy}
           postError={postError}
+          postSuccess={postSuccess}
+          deletingPostId={deletingPostId}
+          deletePostError={deletePostError}
+          onDeletePost={(id) => void handleDeletePost(id)}
           onSubmitAnswer={(id) => void submitAnswer(id)}
           answerDrafts={answerDrafts}
           onAnswerDraftChange={(questionId, value) =>

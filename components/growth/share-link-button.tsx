@@ -15,6 +15,8 @@ type ShareLinkButtonProps = {
   refHandle?: string;
   label: string;
   copiedLabel: string;
+  /** Texto explicativo (tooltip) de qué hace el enlace. */
+  hint?: string;
   variant?: "primary" | "secondary" | "ghost";
   size?: "sm" | "md" | "lg";
   className?: string;
@@ -27,6 +29,7 @@ export function ShareLinkButton({
   refHandle,
   label,
   copiedLabel,
+  hint,
   variant = "secondary",
   size = "sm",
   className,
@@ -52,7 +55,15 @@ export function ShareLinkButton({
   }
 
   return (
-    <Button type="button" variant={variant} size={size} className={cn("gap-2", className)} onClick={onCopy}>
+    <Button
+      type="button"
+      variant={variant}
+      size={size}
+      className={cn("gap-2", className)}
+      onClick={onCopy}
+      title={hint}
+      aria-label={hint ?? label}
+    >
       {copied ? <Check className="h-4 w-4 text-emerald-300" /> : <Link2 className="h-4 w-4" />}
       {copied ? copiedLabel : label}
     </Button>

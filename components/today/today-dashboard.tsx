@@ -38,9 +38,9 @@ function riskTone(risk: "low" | "medium" | "high") {
 }
 
 function riskLabel(risk: "low" | "medium" | "high") {
-  if (risk === "high") return "ALTO";
-  if (risk === "medium") return "MEDIO";
-  return "BAJO";
+  if (risk === "high") return "Riesgo alto";
+  if (risk === "medium") return "Riesgo medio";
+  return "Riesgo bajo";
 }
 
 /** Un paso del hilo didáctico de "Hoy": cada sección dice qué hacer y en qué orden. */
@@ -92,6 +92,27 @@ function StudentDeadlinesCard({ deadlines }: { deadlines: DeadlineItem[] }) {
                 >
                   {t.communityDeadlineCta(deadlines[0].subject)}
                 </Link>
+              </div>
+            ) : null}
+            {profile.plan !== "premium" && deadlines[0] && (deadlines[0].days ?? 99) <= 7 ? (
+              <div className="rounded-2xl border border-purple-400/25 bg-purple-500/[0.06] px-4 py-3">
+                <p className="text-sm text-slate-200">
+                  Tu examen de {deadlines[0].subject}{" "}
+                  {deadlines[0].days === 0
+                    ? "es hoy"
+                    : deadlines[0].days === 1
+                      ? "es mañana"
+                      : `es en ${deadlines[0].days} días`}
+                  : haz tu diagnóstico gratis de 2 minutos y descubre qué temas flojean.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Link href="/modo-examen" className={buttonClasses({ size: "sm" })}>
+                    Probar el diagnóstico gratis
+                  </Link>
+                  <Link href="/pro" className={buttonClasses({ size: "sm", variant: "secondary" })}>
+                    Pasarme a Pro
+                  </Link>
+                </div>
               </div>
             ) : null}
           </>
@@ -192,6 +213,7 @@ export function TodayDashboard() {
               refHandle={profile.university || "kampus"}
               label="Copiar enlace de Hoy"
               copiedLabel="Copiado"
+              hint="Copia un enlace con tu referencia para invitar a un compañero a ver su pantalla Hoy"
             />
             {isTeacher ? (
               <>
@@ -260,32 +282,6 @@ export function TodayDashboard() {
             <StudentDeadlinesCard deadlines={deadlines} />
             <StudentRiskCard risks={risks} />
           </div>
-          {profile.plan !== "premium" && deadlines[0] && (deadlines[0].days ?? 99) <= 7 ? (
-            <Card className="border-purple-400/25 bg-purple-500/[0.06]">
-              <CardHeader>
-                <CardTitle className="text-base">
-                  Tu examen de {deadlines[0].subject} es{" "}
-                  {deadlines[0].days === 0
-                    ? "hoy"
-                    : deadlines[0].days === 1
-                      ? "mañana"
-                      : `en ${deadlines[0].days} días`}
-                </CardTitle>
-                <CardDescription>
-                  Haz tu diagnóstico gratis de 2 minutos y descubre qué temas flojean. El plan de
-                  estudio completo, día por día, es del plan Pro ($5/mes).
-                </CardDescription>
-              </CardHeader>
-              <div className="flex flex-wrap gap-2 px-6 pb-6">
-                <Link href="/modo-examen" className={buttonClasses({ size: "sm" })}>
-                  Probar el diagnóstico gratis
-                </Link>
-                <Link href="/pro" className={buttonClasses({ size: "sm", variant: "secondary" })}>
-                  Pasarme a Pro
-                </Link>
-              </div>
-            </Card>
-          ) : null}
           <TodayReviewsCard />
           <TodayCollaboratePanel />
         </TodayStep>

@@ -31,6 +31,13 @@ export const communityCopy: Record<
     clearCta: string;
     selectChannelError: string;
     postError: string;
+    publishedOk: string;
+    charCount: (used: number, max: number) => string;
+    truncatedNotice: string;
+    deleteCta: string;
+    deleting: string;
+    deleteConfirm: string;
+    deleteError: string;
     feedTitle: string;
     feedHint: string;
     emptyTitle: string;
@@ -118,6 +125,13 @@ export const communityCopy: Record<
     clearCta: "Limpiar",
     selectChannelError: "Elige un canal.",
     postError: "No se pudo publicar.",
+    publishedOk: "¡Publicado!",
+    charCount: (used, max) => `${used}/${max}`,
+    truncatedNotice: "El texto superaba el límite y se recortó al final de la última palabra completa.",
+    deleteCta: "Eliminar",
+    deleting: "Eliminando…",
+    deleteConfirm: "¿Eliminar esta publicación? Esta acción no se puede deshacer.",
+    deleteError: "No se pudo eliminar.",
     feedTitle: "Conversación del canal",
     feedHint: "Ordena por recientes o en tendencia (más respuestas esta semana).",
     emptyTitle: "Todavía no hay conversación aquí",

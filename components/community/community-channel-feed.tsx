@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bookmark, BookOpen, ExternalLink, MessageCircle, ThumbsUp } from "lucide-react";
+import { Bookmark, BookOpen, ExternalLink, MessageCircle, ThumbsUp, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { CommunityNotebookAttachPicker } from "@/components/community/community-notebook-attach-picker";
@@ -38,6 +38,10 @@ type CommunityChannelFeedProps = {
   onClearComposer: () => void;
   postBusy: boolean;
   postError: string | null;
+  postSuccess: boolean;
+  deletingPostId: string | null;
+  deletePostError: string | null;
+  onDeletePost: (postId: string) => void;
   onSubmitAnswer: (questionId: string) => void;
   answerDrafts: Record<string, string>;
   onAnswerDraftChange: (questionId: string, value: string) => void;
@@ -75,6 +79,10 @@ export function CommunityChannelFeed({
   onClearComposer,
   postBusy,
   postError,
+  postSuccess,
+  deletingPostId,
+  deletePostError,
+  onDeletePost,
   onSubmitAnswer,
   answerDrafts,
   onAnswerDraftChange,
@@ -108,6 +116,26 @@ export function CommunityChannelFeed({
   }, [sortedPosts, feedFilter, savedPostIds]);
 
   const [weekAgo] = useState(() => Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const [pasteNotice, setPasteNotice] = useState(false);
+  const POST_MAX = 1200;
+
+  // Pegar texto largo: recorta al límite en el final de la última palabra
+  // completa y avisa (el maxLength nativo cortaría a mitad de palabra en silencio).
+  function handleComposerPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const paste = e.clipboardData.getData("text");
+    if (!paste) return;
+    const el = e.currentTarget;
+    const before = el.value.slice(0, el.selectionStart);
+    const after = el.value.slice(el.selectionEnd);
+    if (before.length + paste.length + after.length <= POST_MAX) return;
+    e.preventDefault();
+    const room = POST_MAX - before.length - after.length;
+    let cut = paste.slice(0, Math.max(0, room));
+    const lastSpace = cut.lastIndexOf(" ");
+    if (lastSpace > 0) cut = cut.slice(0, lastSpace);
+    onPostBodyChange((before + cut + after).slice(0, POST_MAX));
+    setPasteNotice(true);
+  }
 
   return (
     <div className="space-y-6">
@@ -130,9 +158,17 @@ export function CommunityChannelFeed({
                 className="min-h-[90px] w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-slate-200 outline-none ring-indigo-400/40 focus:ring"
                 placeholder={t.postPlaceholder}
                 value={postBody}
-                onChange={(e) => onPostBodyChange(e.target.value)}
-                maxLength={1200}
+                onChange={(e) => {
+                  onPostBodyChange(e.target.value);
+                  setPasteNotice(false);
+                }}
+                onPaste={handleComposerPaste}
+                maxLength={POST_MAX}
               />
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-500">{t.charCount(postBody.length, POST_MAX)}</span>
+                {pasteNotice ? <span className="text-amber-200/90">{t.truncatedNotice}</span> : null}
+              </div>
               <CommunityNotebookAttachPicker subjects={subjects} onAttach={onNotebookAttach} />
               <div className="grid gap-2 sm:grid-cols-2">
                 <label className="block text-xs text-slate-400">
@@ -178,6 +214,7 @@ export function CommunityChannelFeed({
                   {t.clearCta}
                 </Button>
                 {postError ? <span className="text-xs text-rose-300">{postError}</span> : null}
+                {postSuccess ? <span className="text-xs text-emerald-300">{t.publishedOk}</span> : null}
               </div>
             </>
           )}
@@ -287,6 +324,9 @@ export function CommunityChannelFeed({
                 highlighted={highlightPostId === p.id}
                 alreadyReported={reportedPostIds.has(p.id)}
                 onReportPost={(reason, detail) => onReportPost(p.id, reason, detail)}
+                onDeletePost={() => onDeletePost(p.id)}
+                deleting={deletingPostId === p.id}
+                deleteError={deletingPostId === p.id ? deletePostError : null}
               />
             ))
           )}
@@ -315,6 +355,9 @@ function CommunityPostThread({
   highlighted,
   alreadyReported,
   onReportPost,
+  onDeletePost,
+  deleting,
+  deleteError,
 }: {
   post: CommunityPostRow;
   answers: CommunityAnswerRow[];
@@ -334,6 +377,9 @@ function CommunityPostThread({
   highlighted: boolean;
   alreadyReported: boolean;
   onReportPost: (reason: string, detail: string) => Promise<void>;
+  onDeletePost: () => void;
+  deleting: boolean;
+  deleteError: string | null;
 }) {
   const t = communityCopy.es;
   const [expanded, setExpanded] = useState(answers.length > 0);
@@ -414,6 +460,23 @@ function CommunityPostThread({
           alreadyReported={alreadyReported}
           onReport={onReportPost}
         />
+      ) : null}
+
+      {authUserId && post.user_id === authUserId ? (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="gap-1.5 text-rose-300 hover:text-rose-200"
+            disabled={deleting}
+            onClick={onDeletePost}
+          >
+            <Trash2 className="h-4 w-4" aria-hidden />
+            {deleting ? t.deleting : t.deleteCta}
+          </Button>
+          {deleteError ? <span className="text-xs text-rose-300">{deleteError}</span> : null}
+        </div>
       ) : null}
 
       {answers.length > 0 ? (

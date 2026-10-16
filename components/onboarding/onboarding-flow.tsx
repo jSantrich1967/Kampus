@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, useCallback } from "react";
 
 import { KampusLogo } from "@/components/brand/kampus-logo";
@@ -15,6 +15,18 @@ import { defaultProfile, profileSchema, type UserRole } from "@/lib/schemas/prof
 import { cn } from "@/lib/cn";
 
 type ExamRow = { subject: string; date: string };
+
+/** Marca visual de campo obligatorio (asterisco + texto para lector de pantalla). */
+function RequiredMark() {
+  return (
+    <>
+      <span className="text-rose-300" aria-hidden>
+        {" *"}
+      </span>
+      <span className="sr-only">(obligatorio)</span>
+    </>
+  );
+}
 
 const TOTAL_STEPS = 8;
 /** Student / learner-only steps — skipped for teacher & institution. */
@@ -37,10 +49,32 @@ function onboardingProgress(role: UserRole, step: number): { current: number; to
 
 export function OnboardingFlow() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { profile, hydrated, setProfile } = useKampus();
   const t = onboardingCopy.es;
 
-  const [step, setStep] = useState(0);
+  // El paso vive en la URL (?paso=N): atrás/adelante del navegador navega
+  // entre pasos y recargar restaura el paso actual en vez de reiniciar en 1.
+  const [step, setStepState] = useState(() => {
+    const p = parseInt(searchParams.get("paso") ?? "", 10);
+    return Number.isFinite(p) && p >= 1 && p <= TOTAL_STEPS ? p - 1 : 0;
+  });
+  const goToStep = useCallback(
+    (next: number) => {
+      const clamped = Math.max(0, Math.min(TOTAL_STEPS - 1, next));
+      setStepState(clamped);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("paso", String(clamped + 1));
+      router.push(`/onboarding?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams],
+  );
+  // Atrás/adelante del navegador: la URL manda.
+  useEffect(() => {
+    const p = parseInt(searchParams.get("paso") ?? "", 10);
+    if (Number.isFinite(p) && p >= 1 && p <= TOTAL_STEPS) setStepState(p - 1);
+  }, [searchParams]);
+  const setStep = goToStep;
   const [role, setRole] = useState<UserRole>("student");
   const [displayName, setDisplayName] = useState("");
   const [university, setUniversity] = useState("");
@@ -54,8 +88,46 @@ export function OnboardingFlow() {
   const [missedClassesApprox, setMissedClassesApprox] = useState(0);
   const [weeklyAvailabilityHours, setWeeklyAvailabilityHours] = useState(12);
   const preferredLanguage = "es" as const;
-  const [interestedInCommunity, setInterestedInCommunity] = useState(true);
+  const [interestedInCommunity, setInterestedInCommunity] = useState(false);
   const [learningGoals, setLearningGoals] = useState("");
+
+  // Los borradores sobreviven a una recarga (el paso lo cubre la URL).
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("kampus:onboarding-draft");
+      if (!raw) return;
+      const d = JSON.parse(raw) as Record<string, unknown>;
+      if (d.role === "student" || d.role === "teacher" || d.role === "learner" || d.role === "institution") setRole(d.role);
+      if (typeof d.displayName === "string") setDisplayName(d.displayName);
+      if (typeof d.university === "string") setUniversity(d.university);
+      if (typeof d.major === "string") setMajor(d.major);
+      if (typeof d.semester === "string") setSemester(d.semester);
+      if (Array.isArray(d.subjects)) setSubjects(d.subjects.filter((s): s is string => typeof s === "string"));
+      if (Array.isArray(d.exams)) setExams(d.exams.filter((e): e is ExamRow => typeof e === "object" && e !== null));
+      if (Array.isArray(d.weakTopics)) setWeakTopics(d.weakTopics.filter((s): s is string => typeof s === "string"));
+      if (typeof d.missedClassesApprox === "number") setMissedClassesApprox(d.missedClassesApprox);
+      if (typeof d.weeklyAvailabilityHours === "number") setWeeklyAvailabilityHours(d.weeklyAvailabilityHours);
+      if (typeof d.interestedInCommunity === "boolean") setInterestedInCommunity(d.interestedInCommunity);
+      if (typeof d.learningGoals === "string") setLearningGoals(d.learningGoals);
+    } catch {
+      /* borrador corrupto: se ignora */
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        "kampus:onboarding-draft",
+        JSON.stringify({
+          role, displayName, university, major, semester, subjects, exams,
+          weakTopics, missedClassesApprox, weeklyAvailabilityHours,
+          interestedInCommunity, learningGoals,
+        }),
+      );
+    } catch {
+      /* almacenamiento no disponible */
+    }
+  }, [role, displayName, university, major, semester, subjects, exams, weakTopics, missedClassesApprox, weeklyAvailabilityHours, interestedInCommunity, learningGoals]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -67,7 +139,7 @@ export function OnboardingFlow() {
     if (step === WEAK_TOPICS_STEP || step === LOAD_SCHEDULE_STEP) {
       setStep(6);
     }
-  }, [step, role]);
+  }, [step, role, setStep]);
 
   const { current: progressCurrent, total: progressTotal } = onboardingProgress(role, step);
   const progressValue = useMemo(
@@ -112,18 +184,30 @@ export function OnboardingFlow() {
       const subject = major.trim();
       setSubjects((prev) => (prev.length > 0 ? prev : [subject]));
     }
-    setStep((s) => {
-      if (s === 3 && skipsStudentCentricSteps(role)) return 6;
-      return Math.min(TOTAL_STEPS - 1, s + 1);
-    });
-  }, [role, step, major]);
+    const next = step === 3 && skipsStudentCentricSteps(role) ? 6 : Math.min(TOTAL_STEPS - 1, step + 1);
+    goToStep(next);
+  }, [role, step, major, goToStep]);
 
   const goPrev = useCallback(() => {
-    setStep((s) => {
-      if (s === 6 && skipsStudentCentricSteps(role)) return 3;
-      return Math.max(0, s - 1);
-    });
-  }, [role]);
+    const prev = step === 6 && skipsStudentCentricSteps(role) ? 3 : Math.max(0, step - 1);
+    goToStep(prev);
+  }, [role, step, goToStep]);
+
+  // Qué falta para poder continuar (paso 1): se muestra en línea en vez de
+  // un error genérico al pulsar Siguiente.
+  const missingStep1: string[] = useMemo(() => {
+    if (step !== 1) return [];
+    const missing: string[] = [];
+    if (role === "teacher") {
+      if (major.trim().length <= 1) missing.push("la materia principal");
+    } else if (role === "institution") {
+      if (university.trim().length <= 1) missing.push("el nombre del colegio o universidad");
+    } else {
+      if (major.trim().length <= 1) missing.push("tu carrera / programa");
+      if (!semester.trim()) missing.push("el período");
+    }
+    return missing;
+  }, [step, role, major, university, semester]);
 
   function addSubject() {
     const next = subjectDraft.trim();
@@ -165,13 +249,20 @@ export function OnboardingFlow() {
       lastActiveDate: new Date().toISOString().slice(0, 10),
     });
     setProfile(nextProfile);
+    try {
+      sessionStorage.removeItem("kampus:onboarding-draft");
+    } catch {
+      /* noop */
+    }
     router.push("/today");
   }
 
-  if (!hydrated) {
+  // Sin flash del hero: si el onboarding ya terminó, no se renderiza el
+  // formulario; el efecto de arriba redirige a /today.
+  if (!hydrated || profile.onboardingFinished) {
     return (
       <div className="flex min-h-dvh items-center justify-center text-sm text-slate-400">
-        Cargando…
+        {hydrated ? "Redirigiendo…" : "Cargando…"}
       </div>
     );
   }
@@ -261,7 +352,10 @@ export function OnboardingFlow() {
                   />
                 </label>
                 <label className="space-y-2 text-sm">
-                  <span className="text-slate-300">{t.fields.major}</span>
+                  <span className="text-slate-300">
+                    {t.fields.major}
+                    <RequiredMark />
+                  </span>
                   <input
                     className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 outline-none ring-indigo-400/40 focus:ring"
                     value={major}
@@ -269,7 +363,10 @@ export function OnboardingFlow() {
                   />
                 </label>
                 <label className="space-y-2 text-sm md:col-span-2">
-                  <span className="text-slate-300">{t.fields.semester}</span>
+                  <span className="text-slate-300">
+                    {t.fields.semester}
+                    <RequiredMark />
+                  </span>
                   <input
                     className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 outline-none ring-indigo-400/40 focus:ring"
                     value={semester}
@@ -309,7 +406,10 @@ export function OnboardingFlow() {
                   />
                 </label>
                 <label className="space-y-2 text-sm md:col-span-2">
-                  <span className="text-slate-300">Materia principal</span>
+                  <span className="text-slate-300">
+                    Materia principal
+                    <RequiredMark />
+                  </span>
                   <input
                     className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 outline-none ring-indigo-400/40 focus:ring"
                     value={major}
@@ -340,7 +440,10 @@ export function OnboardingFlow() {
                   />
                 </label>
                 <label className="space-y-2 text-sm">
-                  <span className="text-slate-300">Nombre del colegio o universidad</span>
+                  <span className="text-slate-300">
+                    Nombre del colegio o universidad
+                    <RequiredMark />
+                  </span>
                   <input
                     className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 outline-none ring-indigo-400/40 focus:ring"
                     value={university}
@@ -635,6 +738,11 @@ export function OnboardingFlow() {
               </Button>
             )}
           </div>
+          {missingStep1.length > 0 ? (
+            <p className="mt-3 text-center text-xs text-amber-200/90" role="status">
+              Para continuar completa: {missingStep1.join(" y ")}.
+            </p>
+          ) : null}
         </Card>
       </div>
     </div>

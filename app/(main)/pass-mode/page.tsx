@@ -12,26 +12,29 @@ import { useState } from "react";
 
 function PassModePageContent() {
   const router = useRouter();
-  const { profile, hydrated, authUserId } = useKampus();
+  const { profile, hydrated, authReady, authUserId } = useKampus();
 
   useEffect(() => {
-    if (!hydrated) return;
+    // Igual que en /tutor: no redirigir por rol hasta que el perfil real
+    // esté reconciliado (authReady), o un perfil local de otro rol
+    // rebotaría a /today por error.
+    if (!hydrated || !authReady) return;
     if (!profile.onboardingFinished) {
       router.replace("/onboarding");
       return;
     }
     if (profile.role !== "student") router.replace("/today");
-  }, [hydrated, profile.onboardingFinished, profile.role, router]);
+  }, [hydrated, authReady, profile.onboardingFinished, profile.role, router]);
 
   const [demo, setDemo] = useState(false);
   useEffect(() => {
     setDemo(isDemoBrowser());
   }, []);
 
-  if (!hydrated || profile.role !== "student" || !profile.onboardingFinished) {
+  if (!hydrated || !authReady || profile.role !== "student" || !profile.onboardingFinished) {
     return (
       <div className="text-sm text-slate-400">
-        {!hydrated
+        {!hydrated || !authReady
           ? "Cargando…"
           : !profile.onboardingFinished
             ? "Redirigiendo…"

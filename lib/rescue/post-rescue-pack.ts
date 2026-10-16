@@ -22,28 +22,41 @@ export type RescuePackFallbackInput = {
 
 /**
  * Calls `/api/rescue/pack` and falls back to a deterministic pack if the request fails.
+ * Reintenta una vez antes de mostrar el kit básico: un fallo puntual de red no
+ * debería degradar la experiencia al primer intento.
  */
 export async function postRescuePack(
   body: RescuePackApiBody,
   fallback: RescuePackFallbackInput,
 ): Promise<{ pack: RescuePack; packError: string | null }> {
-  try {
-    // Allow enough time for OpenAI + Vercel serverless (route maxDuration = 60s).
-    const timeoutMs = body.packMode === "lite" ? 45000 : 60000;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
-    const res = await fetch("/api/rescue/pack", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-    const json = (await res.json()) as { pack?: RescuePack; error?: string };
-    if (!res.ok) throw new Error(json.error || "No pudimos generar el kit.");
-    if (!json.pack) throw new Error("Respuesta incompleta del servidor.");
-    return { pack: json.pack, packError: null };
-  } catch (e) {
+  const attempts = 2;
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      // Allow enough time for OpenAI + Vercel serverless (route maxDuration = 60s).
+      const timeoutMs = body.packMode === "lite" ? 45000 : 60000;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      const res = await fetch("/api/rescue/pack", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      const json = (await res.json()) as { pack?: RescuePack; error?: string };
+      if (!res.ok) throw new Error(json.error || "No pudimos generar el kit.");
+      if (!json.pack) throw new Error("Respuesta incompleta del servidor.");
+      return { pack: json.pack, packError: null };
+    } catch (e) {
+      lastError = e;
+      if (attempt < attempts - 1) {
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
+  }
+  const e = lastError;
+  {
     const raw = e instanceof Error ? e.message : "No pudimos generar el kit.";
     const msg =
       raw === "Failed to fetch"

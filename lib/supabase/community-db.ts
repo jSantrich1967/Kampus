@@ -209,6 +209,7 @@ export async function insertCommunityPost(
     resourceLabel?: string;
     resourceKind?: CommunityResourceKind;
   },
+  signal?: AbortSignal,
 ): Promise<CommunityPostRow> {
   const payload: Record<string, string> = {
     user_id: input.userId,
@@ -223,7 +224,14 @@ export async function insertCommunityPost(
     if (input.resourceKind) payload.resource_kind = input.resourceKind;
   }
 
-  let { data, error } = await supabase.from("community_posts").insert(payload).select(POST_SELECT_FULL).single();
+  const withSignal = <T extends { abortSignal: (s: AbortSignal) => unknown }>(q: T): T => {
+    if (signal) q.abortSignal(signal);
+    return q;
+  };
+
+  let { data, error } = await withSignal(
+    supabase.from("community_posts").insert(payload).select(POST_SELECT_FULL),
+  ).single();
   if (error && isMissingResourceColumn(error.message)) {
     const slim: Record<string, string> = {
       user_id: input.userId,
@@ -235,17 +243,26 @@ export async function insertCommunityPost(
       const label = input.resourceLabel?.trim();
       if (label) slim.resource_label = label;
     }
-    ({ data, error } = await supabase.from("community_posts").insert(slim).select(POST_SELECT).single());
+    ({ data, error } = await withSignal(
+      supabase.from("community_posts").insert(slim).select(POST_SELECT),
+    ).single());
     if (error && isMissingResourceColumn(error.message)) {
-      ({ data, error } = await supabase
-        .from("community_posts")
-        .insert({ user_id: input.userId, channel_id: input.channelId, body: input.body })
-        .select(POST_SELECT_LEGACY)
-        .single());
+      ({ data, error } = await withSignal(
+        supabase
+          .from("community_posts")
+          .insert({ user_id: input.userId, channel_id: input.channelId, body: input.body })
+          .select(POST_SELECT_LEGACY),
+      ).single());
     }
   }
   if (error) throw new Error(formatAgendaCloudError(error.message));
   return data as CommunityPostRow;
+}
+
+/** Elimina un post propio. RLS (`community_posts_delete_own`) solo permite borrar los propios. */
+export async function deleteCommunityPost(supabase: SupabaseClient, postId: string): Promise<void> {
+  const { error } = await supabase.from("community_posts").delete().eq("id", postId);
+  if (error) throw new Error(formatAgendaCloudError(error.message));
 }
 
 export async function fetchMyReportedPostIds(

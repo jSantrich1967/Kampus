@@ -33,11 +33,17 @@ export function LibraryQuickUploadModal({ target, onClose, onSuccess }: LibraryQ
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadedCount, setUploadedCount] = useState(0);
+  const [mode, setMode] = useState<"upload" | "write">("upload");
+  const [sheetTitle, setSheetTitle] = useState("");
+  const [sheetBody, setSheetBody] = useState("");
 
   const resetState = useCallback(() => {
     setUploading(false);
     setError(null);
     setUploadedCount(0);
+    setMode("upload");
+    setSheetTitle("");
+    setSheetBody("");
   }, []);
 
   const handleClose = useCallback(() => {
@@ -49,8 +55,8 @@ export function LibraryQuickUploadModal({ target, onClose, onSuccess }: LibraryQ
     resetState();
   }, [target, resetState]);
 
-  async function handleFiles(fileList: FileList | null) {
-    if (!target || !fileList?.length || !authUserId) return;
+  async function uploadFiles(files: File[]) {
+    if (!target || files.length === 0 || !authUserId) return;
     if (!isSupabaseConfigured()) {
       setError("Supabase no está configurado.");
       return;
@@ -64,7 +70,7 @@ export function LibraryQuickUploadModal({ target, onClose, onSuccess }: LibraryQ
       await uploadNotebookDocuments(supabase, {
         userId: authUserId,
         subject: target.subject.trim() || "General",
-        files: Array.from(fileList),
+        files,
         fields: {
           topic: target.topic?.trim() || "",
           lesson_point: target.lesson?.trim() || "",
@@ -73,7 +79,7 @@ export function LibraryQuickUploadModal({ target, onClose, onSuccess }: LibraryQ
           class_date: target.classDate?.trim() || null,
         },
       });
-      setUploadedCount(fileList.length);
+      setUploadedCount(files.length);
       onSuccess?.();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Error al subir.";
@@ -81,6 +87,24 @@ export function LibraryQuickUploadModal({ target, onClose, onSuccess }: LibraryQ
     } finally {
       setUploading(false);
     }
+  }
+
+  async function handleFiles(fileList: FileList | null) {
+    if (!fileList?.length) return;
+    await uploadFiles(Array.from(fileList));
+  }
+
+  /** Hoja creada desde cero: el texto del editor se guarda como .txt y usa el mismo flujo de subida. */
+  async function handleWriteSave() {
+    const title = sheetTitle.trim();
+    const body = sheetBody.trim();
+    if (!title || !body) {
+      setError(t.writeSheetEmptyError);
+      return;
+    }
+    const safeTitle = title.replace(/[\\/:*?"<>|]/g, "").slice(0, 80) || "hoja";
+    const file = new File([body], `${safeTitle}.txt`, { type: "text/plain" });
+    await uploadFiles([file]);
   }
 
   const { isDraggingOver, resetDrag, dropZoneProps } = useFileDropZone({
@@ -91,6 +115,15 @@ export function LibraryQuickUploadModal({ target, onClose, onSuccess }: LibraryQ
   useEffect(() => {
     resetDrag();
   }, [target, resetDrag]);
+
+  useEffect(() => {
+    if (!target) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !uploading) handleClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [target, uploading, handleClose]);
 
   if (!target) return null;
 
@@ -159,6 +192,68 @@ export function LibraryQuickUploadModal({ target, onClose, onSuccess }: LibraryQ
               </div>
             ) : (
               <>
+                <div className="mb-4 flex rounded-xl border border-white/10 p-1" role="tablist" aria-label="Modo de hoja">
+                  {(
+                    [
+                      { id: "upload", label: t.uploadFileTab },
+                      { id: "write", label: t.writeSheetTab },
+                    ] as const
+                  ).map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={mode === tab.id}
+                      disabled={uploading}
+                      onClick={() => {
+                        setMode(tab.id);
+                        setError(null);
+                      }}
+                      className={cn(
+                        "flex-1 rounded-lg px-3 py-2 text-sm font-medium transition",
+                        mode === tab.id ? "bg-white/15 text-white" : "text-slate-400 hover:text-slate-200",
+                      )}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {mode === "write" ? (
+                  <div className="space-y-3">
+                    <label className="block text-sm">
+                      <span className="mb-1 block text-slate-300">{t.writeSheetTitleLabel}</span>
+                      <input
+                        className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-slate-200 outline-none ring-indigo-400/40 focus:ring"
+                        value={sheetTitle}
+                        onChange={(e) => setSheetTitle(e.target.value)}
+                        placeholder={t.writeSheetTitlePlaceholder}
+                        maxLength={80}
+                        disabled={uploading}
+                      />
+                    </label>
+                    <label className="block text-sm">
+                      <span className="mb-1 block text-slate-300">{t.writeSheetBodyLabel}</span>
+                      <textarea
+                        className="min-h-[180px] w-full rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-slate-200 outline-none ring-indigo-400/40 focus:ring"
+                        value={sheetBody}
+                        onChange={(e) => setSheetBody(e.target.value)}
+                        placeholder={t.writeSheetBodyPlaceholder}
+                        disabled={uploading}
+                      />
+                    </label>
+                    <Button
+                      type="button"
+                      className="w-full gap-2"
+                      disabled={uploading || !sheetTitle.trim() || !sheetBody.trim()}
+                      onClick={() => void handleWriteSave()}
+                    >
+                      {uploading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+                      {uploading ? t.quickUploadProgress : t.writeSheetSaveCta}
+                    </Button>
+                  </div>
+                ) : (
+                <>
                 <div
                   {...dropZoneProps}
                   role="button"
@@ -208,6 +303,8 @@ export function LibraryQuickUploadModal({ target, onClose, onSuccess }: LibraryQ
                   disabled={uploading}
                   onChange={(e) => void handleFiles(e.target.files)}
                 />
+                </>
+                )}
               </>
             )}
           </>

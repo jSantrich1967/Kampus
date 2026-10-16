@@ -14,6 +14,7 @@ import { cn } from "@/lib/cn";
 import { loadTodayMission, toggleTodayBlock } from "@/lib/storage/today-mission-storage";
 import { recordStudyActivity } from "@/lib/storage/study-streak-storage";
 import { getStudyBlockActionHref, getStudyBlockActionLabel } from "@/lib/today/block-action-href";
+import { modeGlossaryTitle } from "@/lib/study/mode-glossary";
 import { syncProfileStudyStreak } from "@/lib/today/sync-profile-streak";
 
 type TodayMissionPanelProps = {
@@ -162,7 +163,11 @@ function MissionNextStep({
       </p>
       <p className="mt-2 text-xs text-slate-400">{block.rationale}</p>
       <div className="mt-4 flex flex-wrap gap-2">
-        <Link href={getStudyBlockActionHref(block)} className={buttonClasses({ className: "gap-2" })}>
+        <Link
+          href={getStudyBlockActionHref(block)}
+          title={modeGlossaryTitle(getStudyBlockActionHref(block))}
+          className={buttonClasses({ className: "gap-2" })}
+        >
           <Play className="h-4 w-4" aria-hidden />
           {getStudyBlockActionLabel(block)}
         </Link>

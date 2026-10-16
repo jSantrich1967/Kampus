@@ -20,6 +20,7 @@ import {
   studiedOnDate,
 } from "@/lib/storage/study-streak-storage";
 import { buildMotivationMessage } from "@/lib/today/motivation-message";
+import { modeGlossaryTitle } from "@/lib/study/mode-glossary";
 import { syncProfileStudyStreak } from "@/lib/today/sync-profile-streak";
 import { useTodayContext } from "@/components/today/use-today-context";
 
@@ -128,11 +129,19 @@ export function TodayMomentumPanel({ plan, missionTick = 0 }: TodayMomentumPanel
 
         {message.ctaLabel && message.ctaHref ? (
           message.ctaHref.startsWith("#") ? (
-            <a href={message.ctaHref} className={buttonClasses({ size: "sm", variant: "secondary" })}>
+            <a
+              href={message.ctaHref}
+              title={modeGlossaryTitle(message.ctaHref)}
+              className={buttonClasses({ size: "sm", variant: "secondary" })}
+            >
               {message.ctaLabel}
             </a>
           ) : (
-            <Link href={message.ctaHref} className={buttonClasses({ size: "sm", variant: "secondary" })}>
+            <Link
+              href={message.ctaHref}
+              title={modeGlossaryTitle(message.ctaHref)}
+              className={buttonClasses({ size: "sm", variant: "secondary" })}
+            >
               {message.ctaLabel}
             </Link>
           )

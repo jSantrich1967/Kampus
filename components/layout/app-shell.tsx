@@ -33,6 +33,13 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="relative min-h-dvh overflow-x-hidden bg-kampus-bg text-slate-100">
+      {/* Primer elemento enfocable: el skip link debe ir antes que el menú lateral. */}
+      <a
+        href="#contenido"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-indigo-600 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
+      >
+        Saltar al contenido
+      </a>
       {theme === "faculty" ? (
         <div
           aria-hidden
@@ -118,12 +125,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Suspense fallback={null}>
           <AttributionBanner />
         </Suspense>
-        <a
-          href="#contenido"
-          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-indigo-600 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
-        >
-          Saltar al contenido
-        </a>
         <main
           id="contenido"
           tabIndex={-1}

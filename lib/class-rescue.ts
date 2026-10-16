@@ -58,8 +58,16 @@ function pick<T>(items: T[], seed: number, index: number): T {
 
 export function generateRescuePack(input: RescueInput): RescuePack {
   const seed = hashString(`${input.seedText}|${input.subjectHint}|${input.sourceLabel}|${input.sourceKind ?? ""}`);
-  const topic = input.subjectHint.trim() || "este tema";
-  const snippet = input.seedText.trim().slice(0, 280) || `Uploaded source: ${input.sourceLabel}`;
+  // El tema del kit básico debe salir del MATERIAL del usuario (p. ej. sus
+  // apuntes pegados), no del cuaderno seleccionado: si la primera línea parece
+  // un título (corta y el texto continúa), se usa como tema.
+  const seedTrimmed = input.seedText.trim();
+  const firstLine = seedTrimmed.split("\n").map((l) => l.trim()).find((l) => l.length > 0) ?? "";
+  const topic =
+    firstLine && firstLine.length <= 60 && seedTrimmed.length > firstLine.length + 40
+      ? firstLine
+      : input.subjectHint.trim() || "este tema";
+  const snippet = seedTrimmed.slice(0, 280) || `Uploaded source: ${input.sourceLabel}`;
 
   const keyIdeas = [
     `Define el objetivo central de ${topic} en una sola frase.`,

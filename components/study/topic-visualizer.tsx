@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FlaskConical, Loader2, Maximize2, Minimize2, RotateCcw, X } from "lucide-react";
 import Link from "next/link";
 
@@ -33,6 +33,7 @@ export function TopicVisualizer({ subject, defaultTopic, context, label = "Simul
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const openerRef = useRef<HTMLButtonElement | null>(null);
 
   // Si cambia la materia/tema por defecto, precarga el input.
   useEffect(() => {
@@ -48,6 +49,8 @@ export function TopicVisualizer({ subject, defaultTopic, context, label = "Simul
     setOpen(false);
     setBusy(false);
     setFullscreen(false);
+    // El foco vuelve al botón que abrió el diálogo.
+    openerRef.current?.focus();
   }, []);
 
   // Cerrar con Escape.
@@ -59,6 +62,27 @@ export function TopicVisualizer({ subject, defaultTopic, context, label = "Simul
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, close]);
+
+  // Escape DENTRO del iframe: los eventos de teclado del iframe (documento
+  // aparte) no llegan a la ventana padre; el HTML inyectado reenvía Escape
+  // por postMessage para cerrar el diálogo.
+  useEffect(() => {
+    if (!open) return;
+    const onMessage = (e: MessageEvent) => {
+      if (e.data === "kampus:close-simulation") close();
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [open, close]);
+
+  // Puente de Escape inyectado al HTML de la simulación (después de la
+  // validación del servidor; no afecta el smoke test).
+  const htmlWithBridge = useMemo(() => {
+    if (!html) return null;
+    if (html.includes("kampus:close-simulation")) return html;
+    const bridge = `<script>document.addEventListener("keydown",function(e){if(e.key==="Escape"){parent.postMessage("kampus:close-simulation","*")}});</script>`;
+    return html.includes("</body>") ? html.replace("</body>", `${bridge}</body>`) : html + bridge;
+  }, [html]);
 
   const generate = useCallback(async () => {
     const trimmedTopic = topic.trim();
@@ -114,7 +138,14 @@ export function TopicVisualizer({ subject, defaultTopic, context, label = "Simul
 
   return (
     <>
-      <Button type="button" size={size} variant="secondary" onClick={openModal} className="gap-1.5">
+      <Button
+        type="button"
+        size={size}
+        variant="secondary"
+        ref={openerRef}
+        onClick={openModal}
+        className="gap-1.5"
+      >
         <FlaskConical className="h-4 w-4" aria-hidden />
         {label}
       </Button>
@@ -195,6 +226,12 @@ export function TopicVisualizer({ subject, defaultTopic, context, label = "Simul
                         para simulaciones ilimitadas.
                       </p>
                     ) : null}
+                    {errorCode === "VISUALIZE_EXHAUSTED" ? (
+                      <p className="mt-2 text-amber-200/90">
+                        Si tu generación anterior no llegó a mostrarse, pulsa «Reintentar»: si ya
+                        terminó, la verás sin costo adicional.
+                      </p>
+                    ) : null}
                   </div>
                 ) : null}
                 <div className="flex flex-wrap gap-2">
@@ -217,17 +254,18 @@ export function TopicVisualizer({ subject, defaultTopic, context, label = "Simul
                 <Loader2 className="h-8 w-8 animate-spin text-indigo-300" aria-hidden />
                 <p className="text-sm font-medium text-white">Armando tu simulación…</p>
                 <p className="max-w-sm text-xs text-slate-400">
-                  La IA está construyendo un diagrama interactivo de “{topic.trim()}”. Suele tardar menos de un minuto.
+                  La IA está construyendo un diagrama interactivo de “{topic.trim()}”. Suele tardar entre 30 segundos y
+                  2 minutos.
                 </p>
               </div>
             ) : null}
 
-            {html && !busy ? (
+            {htmlWithBridge && !busy ? (
               <div className="flex min-h-0 flex-1 flex-col">
                 <iframe
                   title={`Simulación interactiva: ${topic.trim()}`}
                   sandbox="allow-scripts"
-                  srcDoc={html}
+                  srcDoc={htmlWithBridge}
                   className="min-h-[60vh] w-full flex-1 bg-white"
                 />
                 <div className="flex flex-wrap items-center gap-2 border-t border-white/10 px-4 py-3 sm:px-6">

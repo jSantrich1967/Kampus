@@ -219,7 +219,25 @@ export function buildPassModePlan(
   options?: BuildPassModePlanOptions,
 ): PassModePlan {
   const intensity = options?.intensity ?? "full";
-  const subjectRisks = buildSubjectRisks(profile).sort((a, b) => b.score - a.score);
+  // La cercanía del examen manda sobre el resto de señales: con Cálculo II en
+  // 4 días e Integrales en 7, la misión debe empezar por Cálculo II aunque
+  // Integrales tenga más temas débiles.
+  const nearestExamDays = (subject: string): number | null => {
+    const ds = profile.upcomingExams
+      .filter((e) => e.subject === subject)
+      .map((e) => daysUntil(e.date))
+      .filter((d): d is number => d !== null && d >= 0)
+      .sort((a, b) => a - b);
+    return ds.length > 0 ? ds[0]! : null;
+  };
+  const subjectRisks = buildSubjectRisks(profile).sort((a, b) => {
+    const da = nearestExamDays(a.subject);
+    const db = nearestExamDays(b.subject);
+    if (da !== null && db !== null && da !== db) return da - db;
+    if (da !== null && db === null) return -1;
+    if (da === null && db !== null) return 1;
+    return b.score - a.score;
+  });
 
   const top = subjectRisks[0]?.subject ?? profile.subjects[0] ?? "General";
   const second = subjectRisks[1]?.subject ?? profile.subjects[1] ?? top;
