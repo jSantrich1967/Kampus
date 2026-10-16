@@ -213,8 +213,10 @@ export function SocraticTutorPanel() {
         };
         if (!res.ok && data.code === "TASTE_EXHAUSTED") {
           // Se acabó la probada gratis de hoy: tarjeta de Pro, no error seco.
+          // Se restaura el borrador para que el usuario no pierda lo escrito.
           setTasteOver(true);
           setMessages((prev) => prev.slice(0, -1));
+          setDraft(trimmed);
           return;
         }
         if (!res.ok) {

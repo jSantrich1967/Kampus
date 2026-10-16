@@ -299,10 +299,20 @@ export function CommunityHub() {
 
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [deletePostError, setDeletePostError] = useState<string | null>(null);
+  const [confirmDeletePostId, setConfirmDeletePostId] = useState<string | null>(null);
 
-  async function handleDeletePost(postId: string) {
+  function handleDeletePost(postId: string) {
     if (!authUserId) return;
-    if (!window.confirm(t.deleteConfirm)) return;
+    // Diálogo de confirmación dentro de la app (no window.confirm: los
+    // diálogos nativos son frágiles en webviews/automatización y rompen el
+    // diseño).
+    setConfirmDeletePostId(postId);
+  }
+
+  async function confirmDeletePost() {
+    const postId = confirmDeletePostId;
+    if (!authUserId || !postId) return;
+    setConfirmDeletePostId(null);
     setDeletingPostId(postId);
     setDeletePostError(null);
     try {
@@ -320,6 +330,16 @@ export function CommunityHub() {
     setSelectedChannelId(null);
     router.replace("/community");
   }
+
+  // Escape cierra el diálogo de confirmación de borrado.
+  useEffect(() => {
+    if (!confirmDeletePostId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setConfirmDeletePostId(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [confirmDeletePostId]);
 
   const totalActivityChannels = allStudentChannelIds(profile).length;
 
@@ -472,6 +492,36 @@ export function CommunityHub() {
             <CardDescription>{t.disabledChannelHint}</CardDescription>
           </CardHeader>
         </Card>
+      ) : null}
+
+      {confirmDeletePostId ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t.deleteCta}
+          onClick={() => setConfirmDeletePostId(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-950 p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm text-slate-200">{t.deleteConfirm}</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button type="button" variant="secondary" onClick={() => setConfirmDeletePostId(null)}>
+                {t.reportCancel}
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={() => void confirmDeletePost()}
+                className="gap-1.5"
+              >
+                {t.deleteCta}
+              </Button>
+            </div>
+          </div>
+        </div>
       ) : null}
 
     </div>
