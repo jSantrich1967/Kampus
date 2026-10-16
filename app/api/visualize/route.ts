@@ -193,7 +193,7 @@ export async function POST(req: Request) {
             max_output_tokens: MAX_OUTPUT_TOKENS,
           }),
         },
-        { skipBudgetGate: false },
+        { skipBudgetGate: false, timeoutMs: 50_000 },
       );
 
       if (!res.ok) {

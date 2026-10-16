@@ -21,7 +21,7 @@ export function fetchOpenAi(
   routeKey: string,
   url: string,
   init: RequestInit,
-  opts?: { skipBudgetGate?: boolean },
+  opts?: { skipBudgetGate?: boolean; timeoutMs?: number },
 ): Promise<Response> {
   const startedAt = Date.now();
   const model = modelFromRequestBody(init.body);
@@ -40,9 +40,11 @@ export function fetchOpenAi(
       const blocked = opts?.skipBudgetGate ? null : await aiBudgetBlockResponse();
       if (blocked) return blocked;
       // Ninguna llamada a la IA puede esperar para siempre: si OpenAI no
-      // responde en 90 s, abortamos y la ruta devuelve un error visible en
-      // vez de dejar la interfaz en «Preparando…» indefinidamente.
-      const timeoutSignal = AbortSignal.timeout(90_000);
+      // responde a tiempo, abortamos y la ruta devuelve un error visible en
+      // vez de dejar la interfaz colgada indefinidamente. El timeout SIEMPRE
+      // debe quedar por debajo del maxDuration de la ruta en Vercel: si la
+      // función muere primero, la cuota consumida no se puede reembolsar.
+      const timeoutSignal = AbortSignal.timeout(opts?.timeoutMs ?? 90_000);
       const signal = init.signal ? AbortSignal.any([init.signal, timeoutSignal]) : timeoutSignal;
       const response = await fetch(url, { ...init, signal });
       await recordOpenAiResponse({ feature: routeKey, model, startedAt, response });

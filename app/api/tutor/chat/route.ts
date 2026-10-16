@@ -14,6 +14,9 @@ import { topicScoreSchema } from "@/lib/schemas/cram";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
+// El timeout de OpenAI (50 s) debe quedar por debajo de este límite:
+// si Vercel mata la función primero, la cuota consumida no se reembolsa.
+export const maxDuration = 60;
 
 const messageSchema = z.object({
   role: z.enum(["user", "assistant"]),
@@ -221,7 +224,7 @@ export async function POST(req: Request) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(openaiPayload),
-      }, { skipBudgetGate: !user });
+      }, { skipBudgetGate: !user, timeoutMs: 50_000 });
 
       if (!res.ok) {
         // planLimitMessage clona la respuesta: debe llamarse ANTES de leer el
