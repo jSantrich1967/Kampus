@@ -58,6 +58,7 @@ const STEPS = [
 export function DemoGuideCard() {
   const router = useRouter();
   const [visible, setVisible] = useState(false);
+  const [open, setOpen] = useState(false);
   const [visited, setVisited] = useState<string[]>([]);
 
   useEffect(() => {
@@ -76,13 +77,13 @@ export function DemoGuideCard() {
       <CardHeader>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <CardTitle className="flex items-center gap-2 text-purple-100">
+            <CardTitle className="flex items-center gap-2 text-base text-purple-100">
               <Compass className="h-4 w-4" aria-hidden />
-              Recorrido guiado de la demo
+              Recorrido de la demo
             </CardTitle>
             <CardDescription>
-              Estás probando Kampus sin cuenta: nada de lo que hagas aquí se guarda en un
-              servidor. {doneCount} de {STEPS.length} pasos.
+              Estás probando Kampus sin cuenta: nada de lo que hagas aquí se guarda en un servidor.{" "}
+              {doneCount} de {STEPS.length} pasos.
             </CardDescription>
           </div>
           <button
@@ -98,38 +99,15 @@ export function DemoGuideCard() {
           </button>
         </div>
       </CardHeader>
-      <div className="space-y-2 px-6 pb-4">
-        {STEPS.map((step, i) => {
-          const done = visited.includes(step.id);
-          return (
-            <Link
-              key={step.id}
-              href={step.href}
-              onClick={() => {
-                markDemoGuideVisited(step.id);
-                setVisited((v) => (v.includes(step.id) ? v : [...v, step.id]));
-              }}
-              className={cn(
-                "flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-3 transition hover:border-purple-400/40 hover:bg-black/30",
-                done && "opacity-70",
-              )}
-            >
-              {done ? (
-                <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-300" aria-hidden />
-              ) : (
-                <Circle className="h-5 w-5 shrink-0 text-slate-500" aria-hidden />
-              )}
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium text-white">
-                  {i + 1}. {step.title}
-                </span>
-                <span className="block text-xs text-slate-400">{step.hint}</span>
-              </span>
-            </Link>
-          );
-        })}
-      </div>
       <div className="flex flex-wrap items-center gap-3 px-6 pb-6">
+        <button
+          type="button"
+          className={buttonClasses({ size: "sm", variant: "secondary" })}
+          aria-expanded={open}
+          onClick={() => setOpen((current) => !current)}
+        >
+          {open ? "Ocultar recorrido" : "Ver recorrido"}
+        </button>
         <button
           type="button"
           className={buttonClasses({ size: "sm" })}
@@ -140,10 +118,43 @@ export function DemoGuideCard() {
         >
           Crear mi cuenta gratis
         </button>
-        <span className="text-xs text-slate-500">
-          Al registrarte, tu progreso real empieza desde cero, con tus materias.
-        </span>
       </div>
+      {open ? (
+        <div className="space-y-2 px-6 pb-6">
+          {STEPS.map((step, i) => {
+            const done = visited.includes(step.id);
+            return (
+              <Link
+                key={step.id}
+                href={step.href}
+                onClick={() => {
+                  markDemoGuideVisited(step.id);
+                  setVisited((v) => (v.includes(step.id) ? v : [...v, step.id]));
+                }}
+                className={cn(
+                  "flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-3 transition hover:border-purple-400/40 hover:bg-black/30",
+                  done && "opacity-70",
+                )}
+              >
+                {done ? (
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-300" aria-hidden />
+                ) : (
+                  <Circle className="h-5 w-5 shrink-0 text-slate-500" aria-hidden />
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-white">
+                    {i + 1}. {step.title}
+                  </span>
+                  <span className="block text-xs text-slate-400">{step.hint}</span>
+                </span>
+              </Link>
+            );
+          })}
+          <p className="text-xs text-slate-500">
+            Al registrarte, tu progreso real empieza desde cero, con tus materias.
+          </p>
+        </div>
+      ) : null}
     </Card>
   );
 }
