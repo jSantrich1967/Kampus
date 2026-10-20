@@ -623,7 +623,184 @@ export const EMOTIONAL_CHALLENGE = {
     "Durante 3 días, al final del día escribe en un papel tres líneas: la emoción principal del día, qué la disparó y qué hiciste con ella (reaccionaste o respondiste). Al terminar, escribe aquí qué patrón viste: qué te dispara más seguido y qué pausa te funcionó. No se trata de sentir «bien» todos los días, sino de conocerte en todos.",
 };
 
-export type RouteId = "comunicacion" | "gestion-del-tiempo" | "inteligencia-emocional";
+export const TEAM_LESSONS: Lesson[] = [
+  {
+    id: "roles-claros",
+    title: "Roles claros desde el día uno",
+    minutes: 6,
+    intro:
+      "La mayoría de los trabajos en equipo no fracasan por flojos: fracasan por difusos. Nadie sabía exactamente qué le tocaba, y el día de la entrega todos «pensaban que lo hacía otro».",
+    sections: [
+      {
+        heading: "Divide por entregables, no por ganas",
+        body: "Parte el trabajo en entregables con nombre: «investigar el tema 1», «hacer las láminas», «redactar conclusiones», «exponer la parte 2». Cada entregable tiene UN responsable, aunque otros ayuden. Dos responsables del mismo entregable es lo mismo que ninguno.",
+      },
+      {
+        heading: "Cada quien según su fuerte",
+        body: "Repartir bien no es repartir parejo: es repartir inteligente. Quien dibuja bien hace los gráficos; quien escribe claro redacta; quien no se traba hablando expone. Pregunta «¿en qué eres bueno para este trabajo?» antes de asignar. Y lo que nadie quiere, se sortea o se rota: no se lo queda siempre el mismo.",
+      },
+      {
+        heading: "Déjalo por escrito el mismo día",
+        body: "Los acuerdos de palabra se evaporan. El mismo día, escribe en el chat del grupo: quién hace qué, para cuándo, y qué entrega cada quien primero (un avance, no todo al final). Ese mensaje es la memoria del equipo y la paz del proyecto.",
+      },
+    ],
+    exampleBad: "Día uno: «bueno, ahí vamos viendo». Día de la entrega: falta la mitad, dos hicieron lo mismo y nadie hizo las conclusiones.",
+    exampleGood:
+      "«Queda así: Ana investiga y pasa sus notas el martes; Luis arma las láminas con eso el miércoles; yo redacto y junto todo el jueves; exponemos Ana y yo. Primer avance de cada quien: mañana en la noche.»",
+    commonMistake: "Asignar «entre todos hacemos todo», que suena muy unido y garantiza que nadie responda por nada.",
+    miniCheck: {
+      question: "¿Cuál reparto tiene roles claros?",
+      options: [
+        "«Todos investigamos todo y al final vemos»",
+        "«Ana: investigación (martes). Luis: láminas (miércoles). Yo: redacción y unión (jueves). Avances mañana.»",
+        "«El que tenga tiempo va avanzando lo que pueda»",
+      ],
+      correctIndex: 1,
+      explanation: "Entregables concretos, un responsable por entregable y fechas. Los demás repartos dejan todo «a ver quién».",
+    },
+  },
+  {
+    id: "reuniones-que-sirven",
+    title: "Reuniones que sirven (y chats que no se eternizan)",
+    minutes: 5,
+    intro:
+      "Un equipo no necesita más reuniones: necesita reuniones con punto. Y un chat con decisiones visibles, no 200 mensajes donde el acuerdo quedó enterrado entre stickers.",
+    sections: [
+      {
+        heading: "Toda reunión contesta tres preguntas",
+        body: "¿Qué llevamos? ¿Qué nos falta? ¿Quién hace qué y para cuándo? Si la reunión no termina con respuestas a eso, fue una conversa, no una reunión. Quien coordina llega con esas tres preguntas y no suelta la reunión hasta tenerlas.",
+      },
+      {
+        heading: "Cierra con acuerdos en voz alta",
+        body: "Antes de despedirse, alguien lee los acuerdos: «Entonces: Ana pasa las notas el martes, Luis prueba las láminas el miércoles, nos reunimos el jueves 20 minutos». Repetirlo en voz alta caza los malentendidos ahí mismo, no el día de la entrega.",
+      },
+      {
+        heading: "La minuta en el chat manda",
+        body: "Después de cada acuerdo importante, alguien escribe la minuta en el chat del grupo: fecha, acuerdos, responsables. Cuando haya un «yo nunca dije eso», la minuta lo resuelve sin discusión. Es el mismo mensaje de roles de la primera lección, actualizado.",
+      },
+    ],
+    exampleBad: "Reunión de una hora para «hablar del trabajo»: anécdotas, quejas del profesor, cero acuerdos. Al día siguiente nadie sabe qué cambió.",
+    exampleGood:
+      "«15 minutos: llevamos la investigación; falta la maqueta; Luis la termina el jueves y yo reviso el viernes. Minuta en el chat apenas colguemos.»",
+    commonMistake: "Usar la reunión para trabajar lo que cada quien debía traer, en vez de para decidir lo siguiente.",
+    miniCheck: {
+      question: "Termina una reunión del equipo. ¿Qué debe pasar antes de despedirse?",
+      options: [
+        "Cada quien anota en secreto lo que cree que le toca",
+        "Alguien lee los acuerdos en voz alta: qué, quién y para cuándo — y quedan en la minuta del chat",
+        "Programar la próxima reunión para ahí sí decidir",
+      ],
+      correctIndex: 1,
+      explanation: "Los acuerdos dichos y escritos a la vez evitan el «yo entendí otra cosa» del día de la entrega.",
+    },
+  },
+  {
+    id: "cuando-alguien-no-cumple",
+    title: "Cuando alguien no cumple: la escalera de soluciones",
+    minutes: 6,
+    intro:
+      "En casi todo equipo alguien se atrasa. Lo que separa a los equipos buenos no es que no pase, sino el orden en que lo resuelven: hablar pronto y en privado, no explotar tarde y en público.",
+    sections: [
+      {
+        heading: "Paso 1: pregunta antes de acusar",
+        body: "A veces el atraso es un problema real: enfermedad, familia, no entendió su parte. La primera conversación es en privado y con una pregunta: «¿Qué pasó con tu parte?». Lo que oigas define el paso siguiente. Acusar sin saber quiebra al equipo aunque tengas razón.",
+      },
+      {
+        heading: "Paso 2: acuerdo nuevo, concreto y corto",
+        body: "Si puede recuperarse, fija un acuerdo nuevo: qué entrega, cuándo exactamente, y un avance intermedio («esta noche me pasas el borrador aunque esté feo»). Los avances intermedios son la alarma temprana: si el borrador no llega, lo sabes con días de margen, no con horas.",
+      },
+      {
+        heading: "Paso 3: reorganiza y, si toca, informa con hechos",
+        body: "Si aun así no cumple, el equipo protege la entrega: se reparte su parte entre los demás y se le informa al profesor con hechos y sin drama: «Su parte no llegó en dos fechas acordadas; la asumimos entre Ana y yo». Hechos, fechas y minuta — eso es informar; nombres y quejas sin datos es chisme.",
+      },
+    ],
+    exampleBad: "Nadie dice nada «para no pelear» durante dos semanas. La noche de la entrega, sin la parte, explotan en el chat culpando al ausente y entregan incompleto.",
+    exampleGood:
+      "«Oye, tu parte era para ayer. ¿Qué pasó? … Ok, nuevo trato: esta noche el borrador como esté y mañana la versión final. Si no llega, Luis y yo la absorbemos y avisamos al profe con la minuta.»",
+    commonMistake: "Hacer la parte del otro en silencio y cobrarla con rabia después: el equipo entrega, pero queda roto y el patrón se repite.",
+    miniCheck: {
+      question: "Un compañero lleva 3 días de atraso. ¿Cuál es el primer paso de la escalera?",
+      options: [
+        "Contarle al profesor de una vez que no está haciendo nada",
+        "Hablar con él en privado: preguntar qué pasó antes de acusar",
+        "Hacer su parte en silencio y echárselo en cara al exponer",
+      ],
+      correctIndex: 1,
+      explanation: "Primero la conversación privada con pregunta: sin saber la causa, cualquier paso siguiente puede ser injusto o inútil.",
+    },
+  },
+  {
+    id: "liderar-sin-mandar",
+    title: "Liderar sin mandar: organiza, no ordenes",
+    minutes: 5,
+    intro:
+      "Liderar un equipo de estudiantes no es ser el jefe: es ser quien hace que las cosas pasen. El líder que ordena consigue obediencia a regañadientes; el que organiza consigue compromiso.",
+    sections: [
+      {
+        heading: "El líder sirve al plan, no al ego",
+        body: "Coordinar significa: recordar las fechas, convocar los 15 minutos, llevar la minuta, preguntar «¿cómo vas con tu parte?» antes del vencimiento. Es trabajo de servicio. Quien lidera para lucirse termina en un equipo que le esconde los problemas hasta que explotan.",
+      },
+      {
+        heading: "Pide con el porqué, no con el dedito",
+        body: "«Haz las láminas porque sí» vs «¿Puedes con las láminas? Eres el que mejor resume en gráfico, y sin ellas el jueves no hay nada que exponer». La misma tarea, otra respuesta. Explicar para qué sirve el trabajo de cada quien es el combustible del equipo.",
+      },
+      {
+        heading: "Cierra dando crédito y revisando",
+        body: "Al terminar, el líder nombra los aportes de cada quien —en la exposición y ante el profesor— y propone una revisión breve: «¿qué nos funcionó y qué hacemos distinto la próxima?». El crédito dado se devuelve en esfuerzo la próxima vez; el crédito robado también se recuerda.",
+      },
+    ],
+    exampleBad: "«Yo soy el líder: tú haces esto y esto, y sin discutir.» El equipo cumple a medias, nadie avisa de los problemas y en la exposición lo dejan solo.",
+    exampleGood:
+      "«Yo coordino las fechas y la minuta. Ana, tu fuerte es investigar: ¿te quedas con el tema 1? Luis, tus láminas resumen mejor que un texto: ¿las armas el miércoles?»",
+    commonMistake: "Creer que liderar es quedarse con la parte más visible (exponer) en vez de con la más útil (que todo llegue a tiempo).",
+    miniCheck: {
+      question: "¿Cuál frase es de un líder que organiza (no que manda)?",
+      options: [
+        "«Yo mando aquí: cada quien hace lo que yo diga»",
+        "«Llevo las fechas y la minuta; Ana, ¿te quedas con la investigación? Es tu fuerte y la necesitamos el martes»",
+        "«El líder expone todo, ustedes solo pasen el material»",
+      ],
+      correctIndex: 1,
+      explanation: "Organiza, asigna por fortalezas con el porqué y se queda el trabajo de coordinación: eso hace que las cosas pasen sin mandar.",
+    },
+  },
+];
+
+export const TEAM_SIMULATIONS: Simulation[] = [
+  {
+    id: "reunion-de-arranque",
+    title: "La reunión de arranque",
+    minutes: 10,
+    scenario:
+      "Primer día del trabajo en equipo. Tus dos compañeros (la IA los interpreta) llegan con buena onda pero sin nada claro: «eso lo vemos en el camino». Tu reto: salir de la reunión con roles, fechas y acuerdos escritos.",
+    opening:
+      "Bueno, ya tenemos el tema. Yo digo que no nos compliquemos: cada quien va viendo por su lado y cerca de la entrega juntamos todo. ¿No?",
+    tutorContext:
+      "SIMULACIÓN DE TRABAJO EN EQUIPO. Interpretas a DOS compañeros del estudiante (márcalos como «Luis:» y «Carla:» cuando hablen), relajados y con tendencia a dejar todo ambiguo («eso se ve después», «alguien lo hará»). Reglas: respuestas cortas (máximo 6 líneas en total), un paso por turno. Acepta de buena gana cada propuesta concreta del estudiante (roles con nombre, fechas, avances intermedios, minuta) y sigue poniendo niebla en lo que quede vago. Si al segundo intercambio ya hay roles y fechas, propón colgar («bueno, ¿quedó todo?»). Al tercer intercambio, sal de los personajes y evalúa SOLO al estudiante con esta rúbrica: Roles claros (¿cada entregable quedó con responsable?), Fechas (¿hubo calendario con avances?), Cierre (¿resumió los acuerdos y los dejó por escrito?). Una fortaleza, una mejora y un consejo.",
+    rubric: ["Roles con responsable", "Fechas y avances", "Acuerdos resumidos"],
+  },
+  {
+    id: "salva-el-proyecto",
+    title: "A 48 horas: tu compañero se cae",
+    minutes: 10,
+    scenario:
+      "La entrega es en 48 horas y tu compañero (la IA) te avisa ahora que no va a poder terminar su parte. Tu reto: sin pelear y sin hundir al equipo, reorganizar — redistribuir, recortar alcance y decidir si avisar al profesor.",
+    opening:
+      "Tengo que decirte algo: mi parte no va a estar. Surgió un problema en mi casa y no he podido ni abrir el documento. La entrega es pasado mañana… ¿qué hacemos?",
+    tutorContext:
+      "SIMULACIÓN DE CRISIS DE EQUIPO. Actúas como el compañero que a 48 horas de la entrega avisa que no puede con su parte por un problema familiar real. Reglas: respuestas cortas (máximo 4 líneas), tono apenado y colaborador, un paso por turno. Ofrece lo que sí puedes hacer si el estudiante lo explora (una parte pequeña, pasar tus notas, revisar al final). Si el estudiante solo acusa o explota, retírate («mejor ni te hablo») y espera a que cambie el tono. Si propone un plan concreto (redistribuir, recortar alcance, nuevo mini-plazo para lo tuyo), acéptalo y confirma tu parte. Al tercer intercambio, sal del personaje y da retroalimentación con esta rúbrica: Tono (¿habló sin romper el grupo?), Diagnóstico (¿preguntó qué pasó y con qué sí cuentas?), Reorganización (¿salió un plan concreto con responsables y fechas, incluida la decisión sobre el profesor?). Una fortaleza, una mejora y un consejo.",
+    rubric: ["Tono sin romper el grupo", "Diagnóstico rápido", "Plan de reorganización"],
+  },
+];
+
+export const TEAM_CHALLENGE = {
+  id: "reto-minuta-equipo",
+  title: "Reto de la semana: la minuta de tu equipo",
+  description:
+    "En tu próximo trabajo en equipo, sé quien deja la minuta: un mensaje corto en el chat del grupo con los entregables, el responsable de cada uno y las fechas (incluido un avance intermedio). Al final de la semana escribe aquí cómo reaccionó el equipo y si la minuta evitó algún «yo pensé que lo hacías tú». Cinco líneas tuyas pueden ahorrarle al equipo la peor noche del semestre.",
+};
+
+export type RouteId = "comunicacion" | "gestion-del-tiempo" | "inteligencia-emocional" | "trabajo-en-equipo";
 
 export type RouteContent = {
   routeId: RouteId;
@@ -650,6 +827,12 @@ export const ROUTE_CONTENT: Record<RouteId, RouteContent> = {
     lessons: EMOTIONAL_LESSONS,
     simulations: EMOTIONAL_SIMULATIONS,
     challenge: EMOTIONAL_CHALLENGE,
+  },
+  "trabajo-en-equipo": {
+    routeId: "trabajo-en-equipo",
+    lessons: TEAM_LESSONS,
+    simulations: TEAM_SIMULATIONS,
+    challenge: TEAM_CHALLENGE,
   },
 };
 
@@ -681,7 +864,7 @@ export const SOFT_SKILL_ROUTES: SoftSkillRoute[] = [
     dimension: "equipo",
     title: "Trabajo en equipo y liderazgo",
     tagline: "Organizar, cumplir y resolver diferencias.",
-    available: false,
+    available: true,
   },
   {
     id: "gestion-del-tiempo",

@@ -37,6 +37,9 @@ const TIME_CHALLENGE = "reto-semana-planificada";
 const EMO_LESSONS = ["nombra-lo-que-sientes", "pausa-90-segundos", "ansiedad-ante-examenes", "recibir-criticas"];
 const EMO_SIMS = ["examen-nervioso", "la-nota-inesperada"];
 const EMO_CHALLENGE = "reto-diario-emocional";
+const TEAM_LESSONS_IDS = ["roles-claros", "reuniones-que-sirven", "cuando-alguien-no-cumple", "liderar-sin-mandar"];
+const TEAM_SIMS = ["reunion-de-arranque", "salva-el-proyecto"];
+const TEAM_CHALLENGE = "reto-minuta-equipo";
 
 describe("soft skills progress", () => {
   beforeEach(() => {
@@ -106,6 +109,19 @@ describe("soft skills progress", () => {
     expect(isRouteComplete(emoOnly, "inteligencia-emocional")).toBe(true);
     // Comunicación solo suma sus dos lecciones (2/4 x 60 = 30); las de la ruta emocional no le cuentan.
     expect(routeProgress(emoOnly, "comunicacion")).toBe(30);
+  });
+
+  it("completes the module: the team route also computes independently", () => {
+    const teamOnly: SoftSkillsProgress = {
+      ...EMPTY,
+      lessonsCompleted: TEAM_LESSONS_IDS,
+      simulationsCompleted: TEAM_SIMS,
+      challenges: { [TEAM_CHALLENGE]: { reflection: "La minuta evitó un malentendido.", completed: true } },
+    };
+    expect(routeProgress(teamOnly, "trabajo-en-equipo")).toBe(100);
+    expect(isRouteComplete(teamOnly, "trabajo-en-equipo")).toBe(true);
+    expect(routeProgress(teamOnly, "gestion-del-tiempo")).toBe(0);
+    expect(routeProgress(teamOnly, "inteligencia-emocional")).toBe(0);
   });
 
   it("ignores unknown ids so progress cannot be inflated", () => {

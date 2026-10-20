@@ -38,6 +38,7 @@ type View =
 const ROUTE_BY_DIMENSION: Partial<Record<string, RouteId>> = {
   comunicacion: "comunicacion",
   emocional: "inteligencia-emocional",
+  equipo: "trabajo-en-equipo",
   tiempo: "gestion-del-tiempo",
 };
 
