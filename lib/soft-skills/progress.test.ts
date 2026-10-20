@@ -34,6 +34,9 @@ const COMM_CHALLENGE = "reto-explica-60s";
 const TIME_LESSONS = ["planifica-antes", "empezar-en-pequeno", "telefono-lejos", "entregas-sin-corredera"];
 const TIME_SIMS = ["planifica-tu-semana", "decir-que-no"];
 const TIME_CHALLENGE = "reto-semana-planificada";
+const EMO_LESSONS = ["nombra-lo-que-sientes", "pausa-90-segundos", "ansiedad-ante-examenes", "recibir-criticas"];
+const EMO_SIMS = ["examen-nervioso", "la-nota-inesperada"];
+const EMO_CHALLENGE = "reto-diario-emocional";
 
 describe("soft skills progress", () => {
   beforeEach(() => {
@@ -90,6 +93,19 @@ describe("soft skills progress", () => {
     expect(routeProgress(timeOnly, "gestion-del-tiempo")).toBe(100);
     expect(isRouteComplete(timeOnly, "gestion-del-tiempo")).toBe(true);
     expect(routeProgress(timeOnly, "comunicacion")).toBe(0);
+  });
+
+  it("tracks the emotional-intelligence route independently too", () => {
+    const emoOnly: SoftSkillsProgress = {
+      ...EMPTY,
+      lessonsCompleted: [...COMM_LESSONS.slice(0, 2), ...EMO_LESSONS],
+      simulationsCompleted: EMO_SIMS,
+      challenges: { [EMO_CHALLENGE]: { reflection: "Mi disparador es el cansancio acumulado.", completed: true } },
+    };
+    expect(routeProgress(emoOnly, "inteligencia-emocional")).toBe(100);
+    expect(isRouteComplete(emoOnly, "inteligencia-emocional")).toBe(true);
+    // Comunicación solo suma sus dos lecciones (2/4 x 60 = 30); las de la ruta emocional no le cuentan.
+    expect(routeProgress(emoOnly, "comunicacion")).toBe(30);
   });
 
   it("ignores unknown ids so progress cannot be inflated", () => {

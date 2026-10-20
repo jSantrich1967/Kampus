@@ -446,7 +446,184 @@ export const TIME_CHALLENGE = {
     "Escribe hoy tus 3 prioridades de la semana con sus bloques (día, hora y tema) en un papel o en tu cuaderno, y déjalo donde lo veas. Al final de la semana vuelve aquí y escribe en 2 o 3 líneas: qué bloques cumpliste, cuál se cayó y por qué. Un plan no se juzga por bonito: se juzga por cuánto se cumplió.",
 };
 
-export type RouteId = "comunicacion" | "gestion-del-tiempo";
+export const EMOTIONAL_LESSONS: Lesson[] = [
+  {
+    id: "nombra-lo-que-sientes",
+    title: "Nombra lo que sientes",
+    minutes: 5,
+    intro:
+      "«Estoy mal» no te dice qué hacer. «Estoy frustrado porque estudié y aun así fallé» sí. Ponerle nombre exacto a la emoción es el primer paso para manejarla: lo que no se nombra, manda.",
+    sections: [
+      {
+        heading: "Más allá de «bien» y «mal»",
+        body: "Debajo de «estoy mal» puede haber distintas emociones que piden cosas distintas: cansancio (pide descanso), frustración (pide otro método), vergüenza (pide perspectiva), rabia (pide una pausa), miedo (pide preparación). Pregúntate «¿qué es exactamente lo que siento?» y escríbelo en una frase.",
+      },
+      {
+        heading: "Nombrar baja la intensidad",
+        body: "Describir la emoción con palabras —aunque sea en un papel solo para ti— ordena la cabeza: la emoción pasa de ser una tormenta que «eres» a un estado que «tienes» y que va a pasar. No la elimina, pero te devuelve el volante.",
+      },
+      {
+        heading: "Emoción no es orden",
+        body: "Sentir ganas de dejar todo no es una instrucción de dejar todo. Sentir miedo a un examen no significa que vas a fallar. Las emociones informan; no deciden. Puedes sentir la rabia y, aun así, elegir no gritar. Ahí empieza la inteligencia emocional.",
+      },
+    ],
+    exampleBad: "Sacas una mala nota y concluyes «soy un desastre, no sirvo para esto», y no estudias en tres días.",
+    exampleGood:
+      "«Estoy frustrado y un poco avergonzado: preparé el examen pero me bloqueé en la pregunta 3. La emoción es frustración, no un veredicto. Esta tarde reviso solo esa pregunta.»",
+    commonMistake: "Confundir una emoción pasajera con una conclusión permanente sobre quién eres («soy bruto») en vez de un estado («hoy me bloqueé»).",
+    miniCheck: {
+      question: "Sacaste una nota baja. ¿Qué respuesta muestra mejor inteligencia emocional?",
+      options: [
+        "«No siento nada, me da igual» y no revisar el examen nunca",
+        "«Estoy decepcionado: esperaba más. La emoción es decepción, y me dice que este tema lo estudio distinto»",
+        "«Soy un desastre para esta materia» y dejar de estudiarla",
+      ],
+      correctIndex: 1,
+      explanation: "Nombrar la emoción con precisión y leer lo que informa, sin convertirla ni en negación ni en sentencia sobre ti.",
+    },
+  },
+  {
+    id: "pausa-90-segundos",
+    title: "La pausa: responde, no reacciones",
+    minutes: 5,
+    intro:
+      "Entre lo que pasa y lo que haces hay un espacio pequeño. En ese espacio está tu libertad: reaccionar es automático; responder es elegido. La pausa lo ensancha.",
+    sections: [
+      {
+        heading: "La ola pasa",
+        body: "El pico de una emoción intensa —la rabia de un comentario injusto, el susto de una pregunta sorpresa— dura poco si no lo alimentas con más pensamientos. Respirar lento unas cuantas veces le da tiempo a la ola de bajar antes de que hables o actúes.",
+      },
+      {
+        heading: "El protocolo P-R-E",
+        body: "Paro: detén la mano y la boca (nada de enviar ese mensaje todavía). Respiro: dos o tres respiraciones lentas, soltando el aire despacio. Elijo: «¿qué respuesta me deja bien conmigo mañana?». Esas tres letras caben en cualquier situación: un examen, una discusión, un chat que se calienta.",
+      },
+      {
+        heading: "Comprar tiempo también es pausa",
+        body: "Si la emoción es muy fuerte, dilata la respuesta con una frase: «Déjame pensarlo y te respondo», «Necesito un minuto». Casi nada importante exige respuesta en los próximos 30 segundos, excepto en un examen de emergencia. La pausa no es debilidad: es control.",
+      },
+    ],
+    exampleBad: "Tu compañero dice en el grupo «eso te quedó horrible» y en el acto le respondes tres mensajes con todo lo que hace mal él. El trabajo queda, el grupo roto.",
+    exampleGood:
+      "Lees el mensaje, la rabia sube… P-R-E. Al rato respondes: «No me gustó cómo sonó eso. Si hay algo que mejorar del trabajo, lo revisamos juntos esta tarde.»",
+    commonMistake: "Creer que decir «yo soy así, digo lo que pienso al momento» es honestidad, cuando suele ser la emoción hablando sin filtro.",
+    miniCheck: {
+      question: "Te llega un mensaje que te hace hervir la sangre. ¿Primer paso del protocolo?",
+      options: [
+        "Responder al instante para que no se enfríe el tema",
+        "Parar, respirar y luego elegir la respuesta",
+        "Bloquear a la persona para siempre",
+      ],
+      correctIndex: 1,
+      explanation: "La pausa no evita la conversación: evita que la rabia la dé por ti. Bloquear o explotar son dos formas de no responder.",
+    },
+  },
+  {
+    id: "ansiedad-ante-examenes",
+    title: "Ansiedad ante los exámenes: plan, no pánico",
+    minutes: 6,
+    intro:
+      "Un poco de nervios activa; demasiados bloquean. La ansiedad de examen no se cura con «cálmate»: se maneja con preparación repartida, sueño y un plan para el momento del bloqueo.",
+    sections: [
+      {
+        heading: "La ansiedad baja cuando el plan sube",
+        body: "Gran parte de la ansiedad es incertidumbre: «no sé si sé». Estudiar en bloques repartidos (ver la ruta de Gestión del tiempo) convierte esa niebla en lista: «estos 3 temas me quedan flojos». Lo concreto asusta menos que lo difuso, y cada bloque completado es evidencia contra el pánico.",
+      },
+      {
+        heading: "La víspera y el sueño",
+        body: "La noche antes no se gana un examen: se protege. Repaso ligero, materiales listos, y dormir bien —el cerebro ordena lo estudiado durmiendo—. Trasnochar «repasando» suele cobrarse en memoria y en nervios al día siguiente.",
+      },
+      {
+        heading: "Si te bloqueas durante el examen",
+        body: "Plan de rescate: suelta el lápiz, respira lento 20 segundos, lee la pregunta de nuevo y subraya qué pide exactamente. Si sigue bloqueada, márcala y pasa a la siguiente: avanzar en otras preguntas devuelve confianza, y muchas veces la respuesta aparece al volver. Un bloqueo es un momento, no el examen entero.",
+      },
+    ],
+    exampleBad: "Víspera trasnochando entre café y apuntes, entras al examen sin dormir, te bloqueas en la pregunta 2 y ya no ves el resto «porque todo va a salir mal».",
+    exampleGood:
+      "«Estudié en bloques toda la semana. Hoy repaso ligero y a dormir. Si me bloqueo: respiro, marco la pregunta y sigo. Ya lo practiqué.»",
+    commonMistake: "Intentar calmar la ansiedad evitando pensar en el examen: lo evitado se agranda. Preparar en concreto lo encoge.",
+    miniCheck: {
+      question: "Te bloqueas en una pregunta del examen. ¿Qué haces según el plan de rescate?",
+      options: [
+        "Quedarte mirando esa pregunta hasta que salga, cueste lo que cueste",
+        "Respirar, marcarla, seguir con las demás y volver luego",
+        "Entregar el examen: un bloqueo significa que no sabes nada",
+      ],
+      correctIndex: 1,
+      explanation: "Marcar y seguir protege el resto del examen y suele desbloquear la respuesta. Un bloqueo es un momento, no un diagnóstico.",
+    },
+  },
+  {
+    id: "recibir-criticas",
+    title: "Recibir críticas sin explotar ni hundirte",
+    minutes: 6,
+    intro:
+      "Una crítica puede doler y, a la vez, ser lo más útil que te digan en el mes. La habilidad no es que no duela: es escucharla entera, separar lo útil de lo demás, y responder con la cabeza fría.",
+    sections: [
+      {
+        heading: "Separa el hecho de la interpretación",
+        body: "«Tu exposición se pasó de tiempo» es un hecho comprobable. «No te importa la clase» es una interpretación. Quédate con los hechos, pide ejemplos concretos («¿en qué parte lo notaste?») y suelta las etiquetas sobre tu persona. Lo concreto se puede mejorar; lo personal solo hiere.",
+      },
+      {
+        heading: "Escucha primero, responde después",
+        body: "Interrumpir para defenderte cierra la información justo cuando empieza lo valioso. Escucha completo, toma nota si hace falta y agradece lo específico («gracias, lo del tiempo no lo había notado»). Ya tendrás tu turno de explicar el contexto, con calma y completo, no a pedazos entre interrupciones.",
+      },
+      {
+        heading: "Quédate con el oro, suelta el resto",
+        body: "No toda crítica es justa ni viene bien dicha. Aun así, pregunta: «¿hay algo aquí que sea verdad y me sirva?». Si lo hay, es tuyo, gratis. Si la crítica fue solo un desahogo ajeno, se suelta sin cargarlo días enteros. Ni explotar ni hundirte: filtrar.",
+      },
+    ],
+    exampleBad: "El profesor dice que tu trabajo está desordenado: respondes a la defensiva («los demás están peores»), no oyes en qué está desordenado y entregas el siguiente igual.",
+    exampleGood:
+      "Escuchas completo y preguntas: «¿Desordenado en qué parte: el orden de las ideas o la presentación?». Anotas la respuesta y cierras con: «Entendido, el próximo lo entrego con índice y conclusiones separadas.»",
+    commonMistake: "Responder a la crítica defendiendo tu intención («pero yo quise decir…») en vez de revisar el resultado, que es lo que el otro vio.",
+    miniCheck: {
+      question: "Te dicen «tu trabajo está desordenado». ¿Qué respuesta aprovecha la crítica?",
+      options: [
+        "«Pues a nadie más le pareció desordenado»",
+        "«Puede ser: ¿en qué parte se nota más, en las ideas o en la forma?»",
+        "No decir nada y no corregir nada, para no darle la razón",
+      ],
+      correctIndex: 1,
+      explanation: "Pedir lo concreto convierte una etiqueta hiriente en información usable. Defenderte o callarte en rebeldía pierden el dato.",
+    },
+  },
+];
+
+export const EMOTIONAL_SIMULATIONS: Simulation[] = [
+  {
+    id: "examen-nervioso",
+    title: "El examen que te quita el sueño",
+    minutes: 10,
+    scenario:
+      "Mañana tienes un examen importante y la ansiedad no te deja ni estudiar ni dormir. La IA hace de un mentor que ya pasó por eso: cuéntale qué sientes y sal con la emoción nombrada y un plan concreto para hoy y para el momento del examen.",
+    opening:
+      "Cuéntame: mañana es el examen y te noto tenso desde ya. Dime con tus palabras qué es exactamente lo que sientes, sin «estoy mal»: ¿qué hay debajo?",
+    tutorContext:
+      "SIMULACIÓN DE INTELIGENCIA EMOCIONAL. Actúas como un mentor sereno que acompaña a un estudiante ansioso la víspera de un examen. Reglas: respuestas cortas (máximo 5 líneas), tono cercano, un paso por turno. Primero ayuda al estudiante a NOMBRAR la emoción con precisión (miedo a fallar, vergüenza, presión familiar) haciéndole preguntas, sin burlarte ni minimizar («no es para tanto» está prohibido). Después ayúdale a convertirla en plan: qué repasar en concreto esta tarde, proteger el sueño y un plan de rescate si se bloquea en el examen (respirar, marcar y seguir). Al tercer o cuarto intercambio, cierra con retroalimentación con esta rúbrica: Nombrar la emoción (¿la describió con precisión?), Plan concreto (¿salió con acciones, no solo ánimos?), Mirada realista (¿se trató con exigencia sin hundirse?). Una fortaleza, una mejora y un consejo.",
+    rubric: ["Nombrar la emoción", "Plan concreto", "Mirada realista"],
+  },
+  {
+    id: "la-nota-inesperada",
+    title: "La nota que no esperabas",
+    minutes: 10,
+    scenario:
+      "Estudiaste, esperabas buena nota, y salió baja. La IA hace de tu profesor al entregarla, con retroalimentación directa. Tu reto: escuchar completo, separar hecho de interpretación y salir con pasos claros de mejora.",
+    opening:
+      "Te entrego tu examen: sacaste menos de lo que esperabas. Seré directo: tu desarrollo se va por las ramas y pierdes el hilo de lo que pregunta el ejercicio. ¿Qué me dices?",
+    tutorContext:
+      "SIMULACIÓN DE RECIBIR CRÍTICAS. Actúas como el profesor que acaba de entregar una nota baja con retroalimentación directa (el desarrollo se va por las ramas y pierde el hilo de la pregunta). Reglas: respuestas cortas (máximo 4 líneas), directo pero justo, un paso por turno. Si el estudiante se defiende o ataca, mantén la calma y repite el hecho concreto con un ejemplo. Si pide detalles de cómo mejorar, dáselos con gusto en pasos concretos. Si solo se hunde («soy un desastre»), corrígele: «esto es sobre este examen, no sobre ti». Al tercer intercambio, sal del personaje y da retroalimentación con esta rúbrica: Escucha (¿dejó terminar y oyó lo concreto?), Separación (¿distinguió el hecho de la interpretación?), Pasos (¿pidió o acordó mejoras concretas?). Una fortaleza, una mejora y un consejo.",
+    rubric: ["Escucha sin interrumpir", "Hecho vs interpretación", "Pasos de mejora"],
+  },
+];
+
+export const EMOTIONAL_CHALLENGE = {
+  id: "reto-diario-emocional",
+  title: "Reto de la semana: diario de 3 días",
+  description:
+    "Durante 3 días, al final del día escribe en un papel tres líneas: la emoción principal del día, qué la disparó y qué hiciste con ella (reaccionaste o respondiste). Al terminar, escribe aquí qué patrón viste: qué te dispara más seguido y qué pausa te funcionó. No se trata de sentir «bien» todos los días, sino de conocerte en todos.",
+};
+
+export type RouteId = "comunicacion" | "gestion-del-tiempo" | "inteligencia-emocional";
 
 export type RouteContent = {
   routeId: RouteId;
@@ -467,6 +644,12 @@ export const ROUTE_CONTENT: Record<RouteId, RouteContent> = {
     lessons: TIME_LESSONS,
     simulations: TIME_SIMULATIONS,
     challenge: TIME_CHALLENGE,
+  },
+  "inteligencia-emocional": {
+    routeId: "inteligencia-emocional",
+    lessons: EMOTIONAL_LESSONS,
+    simulations: EMOTIONAL_SIMULATIONS,
+    challenge: EMOTIONAL_CHALLENGE,
   },
 };
 
@@ -491,7 +674,7 @@ export const SOFT_SKILL_ROUTES: SoftSkillRoute[] = [
     dimension: "emocional",
     title: "Inteligencia emocional",
     tagline: "Entender lo que sientes y responder con calma.",
-    available: false,
+    available: true,
   },
   {
     id: "trabajo-en-equipo",

@@ -37,6 +37,7 @@ type View =
 /** Dimensión → ruta disponible que la entrena (las demás aún no tienen ruta). */
 const ROUTE_BY_DIMENSION: Partial<Record<string, RouteId>> = {
   comunicacion: "comunicacion",
+  emocional: "inteligencia-emocional",
   tiempo: "gestion-del-tiempo",
 };
 
