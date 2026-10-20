@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Download, Send, Sparkles } from "lucide-react";
+import { AlertTriangle, Download, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ShareLinkButton } from "@/components/growth/share-link-button";
@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { buildRubricFromPrompt, detectCommonIssues, suggestFeedback, suggestScore, type RubricRow } from "@/lib/teacher-copilot";
-type Workflow = "draft" | "review" | "published";
 
 export function TeacherCopilotWorkspace() {
   const { profile } = useKampus();
@@ -21,14 +20,12 @@ export function TeacherCopilotWorkspace() {
   );
   const [rubric, setRubric] = useState<RubricRow[]>([]);
   const [copilotFeedback, setCopilotFeedback] = useState("");
-  const [workflow, setWorkflow] = useState<Workflow>("draft");
 
   const scorePreview = useMemo(() => suggestScore(answer), [answer]);
   const issues = useMemo(() => detectCommonIssues(answer), [answer]);
 
   function generateRubric() {
     setRubric(buildRubricFromPrompt(assignment));
-    setWorkflow("review");
   }
 
   function applyCopilot() {
@@ -38,7 +35,7 @@ export function TeacherCopilotWorkspace() {
   function exportGradesCsv() {
     const rows = [
       ["student_id", "score", "status"],
-      ["demo_student", String(scorePreview.score), workflow],
+      ["demo_student", "sin_nota", "demostracion"],
     ];
     const csv = rows.map((r) => r.map((c) => `"${c.replaceAll('"', '\\"')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -75,7 +72,7 @@ export function TeacherCopilotWorkspace() {
       <PageHeader
         eyebrow="Docencia"
         title="Copiloto de evaluación"
-        description="Rúbrica, revisión de respuesta, feedback sugerido y publicación — tú editas, tú decides, tú publicas."
+        description="Demostración en esta pantalla. La rúbrica se puede editar aquí, pero publicar no entrega nada a los alumnos y no calcula una nota."
         actions={
           <ShareLinkButton
             pathname="/teaching"
@@ -88,18 +85,9 @@ export function TeacherCopilotWorkspace() {
       />
 
       <div className="flex flex-wrap items-center gap-2">
-        <Badge tone={workflow === "draft" ? "neutral" : workflow === "review" ? "warning" : "success"}>
-          {workflow === "draft" ? "Borrador" : workflow === "review" ? "Revisión" : "Publicado"}
-        </Badge>
-        <Button type="button" size="sm" variant="secondary" onClick={() => setWorkflow("draft")}>
-          Marcar borrador
-        </Button>
-        <Button type="button" size="sm" variant="secondary" onClick={() => setWorkflow("review")}>
-          Enviar a revisión
-        </Button>
-        <Button type="button" size="sm" variant="primary" onClick={() => setWorkflow("published")} className="gap-1">
-          <Send className="h-4 w-4" />
-          Publicar a alumnos
+        <Badge tone="warning">Demostración: no publica</Badge>
+        <Button type="button" size="sm" variant="secondary" disabled>
+          Publicar a alumnos no está conectado
         </Button>
       </div>
 
@@ -190,11 +178,7 @@ export function TeacherCopilotWorkspace() {
           </CardHeader>
           <div className="space-y-4 px-5 pb-5 text-sm text-slate-200">
             <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-              <div className="text-xs uppercase tracking-wide text-slate-400">Calificación sugerida</div>
-              <div className="mt-1 text-2xl font-semibold text-white">
-                {scorePreview.score}
-                <span className="text-base text-slate-400">/100</span>
-              </div>
+              <div className="text-xs uppercase tracking-wide text-slate-400">Orientación, no es una nota</div>
               <p className="mt-2 text-sm text-slate-300">{scorePreview.rationale}</p>
             </div>
 
