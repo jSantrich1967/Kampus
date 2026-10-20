@@ -1,8 +1,9 @@
 import {
-  COMMUNICATION_LESSONS,
-  COMMUNICATION_SIMULATIONS,
+  COMMUNICATION_CHALLENGE,
   DIAGNOSTIC_QUESTIONS,
+  ROUTE_CONTENT,
   SOFT_SKILL_DIMENSIONS,
+  type RouteId,
   type SoftSkillDimensionId,
 } from "./content";
 
@@ -11,13 +12,15 @@ import {
  * navegador (mismo patrón que Comunidad / Tutor: caja propia por usuario).
  */
 
+export type ChallengeState = { reflection: string; completed: boolean };
+
 export type SoftSkillsProgress = {
   diagnosticAnswers: Record<string, number>;
   diagnosticCompletedAt: string | null;
   lessonsCompleted: string[];
   simulationsCompleted: string[];
-  challengeReflection: string;
-  challengeCompleted: boolean;
+  /** Reto por ruta, indexado por el id del reto. */
+  challenges: Record<string, ChallengeState>;
 };
 
 export const EMPTY_PROGRESS: SoftSkillsProgress = {
@@ -25,8 +28,7 @@ export const EMPTY_PROGRESS: SoftSkillsProgress = {
   diagnosticCompletedAt: null,
   lessonsCompleted: [],
   simulationsCompleted: [],
-  challengeReflection: "",
-  challengeCompleted: false,
+  challenges: {},
 };
 
 let ownerId: string | null = null;
@@ -49,7 +51,30 @@ export function loadSoftSkillsProgress(userId?: string | null): SoftSkillsProgre
   try {
     const raw = window.localStorage.getItem(softSkillsStorageKey(resolveOwner(userId)));
     if (!raw) return { ...EMPTY_PROGRESS };
-    const parsed = JSON.parse(raw) as Partial<SoftSkillsProgress>;
+    const parsed = JSON.parse(raw) as Partial<SoftSkillsProgress> & {
+      challengeReflection?: unknown;
+      challengeCompleted?: unknown;
+    };
+    const challenges: Record<string, ChallengeState> = {};
+    if (parsed.challenges && typeof parsed.challenges === "object") {
+      for (const [key, value] of Object.entries(parsed.challenges)) {
+        const v = value as Partial<ChallengeState> | null;
+        if (v && typeof v === "object") {
+          challenges[key] = {
+            reflection: typeof v.reflection === "string" ? v.reflection : "",
+            completed: v.completed === true,
+          };
+        }
+      }
+    }
+    // Migración v1: el reto era único (Comunicación) y vivía en campos sueltos.
+    if (!challenges[COMMUNICATION_CHALLENGE.id]) {
+      const legacyReflection = typeof parsed.challengeReflection === "string" ? parsed.challengeReflection : "";
+      const legacyCompleted = parsed.challengeCompleted === true;
+      if (legacyReflection.length > 0 || legacyCompleted) {
+        challenges[COMMUNICATION_CHALLENGE.id] = { reflection: legacyReflection, completed: legacyCompleted };
+      }
+    }
     return {
       diagnosticAnswers:
         parsed.diagnosticAnswers && typeof parsed.diagnosticAnswers === "object"
@@ -66,8 +91,7 @@ export function loadSoftSkillsProgress(userId?: string | null): SoftSkillsProgre
       simulationsCompleted: Array.isArray(parsed.simulationsCompleted)
         ? parsed.simulationsCompleted.filter((x): x is string => typeof x === "string")
         : [],
-      challengeReflection: typeof parsed.challengeReflection === "string" ? parsed.challengeReflection : "",
-      challengeCompleted: parsed.challengeCompleted === true,
+      challenges,
     };
   } catch {
     return { ...EMPTY_PROGRESS };
@@ -117,21 +141,31 @@ export function weakestDimension(answers: Record<string, number>): SoftSkillDime
 }
 
 /**
- * Avance de la ruta de Comunicación: lecciones 60%, simulaciones 30%, reto 10%.
+ * Avance de una ruta: lecciones 60%, simulaciones 30%, reto 10%.
  * Referencia a content para que un id desconocido no infle el porcentaje.
  */
-export function communicationRouteProgress(progress: SoftSkillsProgress): number {
-  const lessonIds = new Set(COMMUNICATION_LESSONS.map((l) => l.id));
-  const simIds = new Set(COMMUNICATION_SIMULATIONS.map((s) => s.id));
+export function routeProgress(progress: SoftSkillsProgress, routeId: RouteId): number {
+  const content = ROUTE_CONTENT[routeId];
+  const lessonIds = new Set(content.lessons.map((l) => l.id));
+  const simIds = new Set(content.simulations.map((s) => s.id));
   const lessons = progress.lessonsCompleted.filter((id) => lessonIds.has(id)).length;
   const sims = progress.simulationsCompleted.filter((id) => simIds.has(id)).length;
+  const challenge = progress.challenges[content.challenge.id];
   const pct =
-    (lessons / COMMUNICATION_LESSONS.length) * 60 +
-    (sims / COMMUNICATION_SIMULATIONS.length) * 30 +
-    (progress.challengeCompleted && progress.challengeReflection.trim().length > 0 ? 10 : 0);
+    (lessons / content.lessons.length) * 60 +
+    (sims / content.simulations.length) * 30 +
+    (challenge?.completed && challenge.reflection.trim().length > 0 ? 10 : 0);
   return Math.round(pct);
 }
 
+export function isRouteComplete(progress: SoftSkillsProgress, routeId: RouteId): boolean {
+  return routeProgress(progress, routeId) >= 100;
+}
+
+export function communicationRouteProgress(progress: SoftSkillsProgress): number {
+  return routeProgress(progress, "comunicacion");
+}
+
 export function isCommunicationRouteComplete(progress: SoftSkillsProgress): boolean {
-  return communicationRouteProgress(progress) >= 100;
+  return isRouteComplete(progress, "comunicacion");
 }

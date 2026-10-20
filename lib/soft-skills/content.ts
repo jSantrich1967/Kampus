@@ -269,6 +269,207 @@ export const COMMUNICATION_CHALLENGE = {
     "Elige un tema de cualquiera de tus materias y explícaselo en voz alta a una persona real (familia, un amigo, un compañero). Al final pregúntale: «¿qué entendiste?». Escribe aquí en 2 o 3 líneas qué entendió, qué se perdió y qué harías distinto. La comunicación solo mejora practicando con gente de verdad.",
 };
 
+export const TIME_LESSONS: Lesson[] = [
+  {
+    id: "planifica-antes",
+    title: "Planifica antes de estudiar",
+    minutes: 6,
+    intro:
+      "Estudiar sin plan es abrir el cuaderno «a ver qué sale». Diez minutos de planificación te ahorran horas de vueltas: decides una vez, y después solo ejecutas.",
+    sections: [
+      {
+        heading: "La regla de las 3 prioridades",
+        body: "Cada día de estudio elige máximo tres prioridades y escríbelas en orden. No una lista de doce cosas: tres. Si todo es prioridad, nada lo es. La primera de la lista es la que harías aunque solo tuvieras una hora.",
+      },
+      {
+        heading: "Bloques, no intenciones",
+        body: "«Estudiar historia» es una intención. «Historia, 4:00–4:45, el tema de la Independencia» es un bloque. Un bloque tiene hora de inicio, duración y tema concreto. Lo que no tiene hora, compite contra todo y suele perder.",
+      },
+      {
+        heading: "Planifica la noche anterior",
+        body: "El plan del día se hace mejor la noche antes: tardas cinco minutos, duermes sin la cabeza dando vueltas y al despertar ya sabes por dónde empiezas. Empezar es la mitad del trabajo; el plan te regala el arranque.",
+      },
+    ],
+    exampleBad: "«Hoy estudio de todo un poco.» Resultado: abres tres materias, no terminas ninguna y cierras el día con la sensación de no haber avanzado.",
+    exampleGood:
+      "«Mis 3 de hoy: 1) Matemáticas 4:00–4:45 (ejercicios de fracciones). 2) Historia 5:00–5:40 (leer y subrayar el tema 2). 3) Inglés 6:00–6:20 (vocabulario). Si sobra tiempo, adelanto Ciencias.»",
+    commonMistake: "Hacer listas enormes de tareas sin hora ni orden, que se convierten en una fuente diaria de frustración.",
+    miniCheck: {
+      question: "¿Cuál de estos es un bloque de estudio bien definido?",
+      options: [
+        "«Estudiar bastante Biología esta semana»",
+        "«Biología, hoy 5:00–5:40, el tema de la célula, con resumen al final»",
+        "«Ponerme al día con todo»",
+      ],
+      correctIndex: 1,
+      explanation: "Tiene hora, duración, tema concreto y un cierre. Los otros dos son intenciones sin forma de cumplirse.",
+    },
+  },
+  {
+    id: "empezar-en-pequeno",
+    title: "Empezar en pequeño: vence el arranque",
+    minutes: 5,
+    intro:
+      "Casi nunca cuesta hacer la tarea: cuesta empezarla. El truco no es tener más fuerza de voluntad, es hacer el primer paso tan pequeño que no dé pereza.",
+    sections: [
+      {
+        heading: "La versión de 5 minutos",
+        body: "Ante cualquier tarea, pregúntate: «¿cuál es la versión de 5 minutos de esto?». No «hacer el trabajo de Historia», sino «abrir el documento y escribir el título y la primera frase». Casi siempre, al empezar, sigues solo. Y si no sigues, ya avanzaste algo.",
+      },
+      {
+        heading: "Pomodoro: 25 y 5",
+        body: "Trabaja 25 minutos con un temporizador y descansa 5. El temporizador convierte «estudiar toda la tarde» (inabarcable) en «aguantar este bloque» (posible). Cuatro bloques así son casi dos horas reales de estudio, más que una tarde entera «estudiando» con el teléfono.",
+      },
+      {
+        heading: "Registra el arranque, no la perfección",
+        body: "Marca en tu plan cada bloque que empezaste. Lo que se mide mejora: ver la cadena de días en que empezaste a tu hora vale más que cualquier discurso de motivación.",
+      },
+    ],
+    exampleBad: "«El sábado me siento y hago todo el trabajo de una vez.» El sábado llega, el trabajo se ve enorme, y se pospone «para cuando tenga el ánimo».",
+    exampleGood:
+      "«Ahora solo abro el documento y escribo el esquema: tres subtítulos. Nada más.» Veinte minutos después llevas dos apartados, porque empezar era lo difícil.",
+    commonMistake: "Esperar a «tener ganas» para empezar, cuando las ganas casi siempre llegan después de empezar, no antes.",
+    miniCheck: {
+      question: "Te enfrentas a un trabajo grande que llevas días posponiendo. ¿Primer paso correcto?",
+      options: [
+        "Esperar el fin de semana para hacerlo completo",
+        "Hacer hoy su versión de 5 minutos: abrirlo y escribir el esquema",
+        "Pensar en otra cosa hasta que se acerque la fecha",
+      ],
+      correctIndex: 1,
+      explanation: "Empezar en pequeño rompe la inercia hoy. Esperar el momento perfecto es la forma elegante de no empezar nunca.",
+    },
+  },
+  {
+    id: "telefono-lejos",
+    title: "El teléfono lejos: estudiar sin distracciones",
+    minutes: 5,
+    intro:
+      "No pierdes el tiempo en el teléfono: pierdes la vuelta. Cada interrupción te cobra unos minutos de re-concentración, y al final estudiaste dos horas para aprovechar cuarenta minutos.",
+    sections: [
+      {
+        heading: "Lejos vence a silenciado",
+        body: "El teléfono boca abajo sigue ocupando tu cabeza («¿y si me escribió?»). Déjalo en otro cuarto o en una gaveta durante el bloque. La distancia física funciona donde la fuerza de voluntad falla: lo que no está, no tienta.",
+      },
+      {
+        heading: "Diseña tu entorno, no tu carácter",
+        body: "Mesa despejada, solo el material del bloque, agua a mano, puerta cerrada si se puede. Avisar en casa «estudio hasta las 5:40» convierte interrupciones en acuerdos. No necesitas más disciplina: necesitas menos obstáculos.",
+      },
+      {
+        heading: "Las pausas también se planean",
+        body: "En los 5 minutos de descanso sí: teléfono, baño, estirarte. La pausa planeada no rompe el ritmo, lo sostiene. Lo que rompe el estudio no es descansar, es «descansar» sin hora de vuelta.",
+      },
+    ],
+    exampleBad: "Estudiar con el teléfono al lado «solo para emergencias»: 14 notificaciones después, no recuerdas ni en qué página ibas.",
+    exampleGood:
+      "«Bloque de 25: teléfono en la cocina, puerta cerrada, solo el cuaderno de Matemáticas. En la pausa reviso los mensajes y vuelvo.»",
+    commonMistake: "Confiar en «yo sí puedo estudiar con el teléfono al lado»: la evidencia de tu última semana suele decir lo contrario.",
+    miniCheck: {
+      question: "¿Qué cambio protege mejor un bloque de estudio?",
+      options: [
+        "Silenciar el teléfono y dejarlo junto al cuaderno",
+        "Dejar el teléfono en otro cuarto durante el bloque",
+        "Revisar el teléfono «rápido» entre ejercicio y ejercicio",
+      ],
+      correctIndex: 1,
+      explanation: "La distancia física elimina la tentación; el silencio solo la disimula. Revisar «rápido» es justo la interrupción que cobra la vuelta.",
+    },
+  },
+  {
+    id: "entregas-sin-corredera",
+    title: "Entregas sin corredera: planifica hacia atrás",
+    minutes: 7,
+    intro:
+      "La corredera de la última noche no es mala suerte: es un plan que nunca existió. Las entregas se trabajan hacia atrás, desde la fecha, repartiendo el peso en días normales.",
+    sections: [
+      {
+        heading: "Divide en hitos con fecha",
+        body: "Todo trabajo tiene partes: investigar, esquematizar, redactar, revisar. Ponle fecha a cada una, no solo a la entrega. «Entrega: viernes 24» se convierte en «material listo el lunes, esquema el martes, borrador el miércoles, revisión el jueves».",
+      },
+      {
+        heading: "Deja un día de margen",
+        body: "Planifica terminar un día antes de la fecha real. Ese margen absorbe lo que siempre pasa: se va la luz, te enfermas, una parte cuesta el doble. Sin margen, cualquier imprevisto es una tragedia; con margen, es un trámite.",
+      },
+      {
+        heading: "Revisa el avance a mitad de camino",
+        body: "En la fecha del segundo hito, mira dónde estás de verdad. Si vas atrasado, se ajusta el plan ese día, en pequeño: no la última noche, en grande. Detectar un atraso de un día cuesta un rato; detectar el de una semana cuesta la entrega.",
+      },
+    ],
+    exampleBad: "Trabajo para el viernes: lunes «todavía hay tiempo», miércoles «mañana empiezo», jueves 11 p. m. empezando a investigar con sueño y sin margen para fallos.",
+    exampleGood:
+      "«Entrega viernes 24. Lunes: recopilo el material. Martes: esquema. Miércoles: borrador completo. Jueves: reviso y dejo listo. Viernes: entrego tranquilo (día de margen).»",
+    commonMistake: "Contar solo la fecha de entrega y ninguno de los pasos intermedios, como si el trabajo se hiciera en un solo día mágico.",
+    miniCheck: {
+      question: "¿Para qué sirve el día de margen al planificar hacia atrás?",
+      options: [
+        "Para empezar un día más tarde sin culpa",
+        "Para absorber imprevistos sin que se caiga la entrega",
+        "Para entregar dos veces por si acaso",
+      ],
+      correctIndex: 1,
+      explanation: "El margen es un colchón contra lo imprevisto. Se planifica terminar antes justamente porque algo siempre se complica.",
+    },
+  },
+];
+
+export const TIME_SIMULATIONS: Simulation[] = [
+  {
+    id: "planifica-tu-semana",
+    title: "Planifica tu semana con un coach",
+    minutes: 10,
+    scenario:
+      "La IA hace de coach de organización. Cuéntale lo que tienes esta semana (clases, entregas, exámenes) y construyan juntos un plan con prioridades y bloques. Al final te evalúa con la rúbrica.",
+    opening:
+      "Soy tu coach de organización. Vamos a planificar tu semana en serio: cuéntame qué tienes — entregas, exámenes, clases, compromisos — con sus fechas.",
+    tutorContext:
+      "SIMULACIÓN DE PLANIFICACIÓN SEMANAL. Actúas como un coach de organización y gestión del tiempo. Reglas: respuestas cortas (máximo 6 líneas), un paso por turno. Primero escucha todo lo que el estudiante tiene en la semana. Después pídele que elija sus 3 prioridades y ayúdale a convertir cada una en bloques con día, hora y tema concreto, usando planificación hacia atrás para las entregas y dejando un día de margen. Si el plan queda sobrecargado, dilo con franqueza y propón recortar. Al tercer o cuarto intercambio, cierra con retroalimentación usando esta rúbrica: Priorización (¿eligió bien sus 3?), Realismo (¿los bloques caben en su semana?), Concreción (¿cada bloque tiene hora y tema?). Una fortaleza, una mejora y un consejo. No hagas el plan entero sin él: el estudiante decide, tú guías.",
+    rubric: ["Priorización de la semana", "Realismo del plan", "Bloques con hora y tema"],
+  },
+  {
+    id: "decir-que-no",
+    title: "La invitación de la noche anterior",
+    minutes: 10,
+    scenario:
+      "Mañana tienes una entrega importante y tu amigo te invita a jugar en línea «solo un rato» desde las 8 p. m. La IA hace de tu amigo. Tu reto: cuidar tu plan sin pelearte — firmeza amable y una alternativa.",
+    opening:
+      "¡Epa! Hoy a las 8 entramos a jugar, va a estar todo el grupo. No me digas que no, es solo un rato y ese trabajo lo haces rápido mañana temprano.",
+    tutorContext:
+      "SIMULACIÓN DE LÍMITES Y GESTIÓN DEL TIEMPO. Actúas como el amigo que invita al estudiante a jugar en línea la noche antes de una entrega importante. Reglas: respuestas cortas (máximo 4 líneas), tono amistoso e insistente pero no tóxico, un paso por turno. Insiste una o dos veces con argumentos típicos («es solo un rato», «mañana lo haces»). Si el estudiante pone un límite claro y amable ofreciendo una alternativa concreta (otro día u hora después de la entrega), acepta de buena gana. Si cede «un rato», recuérdale riendo que ese rato suele ser tres horas. Al tercer intercambio, sal del personaje y da retroalimentación con esta rúbrica: Claridad del límite (¿dijo que no o un «quizás» que es sí?), Amabilidad (¿cuidó la amistad?), Alternativa (¿propuso otro momento concreto?). Una fortaleza, una mejora y un consejo.",
+    rubric: ["Claridad del límite", "Amabilidad con el amigo", "Alternativa concreta"],
+  },
+];
+
+export const TIME_CHALLENGE = {
+  id: "reto-semana-planificada",
+  title: "Reto de la semana: tu plan en papel",
+  description:
+    "Escribe hoy tus 3 prioridades de la semana con sus bloques (día, hora y tema) en un papel o en tu cuaderno, y déjalo donde lo veas. Al final de la semana vuelve aquí y escribe en 2 o 3 líneas: qué bloques cumpliste, cuál se cayó y por qué. Un plan no se juzga por bonito: se juzga por cuánto se cumplió.",
+};
+
+export type RouteId = "comunicacion" | "gestion-del-tiempo";
+
+export type RouteContent = {
+  routeId: RouteId;
+  lessons: Lesson[];
+  simulations: Simulation[];
+  challenge: { id: string; title: string; description: string };
+};
+
+export const ROUTE_CONTENT: Record<RouteId, RouteContent> = {
+  comunicacion: {
+    routeId: "comunicacion",
+    lessons: COMMUNICATION_LESSONS,
+    simulations: COMMUNICATION_SIMULATIONS,
+    challenge: COMMUNICATION_CHALLENGE,
+  },
+  "gestion-del-tiempo": {
+    routeId: "gestion-del-tiempo",
+    lessons: TIME_LESSONS,
+    simulations: TIME_SIMULATIONS,
+    challenge: TIME_CHALLENGE,
+  },
+};
+
 export type SoftSkillRoute = {
   id: string;
   dimension: SoftSkillDimensionId;
@@ -304,6 +505,6 @@ export const SOFT_SKILL_ROUTES: SoftSkillRoute[] = [
     dimension: "tiempo",
     title: "Gestión del tiempo y hábitos",
     tagline: "Planificar y estudiar sin dejarlo para el final.",
-    available: false,
+    available: true,
   },
 ];

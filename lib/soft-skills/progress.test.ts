@@ -4,7 +4,9 @@ import {
   communicationRouteProgress,
   dimensionScores,
   isCommunicationRouteComplete,
+  isRouteComplete,
   loadSoftSkillsProgress,
+  routeProgress,
   saveSoftSkillsProgress,
   setSoftSkillsOwner,
   weakestDimension,
@@ -17,6 +19,21 @@ const ALL_HIGH: Record<string, number> = {
   t1: 3, t2: 3, t3: 3,
   g1: 1, g2: 2, g3: 3,
 };
+
+const EMPTY: SoftSkillsProgress = {
+  diagnosticAnswers: {},
+  diagnosticCompletedAt: null,
+  lessonsCompleted: [],
+  simulationsCompleted: [],
+  challenges: {},
+};
+
+const COMM_LESSONS = ["idea-en-una-frase", "escuchar-para-entender", "hablar-en-publico", "escribir-claro"];
+const COMM_SIMS = ["exponer-en-clase", "companero-no-cumple"];
+const COMM_CHALLENGE = "reto-explica-60s";
+const TIME_LESSONS = ["planifica-antes", "empezar-en-pequeno", "telefono-lejos", "entregas-sin-corredera"];
+const TIME_SIMS = ["planifica-tu-semana", "decir-que-no"];
+const TIME_CHALLENGE = "reto-semana-planificada";
 
 describe("soft skills progress", () => {
   beforeEach(() => {
@@ -44,57 +61,65 @@ describe("soft skills progress", () => {
   });
 
   it("keeps each account's progress in its own box", () => {
-    const base: SoftSkillsProgress = {
-      diagnosticAnswers: { c1: 4 },
-      diagnosticCompletedAt: "2026-10-20T00:00:00.000Z",
-      lessonsCompleted: ["idea-en-una-frase"],
-      simulationsCompleted: [],
-      challengeReflection: "",
-      challengeCompleted: false,
-    };
-    saveSoftSkillsProgress(base, "ana");
-    saveSoftSkillsProgress({ ...base, lessonsCompleted: [] }, "luis");
+    saveSoftSkillsProgress({ ...EMPTY, lessonsCompleted: ["idea-en-una-frase"] }, "ana");
+    saveSoftSkillsProgress({ ...EMPTY, lessonsCompleted: [] }, "luis");
     expect(loadSoftSkillsProgress("ana").lessonsCompleted).toEqual(["idea-en-una-frase"]);
     expect(loadSoftSkillsProgress("luis").lessonsCompleted).toEqual([]);
   });
 
   it("computes route progress: lessons 60, simulations 30, challenge 10", () => {
-    const empty: SoftSkillsProgress = {
-      diagnosticAnswers: {},
-      diagnosticCompletedAt: null,
-      lessonsCompleted: [],
-      simulationsCompleted: [],
-      challengeReflection: "",
-      challengeCompleted: false,
-    };
-    expect(communicationRouteProgress(empty)).toBe(0);
-    expect(
-      communicationRouteProgress({
-        ...empty,
-        lessonsCompleted: ["idea-en-una-frase", "escuchar-para-entender", "hablar-en-publico", "escribir-claro"],
-      }),
-    ).toBe(60);
+    expect(routeProgress(EMPTY, "comunicacion")).toBe(0);
+    expect(communicationRouteProgress({ ...EMPTY, lessonsCompleted: COMM_LESSONS })).toBe(60);
     const full: SoftSkillsProgress = {
-      ...empty,
-      lessonsCompleted: ["idea-en-una-frase", "escuchar-para-entender", "hablar-en-publico", "escribir-claro"],
-      simulationsCompleted: ["exponer-en-clase", "companero-no-cumple"],
-      challengeReflection: "Entendió la idea, se perdió en el ejemplo.",
-      challengeCompleted: true,
+      ...EMPTY,
+      lessonsCompleted: COMM_LESSONS,
+      simulationsCompleted: COMM_SIMS,
+      challenges: { [COMM_CHALLENGE]: { reflection: "Entendió la idea, se perdió en el ejemplo.", completed: true } },
     };
     expect(communicationRouteProgress(full)).toBe(100);
     expect(isCommunicationRouteComplete(full)).toBe(true);
   });
 
+  it("tracks the time-management route independently from communication", () => {
+    const timeOnly: SoftSkillsProgress = {
+      ...EMPTY,
+      lessonsCompleted: TIME_LESSONS,
+      simulationsCompleted: TIME_SIMS,
+      challenges: { [TIME_CHALLENGE]: { reflection: "Cumplí 5 de 7 bloques.", completed: true } },
+    };
+    expect(routeProgress(timeOnly, "gestion-del-tiempo")).toBe(100);
+    expect(isRouteComplete(timeOnly, "gestion-del-tiempo")).toBe(true);
+    expect(routeProgress(timeOnly, "comunicacion")).toBe(0);
+  });
+
   it("ignores unknown ids so progress cannot be inflated", () => {
     const fake: SoftSkillsProgress = {
-      diagnosticAnswers: {},
-      diagnosticCompletedAt: null,
+      ...EMPTY,
       lessonsCompleted: ["no-existe"],
       simulationsCompleted: ["tampoco"],
-      challengeReflection: "x",
-      challengeCompleted: true,
+      challenges: { [COMM_CHALLENGE]: { reflection: "x", completed: true } },
     };
-    // El reto sí cuenta (hay reflexión), las ids inventadas no.
-    expect(communicationRouteProgress(fake)).toBe(10);
+    // El reto cuenta (está completado y tiene reflexión); las ids inventadas no.
+    expect(routeProgress(fake, "comunicacion")).toBe(10);
+  });
+
+  it("migrates the v1 single-challenge fields into the communication challenge", () => {
+    window.localStorage.setItem(
+      "kampus.softskills.v1.ana",
+      JSON.stringify({
+        diagnosticAnswers: {},
+        diagnosticCompletedAt: null,
+        lessonsCompleted: [],
+        simulationsCompleted: [],
+        challengeReflection: "Reflexión de la v1 que no debe perderse.",
+        challengeCompleted: true,
+      }),
+    );
+    const loaded = loadSoftSkillsProgress("ana");
+    expect(loaded.challenges[COMM_CHALLENGE]).toEqual({
+      reflection: "Reflexión de la v1 que no debe perderse.",
+      completed: true,
+    });
+    expect(routeProgress(loaded, "comunicacion")).toBe(10);
   });
 });
