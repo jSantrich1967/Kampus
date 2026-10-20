@@ -40,6 +40,8 @@ export type TopicMastery = {
   pct: number | null;
   /** True when the percentage comes from fewer than five attempts. */
   uncertain: boolean;
+  /** Intentos que sostienen el porcentaje. Cero cuando no hay datos. */
+  attempts: number;
 };
 
 export type SubjectMastery = {
@@ -134,7 +136,7 @@ export function computeTopicMastery(
       subj = { subject: acc.subject, topics: [] };
       subjects.set(sKey, subj);
     }
-    subj.topics.push({ topic: acc.topic, pct, uncertain });
+    subj.topics.push({ topic: acc.topic, pct, uncertain, attempts });
   }
 
   return [...subjects.values()].map((s) => ({

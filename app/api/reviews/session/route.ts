@@ -1,26 +1,18 @@
 import { NextResponse } from "next/server";
 
 import { getServerUserPlan } from "@/lib/billing/server-plan";
-import { consumeDailyUserQuota } from "@/lib/rate-limit/user-quota";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
 /**
- * Gating de sesiones de repaso (decidido en servidor):
- * - Gratis: 1 sesión al día (hasta 20 tarjetas por sesión).
- * - Pro: sesiones ilimitadas.
- *
- * Para cambiar la regla con una palabra: ajusta FREE_DAILY_SESSIONS
- * (0 = sin sesiones gratis) o la rama de premium.
+ * Gratis: 1 sesión al día. Pro: p_daily_limit null, sin cupo.
+ * La función SQL elige las tarjetas y, si ya hay sesión hoy, devuelve la misma.
  */
 const FREE_DAILY_SESSIONS = parseInt(process.env.API_DAILY_LIMIT_REVIEW_SESSION ?? "1", 10);
 
-/**
- * POST /api/reviews/session
- * Abre una sesión de repaso. Las cuentas gratis consumen su sesión
- * diaria aquí; Pro pasa directo.
- */
+type SessionRow = { session_id: string; item_ids: string[] | null; created: boolean };
+
 export async function POST() {
   const supabase = await createSupabaseServerClient();
   const {
@@ -31,28 +23,48 @@ export async function POST() {
   }
 
   const plan = await getServerUserPlan(supabase, user.id);
-  if (plan === "premium") {
-    return NextResponse.json({ ok: true, unlimited: true });
-  }
+  const { data, error } = await supabase.rpc("start_review_session", {
+    p_daily_limit: plan === "premium" ? null : FREE_DAILY_SESSIONS,
+  });
 
-  const day = new Date().toISOString().slice(0, 10);
-  const quota = await consumeDailyUserQuota("review_session", FREE_DAILY_SESSIONS, `review-session:${day}`);
-  if (!quota.ok) {
+  if (error) {
+    if (String(error.message).includes("review_session_exhausted")) {
+      return NextResponse.json(
+        {
+          error:
+            "Ya usaste tu sesión de repaso gratis de hoy. Con Pro ($5/mes), las sesiones de repaso son ilimitadas.",
+          code: "REVIEW_SESSION_EXHAUSTED",
+        },
+        { status: 429 },
+      );
+    }
     return NextResponse.json(
-      {
-        error:
-          "Ya usaste tu sesión de repaso gratis de hoy. Con Pro ($5/mes), las sesiones de repaso son ilimitadas.",
-        code: "REVIEW_SESSION_EXHAUSTED",
-      },
-      {
-        status: quota.status,
-        headers:
-          quota.status === 429 && quota.retryAfterSec
-            ? { "Retry-After": String(quota.retryAfterSec) }
-            : undefined,
-      },
+      { error: "No se pudo abrir la sesión de repaso. Inténtalo de nuevo." },
+      { status: 500 },
     );
   }
 
-  return NextResponse.json({ ok: true, unlimited: false });
+  const row = (Array.isArray(data) ? data[0] : data) as SessionRow | null;
+  const ids = Array.isArray(row?.item_ids) ? row.item_ids : [];
+  if (!row?.session_id) {
+    return NextResponse.json({ error: "No se pudo abrir la sesión de repaso." }, { status: 500 });
+  }
+
+  const { data: cards, error: cardError } = ids.length
+    ? await supabase.from("review_items").select("id, subject, topic, front, back").in("id", ids).eq("user_id", user.id)
+    : { data: [], error: null };
+  if (cardError) {
+    return NextResponse.json({ error: "No se pudieron leer las tarjetas de la sesión." }, { status: 500 });
+  }
+
+  const byId = new Map((cards ?? []).map((card) => [card.id as string, card]));
+  const items = ids.map((id) => byId.get(id)).filter((card) => card !== undefined);
+
+  return NextResponse.json({
+    ok: true,
+    unlimited: plan === "premium",
+    resumed: row.created === false,
+    sessionId: row.session_id,
+    items,
+  });
 }

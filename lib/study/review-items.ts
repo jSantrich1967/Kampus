@@ -169,16 +169,22 @@ export async function gradeReviewItem(
   userId: string,
   itemId: string,
   quality: number,
+  gradeToken?: string,
 ): Promise<(GradedReview & { id: string }) | null> {
   if (!userId || !itemId) return null;
   try {
     const { data, error } = await supabase
       .from("review_items")
-      .select("id, easiness, interval_days, reps, lapses, successes")
+      .select("id, easiness, interval_days, reps, lapses, successes, next_due, last_grade_token")
       .eq("id", itemId)
       .eq("user_id", userId)
       .maybeSingle();
     if (error || !data) return null;
+    const token = gradeToken?.trim() || "";
+    if (token && data.last_grade_token === token && typeof data.next_due === "string") {
+      const state = toState(data);
+      return { id: itemId, ...state, nextDue: new Date(data.next_due) };
+    }
     const graded = gradeReview(toState(data), quality);
     const { error: updateError } = await supabase
       .from("review_items")
@@ -190,6 +196,7 @@ export async function gradeReviewItem(
         successes: graded.successes ?? graded.reps,
         next_due: graded.nextDue.toISOString(),
         last_reviewed_at: new Date().toISOString(),
+        ...(token ? { last_grade_token: token } : {}),
       })
       .eq("id", itemId)
       .eq("user_id", userId);

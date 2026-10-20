@@ -7,8 +7,10 @@ import { gradeReviewItem } from "@/lib/study/review-items";
 export const runtime = "nodejs";
 
 const gradeSchema = z.object({
-  item_id: z.string().min(1),
+  item_id: z.string().uuid(),
   quality: z.number().int().min(0).max(5),
+  session_id: z.string().uuid(),
+  grade_token: z.string().min(8).max(80),
 });
 
 /**
@@ -30,7 +32,27 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Datos inválidos." }, { status: 400 });
   }
 
-  const graded = await gradeReviewItem(supabase, user.id, parsed.data.item_id, parsed.data.quality);
+  const { data: session, error: sessionError } = await supabase
+    .from("review_sessions")
+    .select("item_ids")
+    .eq("id", parsed.data.session_id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const allowedIds = Array.isArray(session?.item_ids) ? (session.item_ids as string[]) : [];
+  if (sessionError || !allowedIds.includes(parsed.data.item_id)) {
+    return NextResponse.json(
+      { error: "Esa tarjeta no pertenece a la sesión abierta.", code: "SESSION_REQUIRED" },
+      { status: 403 },
+    );
+  }
+
+  const graded = await gradeReviewItem(
+    supabase,
+    user.id,
+    parsed.data.item_id,
+    parsed.data.quality,
+    parsed.data.grade_token,
+  );
   if (!graded) {
     return NextResponse.json(
       { error: "No se pudo calificar la tarjeta. Inténtalo de nuevo." },

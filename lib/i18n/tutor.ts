@@ -47,7 +47,7 @@ export const tutorCopy: Record<
     errorMessage: "No pude responder ahora. Inténtalo de nuevo en un momento.",
     emptyReplyMessage: "El tutor no devolvió respuesta. Inténtalo de nuevo.",
     loginRequired: "Inicia sesión para usar el Tutor IA.",
-    quotaNote: "Uso justo: hay un límite diario de preguntas para que el servicio siga gratis para todos.",
+    quotaNote: "El Tutor IA es del plan Pro. Cada cuenta Pro tiene un límite diario de preguntas.",
     socraticBadge: "Método socrático",
     disclaimer:
       "El tutor guía tu razonamiento y no hace tu tarea por ti: si le pides la respuesta directa, te hará preguntas primero.",

@@ -211,9 +211,7 @@ export function SocraticTutorPanel() {
           plan?: string;
           quota?: { used: number; limit: number };
         };
-        if (!res.ok && data.code === "TASTE_EXHAUSTED") {
-          // Se acabó la probada gratis de hoy: tarjeta de Pro, no error seco.
-          // Se restaura el borrador para que el usuario no pierda lo escrito.
+        if (!res.ok && (data.code === "TASTE_EXHAUSTED" || data.code === "PRO_REQUIRED")) {
           setTasteOver(true);
           setMessages((prev) => prev.slice(0, -1));
           setDraft(trimmed);
@@ -386,8 +384,7 @@ export function SocraticTutorPanel() {
           </div>
           {tasteOver ? (
             <div className="rounded-xl border border-purple-400/25 bg-purple-500/[0.06] px-4 py-3 text-sm text-slate-200">
-              Ya usaste tu probada gratis de hoy. Con Pro el Tutor es tuyo sin ese límite,
-              junto al Modo examen y el Modo aprobar.{" "}
+              El Tutor IA es del plan Pro, junto al Modo examen y el Modo aprobar.{" "}
               <Link href="/pro" className="font-medium text-purple-200 underline underline-offset-2">
                 Pasarme a Pro por $5/mes
               </Link>
