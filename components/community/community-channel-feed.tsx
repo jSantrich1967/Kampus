@@ -6,6 +6,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { CommunityNotebookAttachPicker } from "@/components/community/community-notebook-attach-picker";
 import { CommunityReportPostButton } from "@/components/community/community-report-post-button";
+import { UserAvatar } from "@/components/profile/user-avatar";
+import { fetchPublicProfiles, type PublicProfile } from "@/lib/profile/public-profiles";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -117,6 +119,22 @@ export function CommunityChannelFeed({
 
   const [weekAgo] = useState(() => Date.now() - 7 * 24 * 60 * 60 * 1000);
   const [pasteNotice, setPasteNotice] = useState(false);
+  const [authorProfiles, setAuthorProfiles] = useState<Record<string, PublicProfile>>({});
+
+  // Identidad pública (nombre + foto) de los autores visibles en el feed.
+  useEffect(() => {
+    const ids = new Set<string>();
+    for (const p of posts) ids.add(p.user_id);
+    for (const list of Object.values(answersByQuestion)) for (const a of list) ids.add(a.user_id);
+    if (ids.size === 0) return;
+    let cancelled = false;
+    void fetchPublicProfiles([...ids]).then((map) => {
+      if (!cancelled) setAuthorProfiles((prev) => ({ ...prev, ...map }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [posts, answersByQuestion]);
   const POST_MAX = 1200;
 
   // Pegar texto largo: recorta al límite en el final de la última palabra
@@ -305,6 +323,7 @@ export function CommunityChannelFeed({
                 key={p.id}
                 post={p}
                 answers={answersByQuestion[p.id] ?? []}
+                authorProfiles={authorProfiles}
                 authUserId={authUserId}
                 canReply={canPost && !channelDisabled}
                 answerDraft={answerDrafts[p.id] ?? ""}
@@ -339,6 +358,7 @@ export function CommunityChannelFeed({
 function CommunityPostThread({
   post,
   answers,
+  authorProfiles,
   authUserId,
   canReply,
   answerDraft,
@@ -361,6 +381,7 @@ function CommunityPostThread({
 }: {
   post: CommunityPostRow;
   answers: CommunityAnswerRow[];
+  authorProfiles: Record<string, PublicProfile>;
   authUserId: string | null;
   canReply: boolean;
   answerDraft: string;
@@ -405,11 +426,21 @@ function CommunityPostThread({
       )}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <div className="text-[11px] text-slate-500">
-          {t.postedAt}{" "}
-          <span suppressHydrationWarning>
-            {new Date(post.created_at).toLocaleString("es", { dateStyle: "medium", timeStyle: "short" })}
-          </span>
+        <UserAvatar
+          name={authorProfiles[post.user_id]?.name ?? "Estudiante"}
+          avatarUrl={authorProfiles[post.user_id]?.avatarUrl}
+          size={30}
+        />
+        <div>
+          <p className="text-sm font-medium leading-tight text-slate-100">
+            {authorProfiles[post.user_id]?.name ?? "Estudiante"}
+          </p>
+          <div className="text-[11px] leading-tight text-slate-500">
+            {t.postedAt}{" "}
+            <span suppressHydrationWarning>
+              {new Date(post.created_at).toLocaleString("es", { dateStyle: "medium", timeStyle: "short" })}
+            </span>
+          </div>
         </div>
         {showTrending ? <Badge tone="warning">{t.trendingBadge}</Badge> : null}
       </div>
@@ -484,10 +515,20 @@ function CommunityPostThread({
           <div className="text-xs font-medium text-slate-400">{t.answersTitle(answers.length)}</div>
           {answers.map((a) => (
             <div key={a.id} className="rounded-xl border border-white/5 bg-black/20 px-3 py-2">
-              <p className="whitespace-pre-wrap text-sm text-slate-200">{a.body}</p>
-              <div className="mt-1 text-[10px] text-slate-500" suppressHydrationWarning>
-                {new Date(a.created_at).toLocaleString("es", { dateStyle: "short", timeStyle: "short" })}
+              <div className="mb-1 flex items-center gap-2">
+                <UserAvatar
+                  name={authorProfiles[a.user_id]?.name ?? "Estudiante"}
+                  avatarUrl={authorProfiles[a.user_id]?.avatarUrl}
+                  size={20}
+                />
+                <span className="text-xs font-medium text-slate-300">
+                  {authorProfiles[a.user_id]?.name ?? "Estudiante"}
+                </span>
+                <span className="text-[10px] text-slate-500" suppressHydrationWarning>
+                  {new Date(a.created_at).toLocaleString("es", { dateStyle: "short", timeStyle: "short" })}
+                </span>
               </div>
+              <p className="whitespace-pre-wrap text-sm text-slate-200">{a.body}</p>
             </div>
           ))}
         </div>

@@ -4,6 +4,8 @@ import { Check, Copy, Flag, Loader2, Send, Swords, Timer, Trophy, X } from "luci
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
+import { UserAvatar } from "@/components/profile/user-avatar";
+import { fetchPublicProfiles, type PublicProfile } from "@/lib/profile/public-profiles";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,6 +59,7 @@ export function DuelArena({ code, demo = false, autostart = false }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [playerName, setPlayerName] = useState("");
   const [copied, setCopied] = useState(false);
+  const [rivalProfile, setRivalProfile] = useState<PublicProfile | null>(null);
 
   // Juego
   const [order, setOrder] = useState<number[]>([]);
@@ -65,6 +68,28 @@ export function DuelArena({ code, demo = false, autostart = false }: Props) {
   const [answers, setAnswers] = useState<number[]>([]);
   const [secondsLeft, setSecondsLeft] = useState(DUEL_SECONDS_PER_QUESTION);
   const [result, setResult] = useState<PlayResult | null>(null);
+
+  // Foto del rival para la pantalla de resultado (identidad pública).
+  useEffect(() => {
+    const sd = result?.serverDuel;
+    if (!sd || demo) {
+      setRivalProfile(null);
+      return;
+    }
+    const iAmCreator = authUserId ? sd.creator_id === authUserId : true;
+    const rivalId = iAmCreator ? sd.challenger_id : sd.creator_id;
+    if (!rivalId) {
+      setRivalProfile(null);
+      return;
+    }
+    let cancelled = false;
+    void fetchPublicProfiles([rivalId]).then((map) => {
+      if (!cancelled) setRivalProfile(map[rivalId] ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [result?.serverDuel, authUserId, demo]);
   // Duelos reales: índice correcto revelado por el servidor por pregunta
   // respondida (questionIndex -> correctIndex). En demo se usa answerIndex local.
   const [revealed, setRevealed] = useState<Record<number, number>>({});
@@ -456,12 +481,18 @@ export function DuelArena({ code, demo = false, autostart = false }: Props) {
       <Card className="border-white/10 bg-white/5">
         <div className="grid grid-cols-3 items-center gap-2 px-6 py-5">
           <div>
+            <div className="mb-2 flex justify-center">
+              <UserAvatar name={profile.displayName || t.youLabel} avatarUrl={profile.avatarUrl} size={44} />
+            </div>
             <p className="text-xs uppercase tracking-wide text-slate-400">{t.youLabel}</p>
             <p className="mt-1 text-4xl font-black text-white">{myScore}</p>
             <p className="text-xs text-slate-500">{t.correctLabel}</p>
           </div>
           <div className="text-2xl font-black text-slate-600">VS</div>
           <div>
+            <div className="mb-2 flex justify-center">
+              <UserAvatar name={rivalName} avatarUrl={serverDuel ? rivalProfile?.avatarUrl : undefined} size={44} />
+            </div>
             <p className="text-xs uppercase tracking-wide text-slate-400">{rivalName}</p>
             <p className="mt-1 text-4xl font-black text-white">{rivalScore ?? "–"}</p>
             <p className="text-xs text-slate-500">{t.correctLabel}</p>
