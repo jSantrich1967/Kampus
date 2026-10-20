@@ -80,6 +80,7 @@ export function KampusLuminaNav() {
           open ? "pointer-events-auto" : "pointer-events-none",
         )}
         aria-hidden={!open}
+        {...(!open ? { inert: true } : {})}
       >
         <button
           type="button"

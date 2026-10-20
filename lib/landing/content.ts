@@ -38,7 +38,7 @@ export const PRICING_PLANS = [
       "Tu misión diaria de estudio",
       "Plan adaptativo según tus exámenes",
       "Tarjetas y resúmenes con IA (uso diario limitado)",
-      "Probada diaria del Tutor IA y del diagnóstico de Modo examen",
+      "Tutor IA, Modo examen y Modo aprobar van en el plan Pro",
       "Seguimiento de tu progreso",
     ],
     highlighted: false,

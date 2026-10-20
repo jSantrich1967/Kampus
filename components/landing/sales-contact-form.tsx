@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, Mail, X } from "lucide-react";
 
+import { useDialogFocus } from "@/hooks/use-dialog-focus";
 import { cn } from "@/lib/cn";
 import {
   KAMPUS_SALES_EMAIL,
@@ -184,23 +185,19 @@ type SalesContactModalProps = {
 };
 
 export function SalesContactModal({ open, onClose }: SalesContactModalProps) {
+  const dialogRef = useDialogFocus(open, onClose);
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
     return () => {
-      document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center p-4 sm:items-center" role="presentation">
+    <div ref={dialogRef} className="fixed inset-0 z-[100] flex items-end justify-center p-4 sm:items-center" role="presentation">
       <button
         type="button"
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"

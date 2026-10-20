@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DiagnoseQuestion, PlanBlock } from "@/lib/schemas/cram";
 import { isDemoBrowser, markDemoBrowser } from "@/lib/demo/demo-session";
+import { reviewDiagnosis, scoreDiagnosis } from "@/lib/study/diagnose-review";
 import { preferredProfileSubject } from "@/lib/study/preferred-subject";
 import { cn } from "@/lib/cn";
 
@@ -107,11 +108,12 @@ export function CramMode() {
     return [...map.entries()].map(([topic, s]) => ({ topic, correct: s.correct, total: s.total }));
   }, [questions, answers]);
 
-  const diagScore = useMemo(() => {
-    const total = questions.length;
-    const correct = questions.filter((q, i) => answers[i] === q.answerIndex).length;
-    return { correct, total };
-  }, [questions, answers]);
+  const [excludedItems, setExcludedItems] = useState<number[]>([]);
+  const diagnosisReview = useMemo(() => reviewDiagnosis(questions, answers), [questions, answers]);
+  const diagScore = useMemo(
+    () => scoreDiagnosis(diagnosisReview, new Set(excludedItems)),
+    [diagnosisReview, excludedItems],
+  );
 
   async function startDiagnostic() {
     if (diagLoading || subject.trim().length < 2) return;
@@ -451,6 +453,38 @@ export function CramMode() {
                   <div className="h-2 overflow-hidden rounded-full bg-white/10">
                     <div className="h-full rounded-full bg-violet-400 transition-all" style={{ width: `${progress}%` }} />
                   </div>
+                  <p className="mt-3 text-xs text-slate-400">
+                    Esta cifra compara tu opción con la clave guardada. No es una nota oficial. Quitar una pregunta cambia este conteo; los bloques de abajo ya quedaron armados.
+                  </p>
+                  <ul className="mt-3 space-y-2">
+                    {diagnosisReview.map((item) => {
+                      const excluded = excludedItems.includes(item.index);
+                      return (
+                        <li key={item.index} className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-300">
+                          <p className="font-medium text-white">
+                            {item.index + 1}. {item.topic} · {excluded ? "fuera del conteo" : item.matched ? "coincide con la clave" : "no coincide con la clave"}
+                          </p>
+                          <p className="mt-1">Elegiste: {item.selected ?? "sin respuesta"}</p>
+                          {!item.matched ? <p>Clave guardada: {item.key ?? "sin clave"}</p> : null}
+                          {!item.matched ? (
+                            <button
+                              type="button"
+                              className="mt-1 text-violet-200 underline"
+                              onClick={() =>
+                                setExcludedItems((current) =>
+                                  current.includes(item.index)
+                                    ? current.filter((index) => index !== item.index)
+                                    : [...current, item.index],
+                                )
+                              }
+                            >
+                              {excluded ? "Volver a contar esta pregunta" : "No contar esta pregunta"}
+                            </button>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </div>
               </Card>
 

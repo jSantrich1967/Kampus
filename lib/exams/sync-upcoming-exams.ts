@@ -16,7 +16,9 @@ function upcomingKey(entry: UpcomingExamEntry): string {
 export function mergeUpcomingExamsIntoProfile(
   profileExams: UpcomingExamEntry[],
   agendaExams: Exam[],
+  options?: { retainDemoExams?: boolean },
 ): UpcomingExamEntry[] {
+  const retainDemoExams = options?.retainDemoExams === true;
   const demoKeys = new Set(
     agendaExams
       .filter((e) => isDemoExamTitle(e.title ?? "") && e.dueDate?.trim())
@@ -24,11 +26,21 @@ export function mergeUpcomingExamsIntoProfile(
   );
   const realKeys = new Set(
     agendaExams
-      .filter((e) => e.status !== "draft" && e.dueDate?.trim() && !isDemoExamTitle(e.title ?? ""))
+      .filter(
+        (e) =>
+          e.status !== "draft" &&
+          e.dueDate?.trim() &&
+          (retainDemoExams || !isDemoExamTitle(e.title ?? "")),
+      )
       .map((e) => upcomingKey({ subject: e.subject.trim(), date: e.dueDate!.trim() })),
   );
   const fromAgenda = agendaExams
-    .filter((e) => e.status !== "draft" && e.dueDate?.trim() && !isDemoExamTitle(e.title ?? ""))
+    .filter(
+      (e) =>
+        e.status !== "draft" &&
+        e.dueDate?.trim() &&
+        (retainDemoExams || !isDemoExamTitle(e.title ?? "")),
+    )
     .map((e) => ({ subject: e.subject.trim(), date: e.dueDate!.trim() }));
 
   const map = new Map<string, UpcomingExamEntry>();
@@ -37,7 +49,7 @@ export function mergeUpcomingExamsIntoProfile(
     const key = upcomingKey(entry);
     // Purga: la entrada vino de un examen demo (misma materia+fecha) y no hay
     // un examen real que la respalde.
-    if (demoKeys.has(key) && !realKeys.has(key)) continue;
+    if (!retainDemoExams && demoKeys.has(key) && !realKeys.has(key)) continue;
     map.set(key, { subject: entry.subject.trim(), date: entry.date.trim() });
   }
   for (const entry of fromAgenda) {

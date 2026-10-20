@@ -1,10 +1,10 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import { useDialogFocus } from "@/hooks/use-dialog-focus";
 
 type Props = {
   src: string;
@@ -15,23 +15,13 @@ type Props = {
 };
 
 export function ImageLightbox({ src, alt = "", open, onClose, caption }: Props) {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [onClose, open]);
+  const dialogRef = useDialogFocus(open, onClose);
 
   if (!open) return null;
 
   return (
     <div
+      ref={dialogRef}
       className="fixed inset-0 z-[200] flex items-center justify-center bg-black/92 p-3 backdrop-blur-sm sm:p-6"
       role="dialog"
       aria-modal="true"

@@ -6,6 +6,7 @@ import { CheckCircle2, Lightbulb, Loader2, X } from "lucide-react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button } from "@/components/ui/button";
+import { useDialogFocus } from "@/hooks/use-dialog-focus";
 
 /** Nombre amable de la sección según la ruta. */
 function sectionLabel(pathname: string): string {
@@ -35,6 +36,7 @@ export function FeedbackFab() {
   const pathname = usePathname();
   const { authUserId } = useKampus();
   const [open, setOpen] = useState(false);
+  const dialogRef = useDialogFocus(open, () => setOpen(false));
   const [category, setCategory] = useState<string>("sugerencia");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -95,7 +97,7 @@ export function FeedbackFab() {
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-[110] flex items-end justify-center p-4 sm:items-center" role="dialog" aria-modal="true" aria-label="Sugerir una mejora">
+        <div ref={dialogRef} className="fixed inset-0 z-[110] flex items-end justify-center p-4 sm:items-center" role="dialog" aria-modal="true" aria-label="Sugerir una mejora">
           <button type="button" aria-label="Cerrar" onClick={close} className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
           <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-slate-950 p-6 shadow-2xl">
             <button type="button" onClick={close} aria-label="Cerrar" className="absolute right-4 top-4 text-slate-500 hover:text-white">

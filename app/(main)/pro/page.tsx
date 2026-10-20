@@ -161,6 +161,11 @@ export default function ProPage() {
               Listo, {profile.displayName || "tu pago"} quedó registrado. Verificamos cada pago a mano y activamos tu Pro el mismo día; te llega la confirmación por WhatsApp si tienes los avisos activos.
             </CardDescription>
           </CardHeader>
+          {receiptNote ? (
+            <p role="status" className="px-6 pb-2 text-sm text-amber-200">
+              {receiptNote} El reporte ya está guardado: no hace falta enviarlo otra vez.
+            </p>
+          ) : null}
           <div className="px-6 pb-6">
             <Link href="/today" className={buttonClasses({ size: "sm", variant: "secondary" })}>
               Volver a Hoy

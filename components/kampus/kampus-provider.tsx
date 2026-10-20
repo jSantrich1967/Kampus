@@ -12,6 +12,7 @@ import {
 } from "react";
 
 import type { Locale } from "@/lib/i18n/nav";
+import { isDemoBrowser } from "@/lib/demo/demo-session";
 import { defaultProfile, type UserProfile, type UserRole } from "@/lib/schemas/profile";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -248,7 +249,7 @@ export function KampusProvider({ children }: { children: ReactNode }) {
         saveProfile(cloud, userId);
         setSyncedUserId(userId);
         setAuthReady(true);
-        if (!remoteMeaningful && isMeaningfulProfile(cloud)) {
+        if (!remoteMeaningful && isMeaningfulProfile(cloud) && !isDemoBrowser()) {
           await upsertProfileForUser(supabase, userId, cloud);
         }
       } catch (e) {
@@ -370,6 +371,7 @@ export function KampusProvider({ children }: { children: ReactNode }) {
       profileOwnerRef.current = authUserId;
       return;
     }
+    if (isDemoBrowser() && authUserId) return;
     saveProfile(
       accountRoleRef.current ? profileWithAccountRole(profile, accountRoleRef.current) : profile,
       authUserId,
@@ -378,6 +380,7 @@ export function KampusProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hydrated || !authUserId || syncedUserId !== authUserId || !isSupabaseConfigured()) return;
+    if (isDemoBrowser()) return;
     if (loadScreenRole(authUserId) && !accountRoleRef.current) return;
     const cloud = accountRoleRef.current ? profileWithAccountRole(profile, accountRoleRef.current) : profile;
     const json = JSON.stringify(cloud);

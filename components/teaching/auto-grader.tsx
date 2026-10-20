@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { BadgeCheck, Camera, ClipboardList, Download, Loader2, Plus, Trash2, Users } from "lucide-react";
 
@@ -9,12 +9,14 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AutoGraderResult } from "@/lib/schemas/auto-grader";
+import { appendLocalRosterEntry, type LocalRosterEntry } from "@/lib/teaching/local-roster";
 import { aiErrorMessage } from "@/lib/with-timeout";
 import { cn } from "@/lib/cn";
 
 type RubricQuestion = { question: string; maxPoints: number; answerKey: string };
-type RosterEntry = { name: string; perQuestion: number[]; total: number };
 type Step = "rubric" | "grade" | "roster";
+
+const DRAFT_KEY = "kampus.autoGraderDraft.v1";
 
 const EMPTY_Q: RubricQuestion = { question: "", maxPoints: 5, answerKey: "" };
 
@@ -34,9 +36,51 @@ export function AutoGrader() {
   const [gradeError, setGradeError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<AutoGraderResult | null>(null);
 
-  const [roster, setRoster] = useState<RosterEntry[]>([]);
+  const [roster, setRoster] = useState<LocalRosterEntry[]>([]);
+  const [draftReady, setDraftReady] = useState(false);
 
   const totalPoints = questions.reduce((s, q) => s + (Number(q.maxPoints) || 0), 0);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as {
+        subject?: string;
+        examTitle?: string;
+        questions?: RubricQuestion[];
+        roster?: LocalRosterEntry[];
+      };
+      if (typeof parsed.subject === "string") setSubject(parsed.subject);
+      if (typeof parsed.examTitle === "string") setExamTitle(parsed.examTitle);
+      if (Array.isArray(parsed.questions) && parsed.questions.length > 0) setQuestions(parsed.questions);
+      if (Array.isArray(parsed.roster)) {
+        setRoster(
+          parsed.roster
+            .filter((entry) => entry && typeof entry.name === "string")
+            .map((entry) => ({
+              id: typeof entry.id === "string" && entry.id ? entry.id : crypto.randomUUID(),
+              name: entry.name,
+              perQuestion: Array.isArray(entry.perQuestion) ? entry.perQuestion : [],
+              total: typeof entry.total === "number" ? entry.total : 0,
+            })),
+        );
+      }
+    } catch {
+      /* a broken draft should not block a new rubric */
+    } finally {
+      setDraftReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!draftReady) return;
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ subject, examTitle, questions, roster }));
+    } catch {
+      /* the in-memory sheet still works for this visit */
+    }
+  }, [draftReady, subject, examTitle, questions, roster]);
 
   function updateQuestion(i: number, patch: Partial<RubricQuestion>) {
     setQuestions((qs) => qs.map((q, j) => (j === i ? { ...q, ...patch } : q)));
@@ -127,14 +171,13 @@ export function AutoGrader() {
 
   function addToRoster() {
     if (!lastResult) return;
-    setRoster((r) => [
-      ...r.filter((e) => e.name !== studentName.trim()),
-      {
+    setRoster((current) =>
+      appendLocalRosterEntry(current, {
         name: studentName.trim(),
         perQuestion: lastResult.perQuestion.map((q) => q.score),
         total: lastResult.totalScore,
-      },
-    ]);
+      }),
+    );
     setStudentName("");
     setAnswers(questions.map(() => ""));
     setAnswerImage("");
@@ -144,9 +187,9 @@ export function AutoGrader() {
   }
 
   function exportCsv() {
-    const header = ["Estudiante", ...questions.map((_, i) => `P${i + 1}`), "Total"].join(";");
+    const header = ["Estudiante", "Id", ...questions.map((_, i) => `P${i + 1}`), "Total"].join(";");
     const lines = roster.map((e) =>
-      [e.name, ...e.perQuestion.map((s) => String(s).replace(".", ",")), String(e.total).replace(".", ",")].join(";"),
+      [e.name, e.id, ...e.perQuestion.map((s) => String(s).replace(".", ",")), String(e.total).replace(".", ",")].join(";"),
     );
     const blob = new Blob([["\uFEFF" + header, ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -405,7 +448,7 @@ export function AutoGrader() {
             <CardDescription>
               {roster.length === 0
                 ? "Aún no hay estudiantes calificados. Ve al paso 2 para calificar."
-                : `${roster.length} estudiante(s) · Promedio: ${classAverage} / ${totalPoints}`}
+                : `${roster.length} estudiante(s) · Promedio: ${classAverage} / ${totalPoints}. Borrador de este navegador: recargar lo conserva y no publica notas.`}
             </CardDescription>
           </CardHeader>
           {roster.length > 0 && (
@@ -423,8 +466,11 @@ export function AutoGrader() {
                   </thead>
                   <tbody>
                     {roster.map((e) => (
-                      <tr key={e.name} className="border-b border-white/5 text-slate-200">
-                        <td className="py-2 pr-3 font-medium text-white">{e.name}</td>
+                      <tr key={e.id} className="border-b border-white/5 text-slate-200">
+                        <td className="py-2 pr-3 font-medium text-white">
+                          {e.name}
+                          <span className="mt-0.5 block text-xs font-normal text-slate-400">{e.id.slice(0, 8)}</span>
+                        </td>
                         {e.perQuestion.map((s, i) => (
                           <td key={i} className="px-2 py-2 text-center">{s}</td>
                         ))}
