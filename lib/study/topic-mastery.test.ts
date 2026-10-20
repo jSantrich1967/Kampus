@@ -11,7 +11,7 @@ describe("computeTopicMastery", () => {
     // 0.6*0.8 + 0.4*0.75 = 0.48 + 0.30 = 0.78
     expect(out).toHaveLength(1);
     expect(out[0]!.subject).toBe("Biología");
-    expect(out[0]!.topics).toEqual([{ topic: "La Célula", pct: 78, uncertain: false }]);
+    expect(out[0]!.topics).toEqual([{ topic: "La Célula", pct: 78, uncertain: false, attempts: 9 }]);
   });
 
   it("usa solo el diagnóstico cuando no hay repasos", () => {
@@ -19,7 +19,7 @@ describe("computeTopicMastery", () => {
       [{ subject: "Física", topic: "Cinemática", correct: 1, total: 4 }],
       [],
     );
-    expect(out[0]!.topics).toEqual([{ topic: "Cinemática", pct: 25, uncertain: true }]);
+    expect(out[0]!.topics).toEqual([{ topic: "Cinemática", pct: 25, uncertain: true, attempts: 4 }]);
   });
 
   it("usa solo los repasos cuando no hay diagnóstico", () => {
@@ -27,7 +27,7 @@ describe("computeTopicMastery", () => {
       [],
       [{ subject: "Biología", topic: "Biología", reps: 2, lapses: 2 }],
     );
-    expect(out[0]!.topics).toEqual([{ topic: "Biología", pct: 50, uncertain: true }]);
+    expect(out[0]!.topics).toEqual([{ topic: "Biología", pct: 50, uncertain: true, attempts: 4 }]);
   });
 
   it("agrupa por materia y ordena temas por dominio descendente", () => {
@@ -50,7 +50,7 @@ describe("computeTopicMastery", () => {
     );
     // Sin datos válidos: pct null → "sin datos", nunca un % falso
     expect(out).toHaveLength(1);
-    expect(out[0]!.topics).toEqual([{ topic: "Biología", pct: null, uncertain: false }]);
+    expect(out[0]!.topics).toEqual([{ topic: "Biología", pct: null, uncertain: false, attempts: 0 }]);
   });
 
   it("une mayúsculas/minúsculas de la misma materia y tema", () => {
@@ -60,7 +60,7 @@ describe("computeTopicMastery", () => {
     );
     expect(out).toHaveLength(1);
     // 0.6*0.75 + 0.4*1 = 0.85
-    expect(out[0]!.topics).toEqual([{ topic: "la célula", pct: 85, uncertain: false }]);
+    expect(out[0]!.topics).toEqual([{ topic: "la célula", pct: 85, uncertain: false, attempts: 5 }]);
   });
 
   it("un olvido no borra los aciertos acumulados", () => {
@@ -68,6 +68,6 @@ describe("computeTopicMastery", () => {
       [],
       [{ subject: "Matemáticas", topic: "Fracciones", reps: 0, lapses: 1, successes: 10 }],
     );
-    expect(out[0]!.topics).toEqual([{ topic: "Fracciones", pct: 91, uncertain: false }]);
+    expect(out[0]!.topics).toEqual([{ topic: "Fracciones", pct: 91, uncertain: false, attempts: 11 }]);
   });
 });

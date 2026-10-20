@@ -1,7 +1,7 @@
 export const TRUST_ITEMS = [
   { label: "Sin tarjeta", sub: "La cuenta gratis no pide pago" },
   { label: "En tu navegador", sub: "Sin instalar nada, en tu teléfono o PC" },
-  { label: "Cancela cuando quieras", sub: "Sin permanencia ni letra pequeña" },
+  { label: "Sin renovación automática", sub: "El acceso dura hasta la fecha que pagaste" },
 ] as const;
 
 export const TESTIMONIALS = [

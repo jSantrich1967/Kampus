@@ -231,17 +231,25 @@ export async function evaluatePrizesForUser(
       continue;
     }
     if (value >= prize.goal) {
-      let proDaysGranted = 0;
-      if (prize.reward === "medalla_pro" && prize.proDays && prize.scope === "global") {
-        const ok = await grantProDays(admin, userId, prize.proDays);
-        proDaysGranted = ok ? prize.proDays : 0;
-      }
+      // The unique row is claimed before any Pro days are added. A second
+      // request loses the insert and does not extend the entitlement again.
       const { data: inserted, error } = await admin
         .from("prize_awards")
-        .insert({ prize_id: prize.id, user_id: userId, pro_days_granted: proDaysGranted })
-        .select("awarded_at")
+        .insert({ prize_id: prize.id, user_id: userId, pro_days_granted: 0 })
+        .select("id, awarded_at")
         .single();
       if (!error && inserted) {
+        let proDaysGranted = 0;
+        if (prize.reward === "medalla_pro" && prize.proDays && prize.scope === "global") {
+          const ok = await grantProDays(admin, userId, prize.proDays);
+          proDaysGranted = ok ? prize.proDays : 0;
+          if (ok) {
+            await admin
+              .from("prize_awards")
+              .update({ pro_days_granted: proDaysGranted })
+              .eq("id", (inserted as { id: string }).id);
+          }
+        }
         const entry: PrizeProgress = {
           prize,
           value,

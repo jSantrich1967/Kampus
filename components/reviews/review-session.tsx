@@ -45,6 +45,9 @@ export function ReviewSession() {
   const [revealed, setRevealed] = useState(false);
   const [blockMessage, setBlockMessage] = useState("");
   const [gradedCount, setGradedCount] = useState(0);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [pendingQuality, setPendingQuality] = useState<number | null>(null);
+  const [blockCode, setBlockCode] = useState<string | null>(null);
   const startedRef = useRef(false);
 
   const loadDue = useCallback(async () => {
@@ -73,14 +76,22 @@ export function ReviewSession() {
     setStatus("starting");
     try {
       const res = await fetch("/api/reviews/session", { method: "POST" });
-      const json = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
+      const json = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        code?: string;
+        sessionId?: string;
+        items?: DueItem[];
+      };
+      if (!res.ok || !json.sessionId) {
+        setBlockCode(json.code ?? "OPEN_FAILED");
         setBlockMessage(
           json.error || "No se pudo abrir la sesión de repaso. Inténtalo de nuevo.",
         );
         setStatus("blocked");
         return;
       }
+      setSessionId(json.sessionId);
+      if (Array.isArray(json.items)) setItems(json.items);
       try {
         window.localStorage.setItem(SESSION_KEY, todayKey());
       } catch {
@@ -98,25 +109,33 @@ export function ReviewSession() {
   const grade = useCallback(
     async (quality: number) => {
       const item = items[index];
-      if (!item) return;
-      // La calificación persiste en el servidor; si falla, la tarjeta
-      // sigue vencida y reaparece: nunca se pierde el repaso.
+      if (!item || !sessionId) return;
+      setPendingQuality(quality);
+      // El mismo token en un reintento no vuelve a aplicar SM-2.
       try {
         const res = await fetch("/api/reviews/grade", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ item_id: item.id, quality }),
+          body: JSON.stringify({
+            item_id: item.id,
+            quality,
+            session_id: sessionId,
+            grade_token: `${sessionId}:${item.id}`,
+          }),
         });
         if (!res.ok) {
-          setBlockMessage("No se guardó la calificación. La tarjeta sigue pendiente.");
+          setBlockCode("SAVE_FAILED");
+          setBlockMessage("No se guardó la calificación. Puedes reintentar: si el servidor ya la guardó, no se duplica.");
           setStatus("blocked");
           return;
         }
       } catch {
-        setBlockMessage("No se guardó la calificación. Revisa tu conexión.");
+        setBlockCode("SAVE_FAILED");
+        setBlockMessage("No se guardó la calificación. Revisa tu conexión y reintenta.");
         setStatus("blocked");
         return;
       }
+      setPendingQuality(null);
       setGradedCount((n) => n + 1);
       if (index + 1 >= items.length) {
         setStatus("done");
@@ -125,7 +144,7 @@ export function ReviewSession() {
         setRevealed(false);
       }
     },
-    [index, items],
+    [index, items, sessionId],
   );
 
   if (!authUserId) {
@@ -189,9 +208,15 @@ export function ReviewSession() {
             <CardDescription>{blockMessage}</CardDescription>
           </CardHeader>
           <div className="flex flex-wrap gap-2 px-5 pb-5">
-            <Link href="/pro" className={buttonClasses({ size: "sm" })}>
-              Pasarme a Pro
-            </Link>
+            {blockCode === "SAVE_FAILED" && pendingQuality !== null ? (
+              <Button size="sm" onClick={() => void grade(pendingQuality)}>
+                Reintentar guardado
+              </Button>
+            ) : (
+              <Link href="/pro" className={buttonClasses({ size: "sm" })}>
+                Pasarme a Pro
+              </Link>
+            )}
             <Link href="/today" className={buttonClasses({ size: "sm", variant: "secondary" })}>
               Volver a Hoy
             </Link>

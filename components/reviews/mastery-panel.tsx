@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-type TopicMastery = { topic: string; pct: number | null; uncertain?: boolean };
+type TopicMastery = { topic: string; pct: number | null; uncertain?: boolean; attempts?: number };
 type SubjectMastery = { subject: string; topics: TopicMastery[] };
 
 function barColor(pct: number): string {
@@ -46,8 +46,8 @@ export function MasteryPanel() {
         <CardHeader>
           <CardTitle>Tu dominio por materia</CardTitle>
           <CardDescription>
-            Todavía no hay datos. Haz un diagnóstico en Modo examen o repasa tarjetas y aquí verás
-            tu dominio real por tema.
+            Todavía no hay datos. Haz un diagnóstico en Modo examen o repasa tarjetas. El porcentaje
+            es una orientación, no una nota.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -59,7 +59,7 @@ export function MasteryPanel() {
       <div>
         <h2 className="text-lg font-semibold text-slate-50">Tu dominio por materia</h2>
         <p className="text-sm text-slate-400">
-          Combina tu último diagnóstico con cómo te va en los repasos.
+          Orientación a partir del último diagnóstico y de los repasos. No es una nota.
         </p>
       </div>
       {subjects.map((s) => (
@@ -76,7 +76,9 @@ export function MasteryPanel() {
                     <span className="text-xs text-slate-500">Sin datos todavía</span>
                   ) : (
                     <span className="font-semibold text-slate-100">
-                      {t.pct}%{t.uncertain ? " · muestra chica" : ""}
+                      {t.pct}%
+                      {typeof t.attempts === "number" ? ` · ${t.attempts} intentos` : ""}
+                      {t.uncertain ? " · muestra chica" : ""}
                     </span>
                   )}
                 </div>

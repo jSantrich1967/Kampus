@@ -92,12 +92,12 @@ export function InstitutionConsole() {
   const [copiedLink, setCopiedLink] = useState(false);
   const [demoSignalsLoaded, setDemoSignalsLoaded] = useState(false);
   const [kpis, setKpis] = useState<{
-    activeStudents: number;
-    coursesMonitored: number;
-    atRiskStudents: number;
-    avgEngagement: number;
-    gradingConsistency: number;
-    retentionRisk: "low" | "medium" | "high";
+    activeStudents: number | null;
+    coursesMonitored: number | null;
+    atRiskStudents: number | null;
+    avgEngagement: number | null;
+    gradingConsistency: number | null;
+    retentionRisk: "low" | "medium" | "high" | null;
   } | null>(null);
   const [courses, setCourses] = useState<
     {
@@ -144,32 +144,28 @@ export function InstitutionConsole() {
           .maybeSingle();
         if (kErr) throw kErr;
 
-        const payload = (kData?.payload ?? {}) as Partial<{
+        const payload = (kData?.payload ?? null) as Partial<{
           activeStudents: number;
           coursesMonitored: number;
           atRiskStudents: number;
           avgEngagement: number;
           gradingConsistency: number;
           retentionRisk: "low" | "medium" | "high";
-        }>;
+        }> | null;
 
-        const fallback = {
-          activeStudents: 0,
-          coursesMonitored: 0,
-          atRiskStudents: 0,
-          avgEngagement: 0,
-          gradingConsistency: 0,
-          retentionRisk: "low" as const,
-        };
-
-        const nextKpis = {
-          activeStudents: payload.activeStudents ?? fallback.activeStudents,
-          coursesMonitored: payload.coursesMonitored ?? fallback.coursesMonitored,
-          atRiskStudents: payload.atRiskStudents ?? fallback.atRiskStudents,
-          avgEngagement: payload.avgEngagement ?? fallback.avgEngagement,
-          gradingConsistency: payload.gradingConsistency ?? fallback.gradingConsistency,
-          retentionRisk: payload.retentionRisk ?? fallback.retentionRisk,
-        };
+        const nextKpis = kData
+          ? {
+              activeStudents: typeof payload?.activeStudents === "number" ? payload.activeStudents : null,
+              coursesMonitored: typeof payload?.coursesMonitored === "number" ? payload.coursesMonitored : null,
+              atRiskStudents: typeof payload?.atRiskStudents === "number" ? payload.atRiskStudents : null,
+              avgEngagement: typeof payload?.avgEngagement === "number" ? payload.avgEngagement : null,
+              gradingConsistency: typeof payload?.gradingConsistency === "number" ? payload.gradingConsistency : null,
+              retentionRisk:
+                payload?.retentionRisk === "low" || payload?.retentionRisk === "medium" || payload?.retentionRisk === "high"
+                  ? payload.retentionRisk
+                  : null,
+            }
+          : null;
 
         const { data: cData, error: cErr } = await supabase
           .from("institution_course_signals")
@@ -238,7 +234,7 @@ export function InstitutionConsole() {
   }
 
   const retentionTone =
-    kpis?.retentionRisk === "high" ? "danger" : kpis?.retentionRisk === "medium" ? "warning" : "success";
+    kpis?.retentionRisk === "high" ? "danger" : kpis?.retentionRisk === "medium" ? "warning" : kpis?.retentionRisk === "low" ? "success" : "neutral";
 
   function handleLoadDemoSignals() {
     setKpis({ ...DEMO_KPIS });
@@ -267,12 +263,12 @@ export function InstitutionConsole() {
       ["Informe institucional — Kampus", new Date().toLocaleDateString("es")],
       [],
       ["Métrica", "Valor"],
-      ["Estudiantes activos (30d)", kpis?.activeStudents ?? 0],
-      ["Cursos monitoreados", kpis?.coursesMonitored ?? 0],
-      ["Estudiantes en riesgo", kpis?.atRiskStudents ?? 0],
-      ["Participación promedio (%)", kpis?.avgEngagement ?? 0],
-      ["Consistencia de calificación (/100)", kpis?.gradingConsistency ?? 0],
-      ["Riesgo de retención", retentionLabel(kpis?.retentionRisk ?? "low")],
+      ["Estudiantes activos (30d)", kpis?.activeStudents ?? "sin_datos"],
+      ["Cursos monitoreados", kpis?.coursesMonitored ?? "sin_datos"],
+      ["Estudiantes en riesgo", kpis?.atRiskStudents ?? "sin_datos"],
+      ["Participación promedio (%)", kpis?.avgEngagement ?? "sin_datos"],
+      ["Consistencia de calificación (/100)", kpis?.gradingConsistency ?? "sin_datos"],
+      ["Riesgo de retención", kpis?.retentionRisk ? retentionLabel(kpis.retentionRisk) : "sin_datos"],
       [],
       ["Curso", "Código", "Alumnos", "Riesgo %", "Nota prom.", "Participación", "Tema duro", "Intervención"],
       ...courses.map((c) => [
@@ -296,8 +292,8 @@ export function InstitutionConsole() {
         title={es ? "Inteligencia de cohorte" : "Cohort intelligence"}
         description={
           es
-            ? "Señales creíbles para intervención: riesgo, engagement, tópicos difíciles y consistencia de evaluación (datos demo)."
-            : "Credible intervention signals: risk, engagement, difficult topics, and grading consistency (demo data)."
+            ? "Riesgo, participación y consistencia solo aparecen cuando hay una medición guardada. Si falta, se lee Sin datos."
+            : "Risk, engagement, and consistency appear only when a measurement is stored. Otherwise the panel says there is no data."
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -317,7 +313,7 @@ export function InstitutionConsole() {
               {es ? "Exportar informe (CSV)" : "Export report (CSV)"}
             </Button>
             <Badge tone={retentionTone}>
-              {es ? "Riesgo retención" : "Retention risk"}: {retentionLabel(kpis?.retentionRisk ?? "low")}
+              {es ? "Riesgo retención" : "Retention risk"}: {kpis?.retentionRisk ? retentionLabel(kpis.retentionRisk) : es ? "Sin datos" : "No data"}
             </Badge>
             {demoSignalsLoaded ? (
               <Badge tone="accent">{es ? "Datos demo" : "Demo data"}</Badge>
@@ -371,18 +367,19 @@ export function InstitutionConsole() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatBlock
           label={es ? "Estudiantes activos (30d)" : "Active students (30d)"}
-          value={(kpis?.activeStudents ?? 0).toLocaleString()}
+          value={typeof kpis?.activeStudents === "number" ? kpis.activeStudents.toLocaleString() : es ? "Sin datos" : "No data"}
         />
-        <StatBlock label={es ? "Cursos monitoreados" : "Courses monitored"} value={kpis?.coursesMonitored ?? 0} />
+        <StatBlock
+          label={es ? "Cursos monitoreados" : "Courses monitored"}
+          value={typeof kpis?.coursesMonitored === "number" ? kpis.coursesMonitored : es ? "Sin datos" : "No data"}
+        />
         <StatBlock
           label={es ? "Estudiantes en riesgo" : "At-risk students"}
-          value={(kpis?.atRiskStudents ?? 0).toLocaleString()}
-          hint={es ? "Heurística multi-señal (demo)." : "Multi-signal heuristic (demo)."}
+          value={typeof kpis?.atRiskStudents === "number" ? kpis.atRiskStudents.toLocaleString() : es ? "Sin datos" : "No data"}
         />
         <StatBlock
           label={es ? "Participación promedio" : "Avg engagement"}
-          value={`${kpis?.avgEngagement ?? 0}%`}
-          hint={es ? "Basado en sesiones + entregas." : "Based on sessions + submissions."}
+          value={typeof kpis?.avgEngagement === "number" ? `${kpis.avgEngagement}%` : es ? "Sin datos" : "No data"}
         />
       </div>
 
