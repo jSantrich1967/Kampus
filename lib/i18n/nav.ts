@@ -50,6 +50,7 @@ export const navCopy = {
       autoGrader: "Corrección automática",
       cramMode: "Modo examen",
       repasos: "Repasos",
+      habilidades: "Habilidades blandas",
       grabarClase: "Grabar clase",
       issueCertificates: "Acreditar logros",
       myCertificates: "Mis logros",
