@@ -15,7 +15,8 @@ export type DemoModeOptions = {
 export function activateDemoMode(options?: DemoModeOptions): UserProfile {
   markDemoBrowser();
   const demo = options?.premium ? buildPremiumDemoProfile() : buildDemoProfile();
-  saveProfile(demo);
+  // Demo data stays in the anonymous box. A signed-in account keeps its own profile.
+  saveProfile(demo, null);
   // Los exámenes demo reflejan los próximos exámenes del perfil: misma materia y fecha.
   syncDemoExamsWithUpcoming(demo.upcomingExams ?? []);
   // El demo siempre arranca con el mismo horario de ejemplo: nada de datos viejos.

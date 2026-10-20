@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
+import { isDemoBrowser } from "@/lib/demo/demo-session";
 import { applyAgendaExamsToProfile } from "@/lib/exams/refresh-profile-upcoming-exams";
 import { seedDemoExamsIfEmpty, loadExams } from "@/lib/storage/exams-storage";
 import type { StudentWork } from "@/lib/schemas/student-work";
@@ -40,7 +41,9 @@ export function useAcademicRadarData(): {
             agendaExams = loadExams();
           }
           if (!cancelled) {
-            setProfile((prev) => applyAgendaExamsToProfile(prev, agendaExams));
+            setProfile((prev) =>
+              applyAgendaExamsToProfile(prev, agendaExams, { retainDemoExams: isDemoBrowser() }),
+            );
           }
         }
 

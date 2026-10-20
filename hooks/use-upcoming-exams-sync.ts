@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 
 import { useKampus } from "@/components/kampus/kampus-provider";
+import { isDemoBrowser } from "@/lib/demo/demo-session";
 import { applyAgendaExamsToProfile } from "@/lib/exams/refresh-profile-upcoming-exams";
 import { seedDemoExamsIfEmpty, loadExams } from "@/lib/storage/exams-storage";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -35,7 +36,7 @@ export function useUpcomingExamsSync() {
         if (cancelled) return;
         syncedRef.current = true;
 
-        setProfile((prev) => applyAgendaExamsToProfile(prev, exams));
+        setProfile((prev) => applyAgendaExamsToProfile(prev, exams, { retainDemoExams: isDemoBrowser() }));
       } catch {
         syncedRef.current = true;
       }

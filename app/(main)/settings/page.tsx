@@ -19,12 +19,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { activateDemoMode } from "@/lib/demo/activate-demo-mode";
+import { clearDemoBrowser, isDemoBrowser } from "@/lib/demo/demo-session";
 import { authCopy } from "@/lib/i18n/auth";
 import { onboardingCopy } from "@/lib/i18n/onboarding";
 import type { UserRole } from "@/lib/schemas/profile";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { deleteDemoDataRemote } from "@/lib/supabase/agenda-db";
 import { loadExams, saveExams } from "@/lib/storage/exams-storage";
+import { loadProfile } from "@/lib/storage/kampus-storage";
 import { isSupabaseConfigured, shouldShowAuthBypassWarning } from "@/lib/supabase/env";
 import { saveScreenRole } from "@/lib/storage/screen-role-storage";
 import {
@@ -36,6 +38,7 @@ import {
 export default function SettingsPage() {
   const router = useRouter();
   const { profile, setProfile, authUserId, profileRemoteSyncActive } = useKampus();
+  const [demoOn, setDemoOn] = useState(false);
   const tAuth = authCopy.es;
   const tOnboarding = onboardingCopy.es;
 
@@ -108,6 +111,10 @@ export default function SettingsPage() {
     expiresAt: string | null;
     pending: { id: string } | null;
   } | null>(null);
+
+  useEffect(() => {
+    setDemoOn(isDemoBrowser());
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -618,9 +625,7 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle>Modo prueba completo</CardTitle>
           <CardDescription>
-            Carga un perfil demo con materias, exámenes, racha de estudio y plan{" "}
-            <span className="font-medium text-indigo-200">Premium</span> en un clic. Úsalo para recorrer kits
-            completos, Modo aprobar y el simulador de profesor.
+            Carga un recorrido de ejemplo en esta pantalla. No reemplaza el nombre, el teléfono ni las materias guardadas de la cuenta.
           </CardDescription>
         </CardHeader>
         <div className="flex flex-wrap items-center gap-3">
@@ -629,11 +634,25 @@ export default function SettingsPage() {
             onClick={() => {
               const demo = activateDemoMode({ premium: true });
               setProfile(demo);
+              setDemoOn(true);
               router.push("/today");
             }}
           >
             Activar modo prueba premium
           </Button>
+          {demoOn ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                clearDemoBrowser();
+                setDemoOn(false);
+                if (authUserId) setProfile(loadProfile(authUserId));
+              }}
+            >
+              Volver a mi cuenta
+            </Button>
+          ) : null}
           {profile.plan === "premium" ? (
             <Badge tone="success">Premium activo</Badge>
           ) : (

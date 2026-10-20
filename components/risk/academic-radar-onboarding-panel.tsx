@@ -17,6 +17,7 @@ import { useState } from "react";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { isDemoBrowser } from "@/lib/demo/demo-session";
 import { applyAgendaExamsToProfile } from "@/lib/exams/refresh-profile-upcoming-exams";
 import { bootstrapRadarDemoSignals } from "@/hooks/use-academic-radar-data";
 import { radarCopy } from "@/lib/i18n/radar";
@@ -59,10 +60,10 @@ export function AcademicRadarOnboardingPanel({ useCloud, onRefreshed }: Props) {
         if (useCloud && authUserId) {
           const supabase = createSupabaseBrowserClient();
           const exams = await fetchUserExams(supabase, authUserId);
-          setProfile((prev) => applyAgendaExamsToProfile(prev, exams));
+          setProfile((prev) => applyAgendaExamsToProfile(prev, exams, { retainDemoExams: isDemoBrowser() }));
         } else {
           seedDemoExamsIfEmpty(subjectHint);
-          setProfile((prev) => applyAgendaExamsToProfile(prev, loadExams()));
+          setProfile((prev) => applyAgendaExamsToProfile(prev, loadExams(), { retainDemoExams: isDemoBrowser() }));
         }
       }
 
