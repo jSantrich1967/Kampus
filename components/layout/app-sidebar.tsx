@@ -8,6 +8,7 @@ import { ChevronDown, ShieldCheck } from "lucide-react";
 import { KampusLogo } from "@/components/brand/kampus-logo";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { ContextSwitcher } from "@/components/layout/context-switcher";
+import { UserAvatar } from "@/components/profile/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { navCopy, navLabelForRole, navGroupLabelForRole } from "@/lib/i18n/nav";
@@ -150,11 +151,17 @@ export function AppSidebar({ onNavigate, luminaMode = false }: AppSidebarProps) 
                 : "Sistema operativo académico"}
           </div>
         </Link>
-        <div className="mt-4 flex items-center gap-2">
-          <Badge tone={profile.plan === "premium" ? "success" : "neutral"}>
-            {planLabel}
-          </Badge>
-          <Badge tone="accent">{roleLabel}</Badge>
+        <div className="mt-4 flex items-center gap-3">
+          <UserAvatar name={profile.displayName || "Mi cuenta"} avatarUrl={profile.avatarUrl} size={38} />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-slate-100">{profile.displayName || "Mi cuenta"}</p>
+            <div className="mt-1 flex items-center gap-2">
+              <Badge tone={profile.plan === "premium" ? "success" : "neutral"}>
+                {planLabel}
+              </Badge>
+              <Badge tone="accent">{roleLabel}</Badge>
+            </div>
+          </div>
         </div>
         <ContextSwitcher userId={authUserId} />
       </div>

@@ -13,6 +13,7 @@ export function buildDemoProfile(): UserProfile {
     plan: "free",
     role: "student",
     displayName: "Alex",
+    avatarUrl: "",
     university: "Centro Demo",
     major: "Ingeniería Informática",
     semester: "4º",

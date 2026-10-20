@@ -1,13 +1,20 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as Sentry from "@sentry/nextjs";
-import { Eye, EyeOff } from "lucide-react";
+import { Camera, Eye, EyeOff, Trash2 } from "lucide-react";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { useKampus } from "@/components/kampus/kampus-provider";
+import { UserAvatar } from "@/components/profile/user-avatar";
 import { MyOrganizations } from "@/components/settings/my-organizations";
+import {
+  AVATAR_BUCKET,
+  avatarObjectPath,
+  downscaleAvatarImage,
+  validateAvatarFile,
+} from "@/lib/profile/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +56,53 @@ export default function SettingsPage() {
   const [authBypassHydrated, setAuthBypassHydrated] = useState(false);
   const [subjectDraft, setSubjectDraft] = useState("");
   const [phoneVisible, setPhoneVisible] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarMsg, setAvatarMsg] = useState<string | null>(null);
+
+  const onAvatarFile = async (file: File | null) => {
+    if (!file || !authUserId) return;
+    const invalid = validateAvatarFile(file);
+    if (invalid) {
+      setAvatarMsg(invalid);
+      return;
+    }
+    setAvatarBusy(true);
+    setAvatarMsg(null);
+    try {
+      const blob = await downscaleAvatarImage(file);
+      const supabase = createSupabaseBrowserClient();
+      const path = avatarObjectPath(authUserId);
+      const { error } = await supabase.storage
+        .from(AVATAR_BUCKET)
+        .upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+      if (error) throw error;
+      const { data } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path);
+      setProfile({ ...profile, avatarUrl: `${data.publicUrl}?v=${Date.now()}` });
+      setAvatarMsg("Foto actualizada. Se verá en tu perfil y junto a tu nombre en Kampus.");
+    } catch {
+      setAvatarMsg("No se pudo subir la foto. Inténtalo de nuevo en un momento.");
+    } finally {
+      setAvatarBusy(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  };
+
+  const removeAvatar = async () => {
+    if (!authUserId) return;
+    setAvatarBusy(true);
+    setAvatarMsg(null);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      await supabase.storage.from(AVATAR_BUCKET).remove([avatarObjectPath(authUserId)]);
+    } catch {
+      // Si el borrado falla, al menos se quita la URL del perfil.
+    } finally {
+      setProfile({ ...profile, avatarUrl: "" });
+      setAvatarMsg("Foto eliminada. Ahora se verán tus iniciales.");
+      setAvatarBusy(false);
+    }
+  };
   const [billing, setBilling] = useState<{
     active: boolean;
     expiresAt: string | null;
@@ -257,6 +311,42 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-4">
+            <UserAvatar name={profile.displayName || "?"} avatarUrl={profile.avatarUrl} size={72} />
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-slate-300">Foto de perfil</p>
+              {authUserId ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={avatarBusy}
+                    onClick={() => avatarInputRef.current?.click()}
+                  >
+                    <Camera className="mr-1.5 h-4 w-4" aria-hidden />
+                    {avatarBusy ? "Subiendo…" : profile.avatarUrl ? "Cambiar foto" : "Subir foto"}
+                  </Button>
+                  {profile.avatarUrl ? (
+                    <Button type="button" variant="ghost" size="sm" disabled={avatarBusy} onClick={() => void removeAvatar()}>
+                      <Trash2 className="mr-1.5 h-4 w-4" aria-hidden /> Quitar
+                    </Button>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500">Inicia sesión para subir tu foto.</p>
+              )}
+              <p className="text-xs text-slate-500">JPG, PNG o WebP, hasta 2 MB. Se recorta cuadrada automáticamente.</p>
+              {avatarMsg ? <p className="text-xs text-slate-300">{avatarMsg}</p> : null}
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => void onAvatarFile(e.target.files?.[0] ?? null)}
+              />
+            </div>
+          </div>
           <div>
             <label htmlFor="profile-name" className="mb-1 block text-xs font-medium text-slate-300">
               Tu nombre

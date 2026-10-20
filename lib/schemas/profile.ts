@@ -12,6 +12,8 @@ export const profileSchema = z.object({
   plan: z.enum(["free", "premium"]).default("free"),
   role: roleSchema,
   displayName: z.string().default(""),
+  /** URL pública de la foto de perfil (bucket avatars). "" = sin foto: se muestran las iniciales. */
+  avatarUrl: z.string().default(""),
   university: z.string().default(""),
   major: z.string().min(1),
   semester: z.string().min(1),
@@ -39,6 +41,7 @@ export const defaultProfile: UserProfile = {
   plan: "free",
   role: "student",
   displayName: "",
+  avatarUrl: "",
   university: "",
   major: "",
   semester: "",
