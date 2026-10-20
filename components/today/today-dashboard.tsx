@@ -246,7 +246,6 @@ export function TodayDashboard() {
       />
 
       <TodayAuthBypassNote />
-      <DemoGuideCard />
 
       {isTeacher ? (
         <TodayStep step="Paso 1" label="Empieza aquí">
@@ -275,6 +274,8 @@ export function TodayDashboard() {
           <TodayMissionPanel plan={plan} onProgressChange={() => setMissionTick((n) => n + 1)} />
         </TodayStep>
       ) : null}
+
+      <DemoGuideCard />
 
       {profile.role === "student" ? (
         <TodayStep step="Paso 2" label="Lo que viene">
