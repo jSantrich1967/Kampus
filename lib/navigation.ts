@@ -70,6 +70,7 @@ export const navigationGroups: NavGroup[] = [
       { href: "/modo-examen", key: "cramMode", icon: AlarmClock, roles: ["student", "learner"], premium: true },
       { href: "/repasos", key: "repasos", icon: Repeat, roles: ["student", "learner"] },
       { href: "/habilidades", key: "habilidades", icon: Sparkles, roles: ["student", "learner"] },
+      { href: "/premios", key: "premios", icon: Trophy, roles: ["student", "learner", "teacher"] },
       { href: "/study/grabar", key: "grabarClase", icon: Mic, roles: ["student", "learner"] },
       { href: "/study/library", key: "library", icon: Library, roles: ["student", "teacher", "learner"] },
       { href: "/study/convertir", key: "convertir", icon: FileUp, roles: ["student", "learner"] },
@@ -147,7 +148,7 @@ export const navigationGroups: NavGroup[] = [
  */
 const studentNavStructure: Array<{ id: NavGroup["id"]; keys: NavItemKey[] }> = [
   { id: "command", keys: ["today"] },
-  { id: "learn", keys: ["tutor", "cramMode", "repasos", "habilidades", "grabarClase", "library"] },
+  { id: "learn", keys: ["tutor", "cramMode", "repasos", "habilidades", "premios", "grabarClase", "library"] },
   { id: "evaluate", keys: ["exams", "agendaCalendar"] },
   { id: "classes", keys: ["collaborate"] },
   { id: "social", keys: ["community"] },

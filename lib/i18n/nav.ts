@@ -51,6 +51,7 @@ export const navCopy = {
       cramMode: "Modo examen",
       repasos: "Repasos",
       habilidades: "Habilidades blandas",
+      premios: "Premios",
       grabarClase: "Grabar clase",
       issueCertificates: "Acreditar logros",
       myCertificates: "Mis logros",
