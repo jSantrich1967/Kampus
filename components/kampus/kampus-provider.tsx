@@ -75,6 +75,7 @@ import {
   discardLegacyCommunitySaved,
   setCommunitySavedOwner,
 } from "@/lib/storage/community-saved-storage";
+import { setSoftSkillsOwner } from "@/lib/soft-skills/progress";
 import {
   clearCounselorAlertStorage,
   discardLegacyCounselorAlert,
@@ -155,6 +156,7 @@ export function KampusProvider({ children }: { children: ReactNode }) {
   setPassModeIntensityOwner(authUserId);
   setPassCloseCycleOwner(authUserId);
   setCommunitySavedOwner(authUserId);
+  setSoftSkillsOwner(authUserId);
   setAccountBoxOwner(authUserId);
 
   useEffect(() => {
@@ -224,6 +226,7 @@ export function KampusProvider({ children }: { children: ReactNode }) {
       setPassModeIntensityOwner(userId);
       setPassCloseCycleOwner(userId);
       setCommunitySavedOwner(userId);
+      setSoftSkillsOwner(userId);
       setAccountBoxOwner(userId);
       const local = loadProfile(userId);
       accountRoleRef.current = null;
