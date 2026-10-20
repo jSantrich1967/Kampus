@@ -18,8 +18,12 @@
 export type ReviewState = {
   easiness: number;
   intervalDays: number;
+  /** Consecutive correct streak. Resets when the card is forgotten. */
   reps: number;
+  /** Times the card was forgotten. Never resets. */
   lapses: number;
+  /** Correct recalls that are kept after a lapse. Used for mastery, not for SM-2 intervals. */
+  successes?: number;
 };
 
 export type GradedReview = ReviewState & {
@@ -54,6 +58,7 @@ export function gradeReview(
 ): GradedReview {
   const q = clampQuality(quality);
   let { easiness, intervalDays, reps, lapses } = item;
+  let successes = item.successes ?? item.reps;
 
   if (q < 3) {
     reps = 0;
@@ -61,6 +66,7 @@ export function gradeReview(
     intervalDays = 1;
   } else {
     reps += 1;
+    successes += 1;
     if (reps === 1) intervalDays = 1;
     else if (reps === 2) intervalDays = 6;
     else intervalDays = Math.max(1, Math.round(intervalDays * easiness));
@@ -76,6 +82,7 @@ export function gradeReview(
     intervalDays,
     reps,
     lapses,
+    successes,
     nextDue: new Date(now.getTime() + intervalDays * DAY_MS),
   };
 }

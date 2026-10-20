@@ -2,8 +2,10 @@ export const authCopy = {
   es: {
     loginTitle: "Entrar",
     loginDescription: "Entra con Google o con tu correo y contraseña.",
+    loginDescriptionEmail: "Entra con tu correo y contraseña.",
     registerTitle: "Crear cuenta",
     registerDescription: "Regístrate con Google o con correo para sincronizar tu perfil en la nube.",
+    registerDescriptionEmail: "Regístrate con tu correo para sincronizar tu perfil en la nube.",
     continueWithGoogle: "Continuar con Google",
     orContinueWithEmail: "o con correo",
     email: "Correo",

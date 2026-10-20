@@ -1,0 +1,190 @@
+// Isolated regression for billing authority, quotas, and duel access.
+// Uses a temporary PGlite database. It does not connect to production.
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { resolve } from "node:path";
+
+const repo = resolve(import.meta.dirname, "..");
+const pglitePkg = resolve(repo, "../security-proof/package.json");
+const require = createRequire(pglitePkg);
+const { PGlite } = require("@electric-sql/pglite");
+
+const uid = "11111111-1111-4111-8111-111111111111";
+const other = "22222222-2222-4222-8222-222222222222";
+const admin = "33333333-3333-4333-8333-333333333333";
+const sql = (name) => readFileSync(resolve(repo, "supabase/migrations", name), "utf8");
+
+const db = new PGlite();
+const failures = [];
+
+function check(name, ok, detail) {
+  if (!ok) {
+    failures.push({ name, detail });
+    console.log("DETAIL", JSON.stringify(detail));
+  }
+  console.log(`${ok ? "ok" : "FAIL"} ${name}`);
+}
+
+await db.exec(`
+  CREATE ROLE authenticated;
+  CREATE ROLE anon;
+  CREATE ROLE service_role BYPASSRLS;
+  CREATE SCHEMA auth;
+  CREATE TABLE auth.users(id uuid PRIMARY KEY);
+  CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$
+    SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
+  $$;
+  GRANT USAGE ON SCHEMA public, auth TO authenticated;
+  GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated;
+`);
+await db.exec(sql("20260423120000_profiles.sql"));
+await db.exec(sql("20260505170000_api_usage_quotas.sql"));
+await db.exec(sql("20261016184500_quota_dedup.sql"));
+await db.exec(sql("20260928160000_duels.sql"));
+await db.exec(sql("20261008120000_pro_subscriptions.sql"));
+await db.exec(`
+  CREATE TABLE IF NOT EXISTS public.app_admins (
+    user_id uuid PRIMARY KEY REFERENCES auth.users (id) ON DELETE CASCADE
+  );
+`);
+await db.exec(sql("20261020120000_billing_quota_duel_authority.sql"));
+
+await db.exec(`
+  INSERT INTO auth.users VALUES ('${uid}'), ('${other}'), ('${admin}');
+  INSERT INTO public.app_admins (user_id) VALUES ('${admin}');
+  UPDATE public.profiles SET body = '{"plan":"free","displayName":"Synthetic"}';
+`);
+
+await db.exec(`SET ROLE authenticated; SELECT set_config('request.jwt.claim.sub', '${uid}', false);`);
+await db.query(`UPDATE public.profiles SET body = jsonb_set(body, '{plan}', '"premium"') WHERE id = $1`, [uid]);
+const own = await db.query(`SELECT body->>'plan' AS plan FROM public.profiles WHERE id = $1`, [uid]);
+check("authenticated user cannot keep a self-assigned premium plan", own.rows[0].plan !== "premium", own.rows);
+
+let foreignDenied = false;
+try {
+  await db.query(
+    `INSERT INTO public.profiles (id, body) VALUES ($1, '{"plan":"premium"}') ON CONFLICT (id) DO UPDATE SET body = '{"plan":"premium"}'`,
+    [other],
+  );
+} catch {
+  foreignDenied = true;
+}
+check("authenticated user cannot rewrite another profile", foreignDenied, null);
+
+const first = await db.query(`SELECT * FROM public.consume_api_quota('audit_quota', 1)`);
+const second = await db.query(`SELECT * FROM public.consume_api_quota('audit_quota', 1)`);
+const used = await db.query(`SELECT used_count FROM public.api_usage_quotas WHERE quota_key = 'audit_quota'`);
+check(
+  "second call at the limit is a single denial and does not increment",
+  first.rows.length === 1 &&
+    first.rows[0].allowed === true &&
+    second.rows.length === 1 &&
+    second.rows[0].allowed === false &&
+    used.rows[0].used_count === 1,
+  { first: first.rows, second: second.rows, used: used.rows },
+);
+
+const once = await db.query(`SELECT * FROM public.consume_api_quota('idem_quota', 1, 'req-a')`);
+const same = await db.query(`SELECT * FROM public.consume_api_quota('idem_quota', 1, 'req-a')`);
+const otherRequest = await db.query(`SELECT * FROM public.consume_api_quota('idem_quota', 1, 'req-b')`);
+const idemUsed = await db.query(`SELECT used_count FROM public.api_usage_quotas WHERE quota_key = 'idem_quota'`);
+check(
+  "the same request id does not consume a second unit",
+  once.rows.length === 1 &&
+    once.rows[0].allowed === true &&
+    same.rows.length === 1 &&
+    same.rows[0].allowed === true &&
+    otherRequest.rows.length === 1 &&
+    otherRequest.rows[0].allowed === false &&
+    idemUsed.rows[0].used_count === 1,
+  { once: once.rows, same: same.rows, otherRequest: otherRequest.rows, idemUsed: idemUsed.rows },
+);
+
+await db.exec("RESET ROLE");
+await db.exec(`
+  INSERT INTO public.duels (code, subject, questions, creator_id, creator_name)
+  VALUES (
+    'SYNTHETIC',
+    'Audit',
+    '[{"question":"2+2?","options":["1","2","3","4"],"answerIndex":3}]'::jsonb,
+    '${other}',
+    'Other'
+  );
+  GRANT SELECT, UPDATE ON public.duels TO authenticated;
+  SET ROLE authenticated;
+  SELECT set_config('request.jwt.claim.sub', '${uid}', false);
+`);
+const duelRead = await db.query(`SELECT questions FROM public.duels`);
+let duelWriteBlocked = false;
+try {
+  const overwritten = await db.query(
+    `UPDATE public.duels SET creator_score = 999, questions = '[]'::jsonb WHERE code = 'SYNTHETIC' RETURNING code`,
+  );
+  duelWriteBlocked = overwritten.rows.length === 0;
+} catch {
+  duelWriteBlocked = true;
+}
+const keysVisible = await db.query(
+  `SELECT COUNT(*)::int AS n FROM information_schema.role_table_grants
+   WHERE table_name = 'duel_answer_keys' AND grantee = 'authenticated' AND privilege_type = 'SELECT'`,
+);
+check(
+  "a stranger cannot list duel rows or read answer-key grants",
+  duelRead.rows.length === 0 && duelWriteBlocked && keysVisible.rows[0].n === 0,
+  { duelRead: duelRead.rows, duelWriteBlocked, keysVisible: keysVisible.rows },
+);
+
+await db.exec("RESET ROLE");
+const pending = await db.query(
+  `INSERT INTO public.pro_subscriptions (user_id, months, amount_usd, method, reference, status)
+   VALUES ($1, 1, 5, 'zelle', 'REF-1', 'pending')
+   RETURNING id`,
+  [uid],
+);
+const paymentId = pending.rows[0].id;
+let rejected = false;
+try {
+  await db.query(`SELECT public.review_pro_payment($1, 'reject', $2)`, [paymentId, uid]);
+} catch (error) {
+  rejected = String(error.message).includes("forbidden");
+}
+check("a non-admin cannot reject a payment", rejected, null);
+
+const activated = await db.query(`SELECT public.review_pro_payment($1, 'activate', $2) AS result`, [
+  paymentId,
+  admin,
+]);
+const entitlement = await db.query(`SELECT plan, expires_at FROM public.billing_entitlements WHERE user_id = $1`, [
+  uid,
+]);
+check(
+  "admin activation writes one premium entitlement",
+  activated.rows[0].result.ok === true && entitlement.rows[0].plan === "premium",
+  { activated: activated.rows, entitlement: entitlement.rows },
+);
+
+let secondActivationFailed = false;
+try {
+  await db.query(`SELECT public.review_pro_payment($1, 'activate', $2)`, [paymentId, admin]);
+} catch (error) {
+  secondActivationFailed = String(error.message).includes("already_processed");
+}
+check("a second activation does not extend the period again", secondActivationFailed, null);
+
+await db.query(
+  `UPDATE public.pro_subscriptions SET expires_at = now() - interval '1 day' WHERE id = $1`,
+  [paymentId],
+);
+const expiredCount = await db.query(`SELECT public.expire_pro_entitlements() AS n`);
+const afterExpire = await db.query(`SELECT plan FROM public.billing_entitlements WHERE user_id = $1`, [uid]);
+check(
+  "expiration clears premium without a notification provider",
+  Number(expiredCount.rows[0].n) >= 1 && afterExpire.rows[0].plan === "free",
+  { expiredCount: expiredCount.rows, afterExpire: afterExpire.rows },
+);
+
+await db.close();
+if (failures.length > 0) {
+  console.error(JSON.stringify(failures, null, 2));
+  process.exit(1);
+}

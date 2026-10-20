@@ -27,7 +27,7 @@ const FAQS = [
   },
   {
     q: "¿Cómo cancelo mi suscripción Pro?",
-    a: "Desde los ajustes de tu cuenta puedes cancelar en cualquier momento. Seguirás con Pro hasta el final del periodo ya pagado.",
+    a: "Pro no se renueva solo: se paga cada periodo por Pago Móvil o Zelle. Si no reportas otro pago, el acceso termina en la fecha de vencimiento. No hay un botón de cancelación en Ajustes.",
   },
   {
     q: "¿Mis datos están seguros?",

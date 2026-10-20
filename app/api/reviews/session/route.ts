@@ -35,7 +35,8 @@ export async function POST() {
     return NextResponse.json({ ok: true, unlimited: true });
   }
 
-  const quota = await consumeDailyUserQuota("review_session", FREE_DAILY_SESSIONS);
+  const day = new Date().toISOString().slice(0, 10);
+  const quota = await consumeDailyUserQuota("review_session", FREE_DAILY_SESSIONS, `review-session:${day}`);
   if (!quota.ok) {
     return NextResponse.json(
       {

@@ -9,12 +9,18 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install deps
         run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
       - name: Build
         run: npm run build
-      - name: Deploy to Vercel
+      - name: Deploy preview
         uses: amondnet/vercel-action@v20
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod' # Deploy to production alias if it's the beta branch
+          vercel-args: ''

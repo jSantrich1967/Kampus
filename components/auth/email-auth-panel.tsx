@@ -224,7 +224,13 @@ export function EmailAuthPanel({ mode }: EmailAuthPanelProps) {
           {mode === "login" ? t.loginTitle : t.registerTitle}
         </h1>
         <p className="mb-8 text-sm text-gray-400">
-          {mode === "login" ? t.loginDescription : t.registerDescription}
+          {mode === "login"
+            ? googleEnabled
+              ? t.loginDescription
+              : t.loginDescriptionEmail
+            : googleEnabled
+              ? t.registerDescription
+              : t.registerDescriptionEmail}
         </p>
 
         {!configured ? (

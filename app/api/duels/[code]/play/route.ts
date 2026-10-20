@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { duelScorePatch } from "@/lib/duels/score-patch";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { normalizeDuelCode, type DuelQuestion } from "@/lib/duels/types";
 
@@ -31,40 +33,51 @@ export async function POST(req: Request, { params }: { params: Promise<{ code: s
 
     const body = requestSchema.parse(await req.json().catch(() => ({})));
 
-    const { data: duel, error } = await supabase.from("duels").select("*").eq("code", code).maybeSingle();
+    const admin = createSupabaseAdminClient();
+    if (!admin) {
+      return NextResponse.json({ error: "El duelo no está disponible ahora." }, { status: 503 });
+    }
+    const { data: duel, error } = await admin.from("duels").select("*").eq("code", code).maybeSingle();
     if (error || !duel) {
       return NextResponse.json({ error: "No encontramos un duelo con ese código." }, { status: 404 });
     }
-
-    const questions = duel.questions as DuelQuestion[];
+    const { data: keyRow } = await admin
+      .from("duel_answer_keys")
+      .select("answers")
+      .eq("duel_id", duel.id)
+      .maybeSingle();
+    const storedAnswers = Array.isArray(keyRow?.answers) ? (keyRow.answers as unknown[]) : [];
+    const questions = (duel.questions as Array<{ question: string; options: string[]; answerIndex?: number }>).map(
+      (q, i) => ({
+        question: q.question,
+        options: q.options,
+        answerIndex: typeof storedAnswers[i] === "number" ? (storedAnswers[i] as number) : (q.answerIndex ?? -1),
+      }),
+    ) as DuelQuestion[];
     const score = questions.reduce(
       (acc, q, i) => acc + (body.answers[i] !== undefined && body.answers[i] === q.answerIndex ? 1 : 0),
       0,
     );
 
-    const isCreator = duel.creator_id === user.id;
-    const patch: Record<string, unknown> = isCreator
-      ? {
-          creator_score: score,
-          creator_time_ms: body.timeMs,
-          creator_name: body.playerName || duel.creator_name,
-        }
-      : {
-          challenger_id: user.id,
-          challenger_name: body.playerName || user.email?.split("@")[0] || "Retador",
-          challenger_score: score,
-          challenger_time_ms: body.timeMs,
-          status: "done",
-        };
-
-    // Si el creador ya jugó y ahora juega el retador (o viceversa), el duelo queda completo.
-    if (!isCreator && duel.creator_score !== null) {
-      (patch as Record<string, unknown>).status = "done";
+    const decision = duelScorePatch(
+      {
+        creator_id: duel.creator_id,
+        challenger_id: duel.challenger_id,
+        creator_score: duel.creator_score,
+        creator_name: duel.creator_name,
+      },
+      user.id,
+      score,
+      body.timeMs,
+      body.playerName || (duel.creator_id === user.id ? duel.creator_name : user.email?.split("@")[0] || "Retador"),
+    );
+    if (!decision.ok) {
+      return NextResponse.json({ error: "No puedes modificar este duelo." }, { status: 403 });
     }
 
-    const { data: updated, error: updateError } = await supabase
+    const { data: updated, error: updateError } = await admin
       .from("duels")
-      .update(patch)
+      .update(decision.patch)
       .eq("code", code)
       .select("*")
       .single();

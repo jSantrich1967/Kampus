@@ -62,6 +62,15 @@ describe("gradeReview (SM-2)", () => {
     expect(s.easiness).toBe(1.3);
   });
 
+  it("un olvido conserva los aciertos acumulados y reinicia solo la racha", () => {
+    let s = state();
+    for (let i = 0; i < 10; i++) s = gradeReview(s, 5, NOW);
+    const forgotten = gradeReview(s, 1, NOW);
+    expect(forgotten.reps).toBe(0);
+    expect(forgotten.lapses).toBe(1);
+    expect(forgotten.successes).toBe(10);
+  });
+
   it("la calidad se limita al rango 0..5", () => {
     expect(gradeReview(state(), 99, NOW).reps).toBe(1);
     expect(gradeReview(state(), -7, NOW).reps).toBe(0);

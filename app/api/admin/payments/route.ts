@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { paymentReviewFailure } from "@/lib/billing/payment-review";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -85,9 +86,7 @@ const actionSchema = z.object({
   action: z.enum(["activate", "reject", "receipt"]),
 });
 
-const DAY_MS = 86_400_000;
-
-/** POST: el admin activa (plan premium + vencimiento) o rechaza un pago reportado. */
+/** POST: el admin activa o rechaza un pago en una sola transacción. */
 export async function POST(req: Request) {
   const gate = await requireAdmin();
   if (gate.error) return gate.error;
@@ -126,73 +125,46 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Ese pago ya fue procesado." }, { status: 409 });
   }
 
-  if (action === "reject") {
-    await admin
-      .from("pro_subscriptions")
-      .update({ status: "rejected", reviewed_by: gate.userId, reviewed_at: new Date().toISOString() })
-      .eq("id", id);
-    return NextResponse.json({ ok: true });
+  const { data: reviewed, error: reviewError } = await admin.rpc("review_pro_payment", {
+    p_subscription_id: id,
+    p_action: action,
+    p_reviewer: gate.userId,
+  });
+  if (reviewError) {
+    const failure = paymentReviewFailure(reviewError.message ?? "");
+    return NextResponse.json({ error: failure.error }, { status: failure.status });
   }
 
-  // Si ya tenía Pro activo, el nuevo periodo se suma a su vencimiento actual.
-  const { data: current } = await admin
-    .from("pro_subscriptions")
-    .select("expires_at")
-    .eq("user_id", row.user_id)
-    .eq("status", "active")
-    .gt("expires_at", new Date().toISOString())
-    .order("expires_at", { ascending: false })
-    .limit(1);
-  const currentExpires = (current ?? [])[0]?.expires_at as string | undefined;
-  const baseMs = currentExpires ? Math.max(Date.now(), Date.parse(currentExpires)) : Date.now();
-  const expiresAt = new Date(baseMs + row.months * 30 * DAY_MS).toISOString();
+  const expiresAt =
+    reviewed && typeof reviewed === "object" && "expiresAt" in reviewed
+      ? String((reviewed as { expiresAt?: unknown }).expiresAt ?? "")
+      : "";
 
-  const { error: updErr } = await admin
-    .from("pro_subscriptions")
-    .update({
-      status: "active",
-      starts_at: new Date().toISOString(),
-      expires_at: expiresAt,
-      reviewed_by: gate.userId,
-      reviewed_at: new Date().toISOString(),
-    })
-    .eq("id", id);
-  if (updErr) {
-    return NextResponse.json({ error: "No se pudo activar el pago." }, { status: 500 });
-  }
-
-  // El plan vive en profiles.body: lo subimos a premium (la expiración la
-  // hace el cron diario cuando el periodo vence).
-  const { data: profileRow } = await admin
-    .from("profiles")
-    .select("body")
-    .eq("id", row.user_id)
-    .maybeSingle();
-  const body = (profileRow?.body ?? {}) as Record<string, unknown>;
-  await admin
-    .from("profiles")
-    .update({ body: { ...body, plan: "premium" } })
-    .eq("id", row.user_id);
-
-  // Confirmación por WhatsApp (best-effort: nunca bloquea la activación).
-  const phone = (body as { phone?: unknown }).phone;
-  if (typeof phone === "string" && /^\+[1-9]\d{7,14}$/.test(phone)) {
-    try {
-      const { sendWhatsAppMessage } = await import("@/lib/whatsapp/twilio");
-      const fecha = new Date(expiresAt).toLocaleDateString("es-VE", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-        timeZone: "America/Caracas",
-      });
-      await sendWhatsAppMessage(
-        phone,
-        `✅ Tu plan Pro de Kampus ya está activo hasta el ${fecha}. ¡Gracias por tu apoyo!`,
-      );
-    } catch {
-      /* la activación ya quedó hecha; el aviso es un extra */
+  if (action === "activate") {
+    const { data: profileRow } = await admin
+      .from("profiles")
+      .select("body")
+      .eq("id", row.user_id)
+      .maybeSingle();
+    const phone = ((profileRow?.body ?? {}) as { phone?: unknown }).phone;
+    if (typeof phone === "string" && /^\+[1-9]\d{7,14}$/.test(phone) && expiresAt) {
+      try {
+        const { sendWhatsAppMessage } = await import("@/lib/whatsapp/twilio");
+        const fecha = new Date(expiresAt).toLocaleDateString("es-VE", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+          timeZone: "America/Caracas",
+        });
+        await sendWhatsAppMessage(
+          phone,
+          `✅ Tu plan Pro de Kampus ya está activo hasta el ${fecha}. ¡Gracias por tu apoyo!`,
+        );
+      } catch {
+        // The entitlement is already committed. The notice can fail on its own.
+      }
     }
   }
 
-  return NextResponse.json({ ok: true, expiresAt });
+  return NextResponse.json(expiresAt ? { ok: true, expiresAt } : { ok: true });
 }

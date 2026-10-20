@@ -5,8 +5,9 @@
  * - Diagnóstico: último `cram_diagnoses` guardado por materia → por tema,
  *   correct/total (0..1).
  * - Repasos: `review_items` del usuario → por tema, proporción de
- *   repasos recordados = reps / (reps + lapses), considerando solo
- *   tarjetas repasadas en los últimos 30 días.
+ *   aciertos acumulados = successes / (successes + lapses).
+ *   `reps` es solo la racha SM-2 y no se usa como historial.
+ *   Se consideran tarjetas repasadas en los últimos 30 días.
  *
  * Fórmula documentada:
  * - Si hay dato de ambas fuentes: 60% diagnóstico + 40% repasos.
@@ -25,16 +26,20 @@ export type DiagnosisTopicInput = {
 export type ReviewTopicInput = {
   subject: string;
   topic: string;
-  /** Recuerdos correctos acumulados (SM-2). */
+  /** Racha SM-2. No es el historial de aciertos. */
   reps: number;
   /** Olvidos acumulados (SM-2). */
   lapses: number;
+  /** Aciertos que sobreviven a un olvido. Si falta, no hay historial fiable. */
+  successes?: number;
 };
 
 export type TopicMastery = {
   topic: string;
   /** 0..100 redondeado, o null cuando no hay datos. */
   pct: number | null;
+  /** True when the percentage comes from fewer than five attempts. */
+  uncertain: boolean;
 };
 
 export type SubjectMastery = {
@@ -54,10 +59,12 @@ function diagnosisScore(t: DiagnosisTopicInput): number | null {
   return Math.min(1, Math.max(0, t.correct / t.total));
 }
 
-function reviewScore(reps: number, lapses: number): number | null {
-  const total = reps + lapses;
-  if (!Number.isFinite(reps) || !Number.isFinite(lapses) || total <= 0) return null;
-  return Math.min(1, Math.max(0, reps / total));
+const MIN_CERTAIN_ATTEMPTS = 5;
+
+function reviewScore(remembered: number, lapses: number): number | null {
+  const total = remembered + lapses;
+  if (!Number.isFinite(remembered) || !Number.isFinite(lapses) || total <= 0) return null;
+  return Math.min(1, Math.max(0, remembered / total));
 }
 
 /**
@@ -72,7 +79,8 @@ export function computeTopicMastery(
     subject: string;
     topic: string;
     d: number | null;
-    reps: number;
+    diagAttempts: number;
+    remembered: number;
     lapses: number;
   };
   const byKey = new Map<string, Acc>();
@@ -84,10 +92,12 @@ export function computeTopicMastery(
       subject: t.subject.trim(),
       topic: t.topic.trim(),
       d: null,
-      reps: 0,
+      diagAttempts: 0,
+      remembered: 0,
       lapses: 0,
     };
     acc.d = diagnosisScore(t);
+    acc.diagAttempts = Math.max(0, Math.floor(t.total));
     byKey.set(key, acc);
   }
 
@@ -98,21 +108,25 @@ export function computeTopicMastery(
       subject: r.subject.trim(),
       topic: r.topic.trim(),
       d: null,
-      reps: 0,
+      diagAttempts: 0,
+      remembered: 0,
       lapses: 0,
     };
-    acc.reps += Math.max(0, Math.floor(r.reps));
+    const remembered = r.successes ?? r.reps;
+    acc.remembered += Math.max(0, Math.floor(remembered));
     acc.lapses += Math.max(0, Math.floor(r.lapses));
     byKey.set(key, acc);
   }
 
   const subjects = new Map<string, SubjectMastery>();
   for (const acc of byKey.values()) {
-    const r = reviewScore(acc.reps, acc.lapses);
+    const r = reviewScore(acc.remembered, acc.lapses);
     let pct: number | null = null;
     if (acc.d !== null && r !== null) pct = Math.round((DIAGNOSIS_WEIGHT * acc.d + REVIEW_WEIGHT * r) * 100);
     else if (acc.d !== null) pct = Math.round(acc.d * 100);
     else if (r !== null) pct = Math.round(r * 100);
+    const attempts = acc.diagAttempts + acc.remembered + acc.lapses;
+    const uncertain = pct !== null && attempts < MIN_CERTAIN_ATTEMPTS;
 
     const sKey = norm(acc.subject);
     let subj = subjects.get(sKey);
@@ -120,7 +134,7 @@ export function computeTopicMastery(
       subj = { subject: acc.subject, topics: [] };
       subjects.set(sKey, subj);
     }
-    subj.topics.push({ topic: acc.topic, pct });
+    subj.topics.push({ topic: acc.topic, pct, uncertain });
   }
 
   return [...subjects.values()].map((s) => ({

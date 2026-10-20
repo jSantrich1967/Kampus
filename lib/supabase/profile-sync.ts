@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { planFromEntitlement, type EntitlementRow } from "@/lib/billing/server-plan";
 import { defaultProfile, profileSchema, type UserProfile } from "@/lib/schemas/profile";
 
 const TABLE = "profiles";
@@ -37,7 +38,10 @@ export function profileWithAccountRole(profile: UserProfile, accountRole: UserPr
 }
 
 export function profileToJsonBody(profile: UserProfile): Record<string, unknown> {
-  return JSON.parse(JSON.stringify(profile)) as Record<string, unknown>;
+  const body = JSON.parse(JSON.stringify(profile)) as Record<string, unknown>;
+  // The account plan is granted by the server. A client save must not carry it.
+  delete body.plan;
+  return body;
 }
 
 export async function fetchProfileForUser(
@@ -47,7 +51,17 @@ export async function fetchProfileForUser(
   const { data, error } = await client.from(TABLE).select("body").eq("id", userId).maybeSingle();
   if (error) throw error;
   if (!data || data.body === null || data.body === undefined) return null;
-  return mergeRemoteProfileBody(data.body);
+  const profile = mergeRemoteProfileBody(data.body);
+  const entitlement = await client
+    .from("billing_entitlements")
+    .select("plan, expires_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (entitlement.error) return profile;
+  return {
+    ...profile,
+    plan: planFromEntitlement((entitlement.data as EntitlementRow | null) ?? null),
+  };
 }
 
 export async function upsertProfileForUser(

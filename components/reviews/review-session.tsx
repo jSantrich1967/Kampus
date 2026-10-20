@@ -72,14 +72,6 @@ export function ReviewSession() {
   const startSession = useCallback(async () => {
     setStatus("starting");
     try {
-      // Si ya abrió su sesión hoy en este dispositivo, continúa sin
-      // consumir otra (el servidor sigue siendo quien manda).
-      if (typeof window !== "undefined" && window.localStorage.getItem(SESSION_KEY) === todayKey()) {
-        setIndex(0);
-        setRevealed(false);
-        setStatus("session");
-        return;
-      }
       const res = await fetch("/api/reviews/session", { method: "POST" });
       const json = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
@@ -110,13 +102,20 @@ export function ReviewSession() {
       // La calificación persiste en el servidor; si falla, la tarjeta
       // sigue vencida y reaparece: nunca se pierde el repaso.
       try {
-        await fetch("/api/reviews/grade", {
+        const res = await fetch("/api/reviews/grade", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ item_id: item.id, quality }),
         });
+        if (!res.ok) {
+          setBlockMessage("No se guardó la calificación. La tarjeta sigue pendiente.");
+          setStatus("blocked");
+          return;
+        }
       } catch {
-        // se avanza igual; la tarjeta queda pendiente
+        setBlockMessage("No se guardó la calificación. Revisa tu conexión.");
+        setStatus("blocked");
+        return;
       }
       setGradedCount((n) => n + 1);
       if (index + 1 >= items.length) {

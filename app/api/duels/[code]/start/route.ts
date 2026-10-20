@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket";
 import { normalizeDuelCode, type DuelQuestion } from "@/lib/duels/types";
@@ -41,7 +42,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ code: s
 
     const body = requestSchema.parse(await req.json().catch(() => ({})));
 
-    const { data: duel, error } = await supabase.from("duels").select("*").eq("code", code).maybeSingle();
+    const admin = createSupabaseAdminClient();
+    if (!admin) {
+      return NextResponse.json({ error: "El duelo no está disponible ahora." }, { status: 503 });
+    }
+    const { data: duel, error } = await admin.from("duels").select("*").eq("code", code).maybeSingle();
     if (error || !duel) {
       return NextResponse.json({ error: "No encontramos un duelo con ese código." }, { status: 404 });
     }
@@ -72,10 +77,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ code: s
       return NextResponse.json({ ok: true, resumed: true });
     }
 
-    const { error: updateError } = await supabase
-      .from("duels")
-      .update({ [orderCol]: body.order, [progressCol]: 0 })
-      .eq("code", code);
+    if (duel.creator_id !== user.id && duel.challenger_id && duel.challenger_id !== user.id) {
+      return NextResponse.json({ error: "No puedes modificar este duelo." }, { status: 403 });
+    }
+    const startPatch: Record<string, unknown> = { [orderCol]: body.order, [progressCol]: 0 };
+    if (duel.creator_id !== user.id && !duel.challenger_id) {
+      startPatch.challenger_id = user.id;
+    }
+    const { error: updateError } = await admin.from("duels").update(startPatch).eq("code", code);
     if (updateError) {
       return NextResponse.json({ error: "No pudimos iniciar el duelo." }, { status: 500 });
     }

@@ -31,12 +31,15 @@ function toState(row: {
   interval_days: unknown;
   reps: unknown;
   lapses: unknown;
+  successes?: unknown;
 }): ReviewState {
+  const reps = typeof row.reps === "number" ? row.reps : 0;
   return {
     easiness: typeof row.easiness === "number" ? row.easiness : 2.5,
     intervalDays: typeof row.interval_days === "number" ? row.interval_days : 0,
-    reps: typeof row.reps === "number" ? row.reps : 0,
+    reps,
     lapses: typeof row.lapses === "number" ? row.lapses : 0,
+    successes: typeof row.successes === "number" ? row.successes : reps,
   };
 }
 
@@ -120,6 +123,7 @@ export type ReviewTopicStat = {
   topic: string;
   reps: number;
   lapses: number;
+  successes: number;
 };
 
 export async function getRecentReviewTopicStats(
@@ -132,7 +136,7 @@ export async function getRecentReviewTopicStats(
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
     const { data, error } = await supabase
       .from("review_items")
-      .select("subject, topic, reps, lapses")
+      .select("subject, topic, reps, lapses, successes")
       .eq("user_id", userId)
       .not("last_reviewed_at", "is", null)
       .gte("last_reviewed_at", since)
@@ -140,7 +144,7 @@ export async function getRecentReviewTopicStats(
     if (error || !Array.isArray(data)) return [];
     return data
       .filter(
-        (r): r is { subject: string; topic: string; reps: number; lapses: number } =>
+        (r): r is { subject: string; topic: string; reps: number; lapses: number; successes: number } =>
           typeof r?.subject === "string" && typeof r?.topic === "string",
       )
       .map((r) => ({
@@ -148,6 +152,7 @@ export async function getRecentReviewTopicStats(
         topic: r.topic,
         reps: typeof r.reps === "number" ? r.reps : 0,
         lapses: typeof r.lapses === "number" ? r.lapses : 0,
+        successes: typeof r.successes === "number" ? r.successes : typeof r.reps === "number" ? r.reps : 0,
       }));
   } catch {
     return [];
@@ -169,7 +174,7 @@ export async function gradeReviewItem(
   try {
     const { data, error } = await supabase
       .from("review_items")
-      .select("id, easiness, interval_days, reps, lapses")
+      .select("id, easiness, interval_days, reps, lapses, successes")
       .eq("id", itemId)
       .eq("user_id", userId)
       .maybeSingle();
@@ -182,6 +187,7 @@ export async function gradeReviewItem(
         interval_days: graded.intervalDays,
         reps: graded.reps,
         lapses: graded.lapses,
+        successes: graded.successes ?? graded.reps,
         next_due: graded.nextDue.toISOString(),
         last_reviewed_at: new Date().toISOString(),
       })

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { normalizeDuelCode } from "@/lib/duels/types";
 
 export const runtime = "nodejs";
@@ -12,8 +12,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ code: s
     return NextResponse.json({ error: "Código no válido." }, { status: 400 });
   }
 
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from("duels").select("*").eq("code", code).maybeSingle();
+  const admin = createSupabaseAdminClient();
+  if (!admin) {
+    return NextResponse.json({ error: "El duelo no está disponible ahora." }, { status: 503 });
+  }
+  const { data, error } = await admin.from("duels").select("*").eq("code", code).maybeSingle();
 
   if (error || !data) {
     return NextResponse.json({ error: "No encontramos un duelo con ese código." }, { status: 404 });

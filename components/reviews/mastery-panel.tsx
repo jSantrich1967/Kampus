@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-type TopicMastery = { topic: string; pct: number | null };
+type TopicMastery = { topic: string; pct: number | null; uncertain?: boolean };
 type SubjectMastery = { subject: string; topics: TopicMastery[] };
 
 function barColor(pct: number): string {
@@ -75,7 +75,9 @@ export function MasteryPanel() {
                   {t.pct === null ? (
                     <span className="text-xs text-slate-500">Sin datos todavía</span>
                   ) : (
-                    <span className="font-semibold text-slate-100">{t.pct}%</span>
+                    <span className="font-semibold text-slate-100">
+                      {t.pct}%{t.uncertain ? " · muestra chica" : ""}
+                    </span>
                   )}
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-white/10">

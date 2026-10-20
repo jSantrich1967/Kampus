@@ -18,13 +18,23 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  if (!isWhatsAppConfigured()) {
-    return NextResponse.json({ error: "whatsapp_not_configured" }, { status: 503 });
-  }
-
   const admin = createSupabaseAdminClient();
   if (!admin) {
     return NextResponse.json({ error: "supabase_admin_not_configured" }, { status: 503 });
+  }
+
+  // Expiration does not wait for WhatsApp. Access also checks expires_at on read.
+  const { data: expiredPlans, error: expireError } = await admin.rpc("expire_pro_entitlements");
+  if (expireError) {
+    return NextResponse.json({ error: "expire_failed" }, { status: 500 });
+  }
+
+  if (!isWhatsAppConfigured()) {
+    return NextResponse.json({
+      ok: true,
+      expiredPlans: expiredPlans ?? 0,
+      notifications: "skipped",
+    });
   }
 
   const today = caracasDate(0);
@@ -36,10 +46,6 @@ export async function GET(req: Request) {
   if (profileErr) {
     return NextResponse.json({ error: "profiles_fetch_failed" }, { status: 500 });
   }
-
-  // Planes Pro vencidos: la suscripción activa manda; al vencer, el perfil
-  // vuelve a gratis sin tocar nada más de su contenido.
-  const expiredPlans = await expireProPlans(admin);
 
   const optedIn = (profileRows ?? []).filter((row) => {
     const body = (row.body ?? {}) as { phone?: unknown; whatsappReminders?: unknown };
@@ -383,47 +389,4 @@ function caracasTimeOf(ms: number): string {
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/** Degrada a plan gratis las suscripciones Pro cuyo periodo ya venció. */
-async function expireProPlans(admin: SupabaseClient): Promise<number> {
-  const nowIso = new Date().toISOString();
-  const { data: expired } = await admin
-    .from("pro_subscriptions")
-    .select("id, user_id")
-    .eq("status", "active")
-    .lt("expires_at", nowIso)
-    .limit(200);
-  const rows = (expired ?? []) as Array<{ id: string; user_id: string }>;
-  let count = 0;
-  for (const row of rows) {
-    await admin
-      .from("pro_subscriptions")
-      .update({ status: "expired" })
-      .eq("id", row.id);
-    // Solo degradar si no le queda otra suscripción activa vigente.
-    const { data: stillActive } = await admin
-      .from("pro_subscriptions")
-      .select("id")
-      .eq("user_id", row.user_id)
-      .eq("status", "active")
-      .gt("expires_at", nowIso)
-      .limit(1);
-    if ((stillActive ?? []).length === 0) {
-      const { data: profileRow } = await admin
-        .from("profiles")
-        .select("body")
-        .eq("id", row.user_id)
-        .maybeSingle();
-      const body = (profileRow?.body ?? {}) as Record<string, unknown>;
-      if (body.plan === "premium") {
-        await admin
-          .from("profiles")
-          .update({ body: { ...body, plan: "free" } })
-          .eq("id", row.user_id);
-      }
-    }
-    count += 1;
-  }
-  return count;
 }

@@ -1,23 +1,40 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+export type ServerPlan = "free" | "premium";
+
+export type EntitlementRow = {
+  plan?: unknown;
+  expires_at?: unknown;
+};
+
 /**
- * Plan real del usuario según el servidor (profiles.body.plan), no según
- * el navegador: así nadie se "regala" Pro tocando su perfil local.
- * Las suscripciones activas las escribe el admin al aprobar un pago y el
- * cron las vence; este es el dato que manda en las rutas de IA.
+ * Pro is premium only while the entitlement row says so and the period
+ * has not ended. A missing row, a free row, or a past date is free.
+ * This does not read profiles.body.plan.
+ */
+export function planFromEntitlement(row: EntitlementRow | null, now = new Date()): ServerPlan {
+  if (!row || row.plan !== "premium" || typeof row.expires_at !== "string") return "free";
+  const expiresAt = Date.parse(row.expires_at);
+  if (!Number.isFinite(expiresAt) || expiresAt <= now.getTime()) return "free";
+  return "premium";
+}
+
+/**
+ * Plan the server will enforce. The client profile JSON is not consulted.
  */
 export async function getServerUserPlan(
   supabase: SupabaseClient,
   userId: string,
-): Promise<"free" | "premium"> {
+  now = new Date(),
+): Promise<ServerPlan> {
   try {
-    const { data } = await supabase
-      .from("profiles")
-      .select("body")
-      .eq("id", userId)
+    const { data, error } = await supabase
+      .from("billing_entitlements")
+      .select("plan, expires_at")
+      .eq("user_id", userId)
       .maybeSingle();
-    const plan = (data?.body as { plan?: unknown } | null)?.plan;
-    return plan === "premium" ? "premium" : "free";
+    if (error) return "free";
+    return planFromEntitlement((data as EntitlementRow | null) ?? null, now);
   } catch {
     return "free";
   }

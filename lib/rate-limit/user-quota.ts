@@ -18,6 +18,7 @@ function secondsUntil(iso: string): number {
 export async function consumeDailyUserQuota(
   quotaKey: string,
   dailyLimit: number,
+  requestId?: string,
 ): Promise<QuotaResult> {
   /** Without Supabase there is no user row to count. A configured project always consumes quota. */
   if (!isSupabaseConfigured()) {
@@ -47,6 +48,7 @@ export async function consumeDailyUserQuota(
   const { data, error } = await supabase.rpc("consume_api_quota", {
     p_quota_key: quotaKey,
     p_daily_limit: dailyLimit,
+    p_request_id: requestId ?? null,
   });
 
   if (error) {
@@ -57,7 +59,16 @@ export async function consumeDailyUserQuota(
     return { ok: false, status: 429, message: "No pudimos validar tu cuota ahora. Inténtalo de nuevo." };
   }
 
-  const row = Array.isArray(data) ? data[0] : data;
+  const rows = Array.isArray(data) ? data : data ? [data] : [];
+  // One decision row. Extra rows used to hide a denial behind an allow.
+  if (rows.length !== 1) {
+    return {
+      ok: false,
+      status: 429,
+      message: "No pudimos validar tu cuota ahora. Inténtalo de nuevo.",
+    };
+  }
+  const row = rows[0];
   const allowed = Boolean(row?.allowed);
   const used = typeof row?.used === "number" ? row.used : NaN;
   const limit = typeof row?.daily_limit === "number" ? row.daily_limit : dailyLimit;

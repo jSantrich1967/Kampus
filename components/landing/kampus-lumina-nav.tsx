@@ -37,7 +37,7 @@ export function KampusLuminaNav() {
           <KampusLockup className="text-lg sm:text-xl" />
         </Link>
 
-        <div className="hidden items-center gap-8 text-sm font-medium text-gray-400 md:flex">
+        <div className="hidden items-center gap-8 text-sm font-medium text-gray-400 lg:flex">
           {NAV_LINKS.map((link) => (
             <a key={link.label} href={link.href} className="transition-colors hover:text-white">
               {link.label}
@@ -62,7 +62,7 @@ export function KampusLuminaNav() {
 
           <button
             type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white transition-colors hover:bg-white/10 md:hidden"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white transition-colors hover:bg-white/10 lg:hidden"
             aria-expanded={open}
             aria-controls="kampus-mobile-menu"
             aria-label={open ? "Cerrar menú" : "Abrir menú"}
@@ -76,7 +76,7 @@ export function KampusLuminaNav() {
       <div
         id="kampus-mobile-menu"
         className={cn(
-          "fixed inset-0 top-[73px] z-40 md:hidden",
+          "fixed inset-0 top-[73px] z-40 lg:hidden",
           open ? "pointer-events-auto" : "pointer-events-none",
         )}
         aria-hidden={!open}

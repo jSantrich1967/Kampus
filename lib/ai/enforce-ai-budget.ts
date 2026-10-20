@@ -92,11 +92,8 @@ async function loadPersonalPlan(
   admin: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
   userId: string,
 ): Promise<{ ok: true; value: PlanSnapshot } | { ok: false }> {
-  // FUENTE DE VERDAD ÚNICA: profiles.body.plan vía getServerUserPlan.
-  // La activación de Pro (POST /api/admin/payments) y el cron de
-  // vencimiento escriben ahí; la tabla legacy `user_plans` ya no se lee
-  // porque nunca se actualizaba y dejaba a los Pro pagados con los
-  // límites del plan "free" en el presupuesto de IA.
+  // FUENTE DE VERDAD: billing_entitlements, con fecha de vencimiento.
+  // profiles.body.plan no autoriza. La tabla legacy user_plans no se lee.
   const serverPlan = await getServerUserPlan(admin, userId);
   const planId = serverPlan === "premium" ? "pro" : "free";
   const limits = await loadPlanLimits(admin, planId);
