@@ -30,16 +30,21 @@ export function buildRubricFromPrompt(prompt: string): RubricRow[] {
   ];
 }
 
-export function suggestScore(answer: string): { score: number; rationale: string } {
+/** Signals for a demo review. This is not a grade and must not be used as one. */
+export function suggestScore(answer: string): { score: null; rationale: string } {
   const len = answer.trim().length;
-  if (len < 40) return { score: 58, rationale: "La respuesta es muy corta: faltan justificación o ejemplos." };
-  if (len < 160) return { score: 74, rationale: "Buen comienzo; precisa las definiciones y añade un caso límite." };
-  return { score: 86, rationale: "Buen desarrollo; revisa la notación y deja las suposiciones por escrito." };
+  if (len < 40) {
+    return { score: null, rationale: "La respuesta es muy corta: faltan justificación o ejemplos." };
+  }
+  if (len < 160) {
+    return { score: null, rationale: "Hay un comienzo; faltan definiciones precisas y un caso límite." };
+  }
+  return { score: null, rationale: "Hay desarrollo; revisa la notación y deja las suposiciones por escrito." };
 }
 
 export function suggestFeedback(answer: string): string {
-  const { score, rationale } = suggestScore(answer);
-  return `Calificación sugerida (demo): ${score}/100. ${rationale}\n\nSiguiente paso: pide una versión con “por lo tanto” explícito en cada transición clave.`;
+  const { rationale } = suggestScore(answer);
+  return `Esto no es una nota. ${rationale}\n\nSiguiente paso: pide una versión con “por lo tanto” explícito en cada transición clave.`;
 }
 
 export function detectCommonIssues(answer: string): string[] {

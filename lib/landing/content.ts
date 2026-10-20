@@ -62,7 +62,12 @@ export const PRICING_PLANS = [
     price: "A medida",
     period: "",
     description: "Licencias para facultades, academias y centros formativos.",
-    features: ["Panel docente", "Integración LMS", "SSO y administración", "Formación del equipo"],
+    features: [
+      "Panel docente",
+      "Enlaces a Moodle o Canvas (no sincroniza cursos ni notas)",
+      "Inicio con Google si el colegio lo activa; no es un SSO federado",
+      "Formación del equipo",
+    ],
     highlighted: false,
   },
 ] as const;
@@ -95,7 +100,7 @@ export const FAQS = [
   {
     question: "¿Puedo usar Kampus en mi colegio o universidad?",
     answer:
-      "Sí. El plan Institución está pensado para facultades, academias y centros formativos: incluye panel docente, integración con tu LMS, inicio de sesión institucional (SSO) y formación para tu equipo. Escríbenos desde la sección de contacto y te armamos una propuesta a medida.",
+      "Sí. El plan Institución incluye panel docente y formación del equipo. Hoy puedes guardar un enlace de regreso a Moodle o Canvas; no sincroniza cursos, listas ni notas. El inicio con Google es opcional y no reemplaza el directorio del colegio. Escríbenos y acordamos por escrito qué incluye la propuesta.",
   },
   {
     question: "¿Necesito instalar algo?",

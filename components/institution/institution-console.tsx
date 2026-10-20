@@ -18,20 +18,6 @@ import { StatBlock } from "@/components/ui/stat-block";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
-function BarRow({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-xs text-slate-400">
-        <span>{label}</span>
-        <span className="text-slate-200">{value}</span>
-      </div>
-      <div className="h-2 overflow-hidden rounded-full bg-white/5">
-        <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-cyan-400" style={{ width: `${value}%` }} />
-      </div>
-    </div>
-  );
-}
-
 function retentionLabel(level: "low" | "medium" | "high"): string {
   if (level === "high") return "Alto";
   if (level === "medium") return "Medio";
@@ -125,17 +111,6 @@ export function InstitutionConsole() {
       intervention: string;
     }[]
   >([]);
-
-  const series = useMemo(() => {
-    // Placeholder real: once you store time-series, replace this with a Supabase query.
-    return [
-      { label: "Hace 4 sem.", value: 0 },
-      { label: "Hace 3 sem.", value: 0 },
-      { label: "Hace 2 sem.", value: 0 },
-      { label: "Semana pasada", value: 0 },
-      { label: "Ahora", value: 0 },
-    ];
-  }, []);
 
   const topics = useMemo(() => {
     // Placeholder real: future table for aggregated topics.
@@ -453,18 +428,13 @@ export function InstitutionConsole() {
         <Card>
           <CardHeader>
             <CardTitle>{es ? "Participación por semana" : "Engagement (series)"}</CardTitle>
-            <CardDescription>{es ? "Vista semanal agregada (demo)." : "Weekly aggregate view (demo)."}</CardDescription>
+            <CardDescription>{es ? "Aún no hay una serie guardada." : "No time series is stored yet."}</CardDescription>
           </CardHeader>
-          <div className="space-y-3">
-            {series.map((p) => (
-              <BarRow key={p.label} label={p.label} value={p.value} />
-            ))}
-          </div>
-          <div className="mt-5 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-slate-300">
+          <p className="px-5 pb-5 text-sm text-slate-300">
             {es
-              ? "Siguiente paso: conectar LMS + asistencia + entregas para que esto deje de ser sintético."
-              : "Next step: connect LMS + attendance + submissions so this stops being synthetic."}
-          </div>
+              ? "Sin datos. Estos ceros no son una medición de la semana."
+              : "No data. Zeros here would not be a measured week."}
+          </p>
         </Card>
       </div>
 
@@ -474,6 +444,11 @@ export function InstitutionConsole() {
             <CardTitle>{es ? "Tópicos difíciles (agregado)" : "Difficult topics (aggregate)"}</CardTitle>
             <CardDescription>{es ? "Menciones cruzadas entre cursos." : "Cross-course mentions."}</CardDescription>
           </CardHeader>
+          {topics.length === 0 ? (
+            <p className="px-5 pb-5 text-sm text-slate-300">
+              {es ? "Sin datos. No hay temas agregados todavía." : "No data. No aggregated topics yet."}
+            </p>
+          ) : (
           <ul className="space-y-3">
             {topics.map((t) => (
               <li key={t.topic} className="flex items-center justify-between rounded-xl border border-white/10 bg-slate-950/40 px-3 py-3">
@@ -487,29 +462,29 @@ export function InstitutionConsole() {
               </li>
             ))}
           </ul>
+          )}
         </Card>
 
         <Card>
           <CardHeader>
             <CardTitle>{es ? "Patrones de calificación" : "Grading patterns"}</CardTitle>
-            <CardDescription>{es ? "Consistencia y equidad (vista previa)." : "Consistency and fairness (demo)."}</CardDescription>
+            <CardDescription>{es ? "Solo si el indicador viene de la base." : "Only when the indicator comes from the database."}</CardDescription>
           </CardHeader>
-          <div className="space-y-4 text-sm text-slate-200">
+          <div className="space-y-4 px-5 pb-5 text-sm text-slate-200">
+            {typeof kpis?.gradingConsistency === "number" ? (
             <div>
               <div className="text-xs uppercase tracking-wide text-slate-500">{es ? "Consistencia índice" : "Consistency index"}</div>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/5">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400"
-                  style={{ width: `${kpis?.gradingConsistency ?? 0}%` }}
+                  style={{ width: `${kpis.gradingConsistency}%` }}
                 />
               </div>
-              <div className="mt-1 text-xs text-slate-400">{kpis?.gradingConsistency ?? 0}/100</div>
+              <div className="mt-1 text-xs text-slate-400">{kpis.gradingConsistency}/100</div>
             </div>
-            <ul className="list-disc space-y-2 pl-5 text-slate-300">
-              <li>{es ? "Menos varianza entre secciones en rúbricas compartidas." : "Lower variance across sections when rubrics are shared."}</li>
-              <li>{es ? "Picos de calificaciones tardías correlacionan con caída de engagement." : "Late grading spikes correlate with engagement drops."}</li>
-              <li>{es ? "Micro-quizzes reducen preguntas repetidas en foros." : "Micro-quizzes reduce repeated forum questions."}</li>
-            </ul>
+            ) : (
+              <p className="text-sm text-slate-300">{es ? "Sin datos." : "No data."}</p>
+            )}
             <Link href="/risk" className={buttonClasses({ variant: "secondary", size: "sm" })}>
               {es ? "Ver radar académico" : "Open academic radar"}
             </Link>

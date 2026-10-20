@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DiagnoseQuestion, PlanBlock } from "@/lib/schemas/cram";
+import { isDemoBrowser, markDemoBrowser } from "@/lib/demo/demo-session";
 import { preferredProfileSubject } from "@/lib/study/preferred-subject";
 import { cn } from "@/lib/cn";
 
@@ -53,6 +54,14 @@ export function CramMode() {
   const [checked, setChecked] = useState<Record<number, boolean>>({});
 
   const loggedIn = Boolean(authUserId);
+  const [demo, setDemo] = useState(false);
+  useEffect(() => {
+    if (!isDemoBrowser()) return;
+    // The server only accepts the cookie. Refresh it when the browser still remembers the demo.
+    markDemoBrowser();
+    setDemo(true);
+  }, []);
+  const canStartDiagnostic = loggedIn || demo;
 
   // Mantener la materia alineada con el perfil sincronizado: antes solo se
   // fijaba en el primer render y quedaba la materia anterior (p. ej. Cálculo)
@@ -122,8 +131,7 @@ export function CramMode() {
         error?: string;
         code?: string;
       };
-      if (!res.ok && data.code === "TASTE_EXHAUSTED") {
-        // Ya usó su diagnóstico gratis de hoy: tarjeta de Pro, no error seco.
+      if (!res.ok && (data.code === "TASTE_EXHAUSTED" || data.code === "PRO_REQUIRED")) {
         setProGate("taste");
         return;
       }
@@ -259,7 +267,7 @@ export function CramMode() {
           description={
             proGate === "plan"
               ? "Tu diagnóstico ya está: sabes qué temas flojean. Con Pro te armo el plan completo: qué estudiar primero, cuánto tiempo y con qué ejercicios."
-              : "Ya usaste tu diagnóstico gratis de hoy. Con Pro tienes diagnósticos y planes sin límite, junto al Tutor IA y el Modo aprobar."
+              : "El Modo examen es del plan Pro. Con Pro tienes el diagnóstico y el plan, junto al Tutor IA y el Modo aprobar."
           }
         />
         {proGate === "plan" ? (
@@ -286,11 +294,24 @@ export function CramMode() {
         description="Dime cuándo es tu examen, responde un diagnóstico de 2 minutos y te armo el plan: qué estudiar primero, cuánto tiempo y con qué."
       />
 
-      {!loggedIn && (
+      {demo && !loggedIn ? (
+        <Card className="border-sky-400/20 bg-sky-500/5">
+          <CardHeader>
+            <CardTitle className="text-base">Demo acotada</CardTitle>
+            <CardDescription>
+              Puedes hacer un diagnóstico de prueba, una vez. El plan de estudio completo sigue siendo de Pro y esta demo no usa una cuenta real.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ) : null}
+
+      {!loggedIn && !demo && (
         <Card className="border-amber-400/20 bg-amber-500/5">
           <CardHeader>
             <CardTitle className="text-base">Inicia sesión</CardTitle>
-            <CardDescription>El modo examen usa IA y necesita tu cuenta para funcionar.</CardDescription>
+            <CardDescription>
+              El modo examen usa IA. Entra con tu cuenta o abre la demo desde la portada para un diagnóstico de prueba.
+            </CardDescription>
           </CardHeader>
         </Card>
       )}
@@ -353,7 +374,7 @@ export function CramMode() {
               </div>
             </div>
             {diagError && <p role="alert" className="text-sm font-medium text-red-300">{diagError}</p>}
-            <Button onClick={startDiagnostic} disabled={diagLoading || !loggedIn || subject.trim().length < 2} className="w-full md:w-auto">
+            <Button onClick={startDiagnostic} disabled={diagLoading || !canStartDiagnostic || subject.trim().length < 2} className="w-full md:w-auto">
               {diagLoading ? (
                 <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Preparando diagnóstico…</span>
               ) : (
