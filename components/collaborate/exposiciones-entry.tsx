@@ -8,6 +8,8 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PresentationPlanner } from "@/components/collaborate/presentation-planner";
+import { PresentonGenerator } from "@/components/collaborate/presenton-generator";
+import { isPresentonPilotEnabled } from "@/lib/presenton/flag";
 
 export function ExposicionesEntry() {
   const { profile, hydrated } = useKampus();
@@ -18,7 +20,15 @@ export function ExposicionesEntry() {
   }
 
   if (profile.role !== "teacher") {
-    return <PresentationPlanner />;
+    if (!isPresentonPilotEnabled()) {
+      return <PresentationPlanner />;
+    }
+    return (
+      <div className="space-y-8">
+        <PresentonGenerator />
+        <PresentationPlanner />
+      </div>
+    );
   }
 
   return (
@@ -61,6 +71,8 @@ export function ExposicionesEntry() {
           </div>
         </Card>
       </div>
+
+      {isPresentonPilotEnabled() ? <PresentonGenerator /> : null}
 
       <Card>
         <CardHeader>
