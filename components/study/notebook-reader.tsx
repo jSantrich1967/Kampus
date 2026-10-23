@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+import { NotebookCopilot } from "@/components/copilot-pilot/notebook-copilot";
 import { useKampus } from "@/components/kampus/kampus-provider";
 import { PageHeader } from "@/components/layout/page-header";
 import { NotebookClassPresentationPanel } from "@/components/study/notebook-class-presentation-panel";
@@ -592,6 +593,17 @@ export function NotebookReader({ subjectSlug }: Props) {
       />
 
       {error ? <p className="text-sm text-rose-300">{error}</p> : null}
+
+      {/* Piloto CopilotKit: apagado por defecto (bandera), no renderiza nada sin ella. */}
+      {!loading ? (
+        <NotebookCopilot
+          notebookTitle={subjectLabel}
+          sheets={pages.map((p) => ({
+            title: (p.topic ?? "").trim() || p.filename,
+            date: p.class_date ?? null,
+          }))}
+        />
+      ) : null}
 
       {calendarUploadMode && openUploadFromUrl ? (
         <div className="mb-4 rounded-2xl border border-sky-500/25 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
