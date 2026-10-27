@@ -1,4 +1,6 @@
-import { BarChart3, FileCheck2, Shield } from "lucide-react";
+import { Award, BarChart3, FileCheck2, Shield } from "lucide-react";
+
+import { landingCertificateClaim } from "@/lib/landing/certificate-claim";
 
 export function FeaturesSection() {
   return (
@@ -116,13 +118,10 @@ export function FeaturesSection() {
 
         <div className="group relative overflow-hidden rounded-3xl bg-purple-600 lg:col-span-2">
           <div className="relative z-10 p-8">
-            <h3 className="mb-4 text-3xl font-bold">Certificados verificables</h3>
-            <p className="max-w-md leading-relaxed text-white/80">
-              Al completar tus metas recibes certificados con un código único de verificación,
-              listos para compartir con tu familia o tu institución.
-            </p>
+            <h3 className="mb-4 text-3xl font-bold">{landingCertificateClaim.title}</h3>
+            <p className="max-w-md leading-relaxed text-white/80">{landingCertificateClaim.body}</p>
           </div>
-          <Shield className="absolute -right-12 -bottom-12 h-64 w-64 rotate-12 text-white/10 transition-transform group-hover:scale-110" />
+          <Award className="absolute -right-12 -bottom-12 h-64 w-64 rotate-12 text-white/10 transition-transform group-hover:scale-110" />
         </div>
       </div>
     </section>
