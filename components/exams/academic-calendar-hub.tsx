@@ -48,6 +48,7 @@ import type { NotebookDocumentRow } from "@/lib/notebooks/types";
 import { combineNotebookExtractedTextForPack } from "@/lib/notebooks/document-tags";
 import { postRescuePack } from "@/lib/rescue/post-rescue-pack";
 import type { RescuePack } from "@/lib/class-rescue";
+import { calendarGuestCopy } from "@/lib/exams/calendar-guest-copy";
 import { seedDemoExamsIfEmpty, loadExams, updateExamDueDate } from "@/lib/storage/exams-storage";
 import { loadPresentation, savePresentation } from "@/lib/storage/presentation-storage";
 import { addStudentWork, loadStudentWorks, removeStudentWork, setStudentWorkCompleted, updateStudentWorkDueDate } from "@/lib/storage/student-work-storage";
@@ -943,10 +944,9 @@ export function AcademicCalendarHub() {
   async function submitExam(e: FormEvent) {
     e.preventDefault();
     if (!examTitle.trim() || !examDue || !examSubject.trim()) return;
-    if (!useCloud || !authUserId) {
-      setLoadError("Inicia sesión para registrar tus exámenes en el calendario.");
-      return;
-    }
+    // A date-only exam lives on the account. Without a session the card
+    // already explains that, so this is not shown as a load failure.
+    if (!useCloud || !authUserId) return;
     try {
       const supabase = createSupabaseBrowserClient();
       await insertUserExamRemote(supabase, authUserId, {
@@ -1049,11 +1049,11 @@ export function AcademicCalendarHub() {
 
   const workStorageHint = useCloud
     ? "Se guardan en tu cuenta y aparecen en el calendario de cualquier dispositivo donde inicies sesión."
-    : "Se guardan en este dispositivo. Si inicias sesión, también los verás en tus otros dispositivos.";
+    : calendarGuestCopy.workHint;
 
   const pageDescription = useCloud
     ? "Exámenes, fecha de exposición y trabajos se guardan en tu cuenta cuando inicias sesión."
-    : "Un mismo calendario para Mis exámenes (con fecha de entrega), Mis exposiciones (fecha en Colaboración) y Mis investigaciones. Sin sesión, los datos de exámenes y trabajos quedan en el navegador.";
+    : calendarGuestCopy.pageDescription;
 
   return (
     <div className="space-y-8">
@@ -1090,7 +1090,9 @@ export function AcademicCalendarHub() {
           <CardHeader>
             <CardTitle>Mis exámenes</CardTitle>
             <CardDescription>
-              Registra las fechas de tus exámenes para verlos en el calendario y recibir avisos.
+              {useCloud
+                ? "Registra las fechas de tus exámenes para verlos en el calendario y recibir avisos."
+                : calendarGuestCopy.examHint}
             </CardDescription>
           </CardHeader>
           <form className="space-y-3 px-6 pb-4" onSubmit={(e) => void submitExam(e)}>
@@ -1119,9 +1121,15 @@ export function AcademicCalendarHub() {
                 />
               </label>
             </div>
-            <Button type="submit" size="sm">
-              Añadir examen
-            </Button>
+            {useCloud ? (
+              <Button type="submit" size="sm">
+                Añadir examen
+              </Button>
+            ) : (
+              <Link href="/login" className={buttonClasses({ size: "sm" })}>
+                {calendarGuestCopy.examAction}
+              </Link>
+            )}
           </form>
         </Card>
 
