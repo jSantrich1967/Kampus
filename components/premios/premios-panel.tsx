@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Award, Medal, PartyPopper, Plus, Trophy } from "lucide-react";
+import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { METRIC_LABELS, type Prize, type PrizeMetric } from "@/lib/premios/engine";
+import { premiosLoadKind, type PremiosLoadKind } from "@/lib/premios/load-state";
 
 type PrizeProgressJson = { prize: Prize; value: number; awardedAt: string | null; proDaysGranted: number };
 type CreatedPrize = Prize & { winners: { name: string; awardedAt: string }[] };
@@ -33,7 +35,7 @@ function goalText(p: Prize): string {
 
 export function PremiosPanel() {
   const [data, setData] = useState<ApiData | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<PremiosLoadKind | null>(null);
   const [busy, setBusy] = useState(false);
 
   // Formulario de creación
@@ -51,10 +53,16 @@ export function PremiosPanel() {
   const load = useCallback(async () => {
     try {
       const res = await fetch("/api/premios");
-      if (!res.ok) throw new Error("load");
-      setData((await res.json()) as ApiData);
+      const body = (await res.json().catch(() => ({}))) as ApiData;
+      const kind = premiosLoadKind({ status: res.status, configured: body.configured });
+      if (kind === "ready" || kind === "inactive") {
+        setData(body);
+        setNotice(null);
+        return;
+      }
+      setNotice(kind);
     } catch {
-      setError("No se pudieron cargar los premios. Revisa tu conexión e inténtalo de nuevo.");
+      setNotice("offline");
     }
   }, []);
 
@@ -62,15 +70,36 @@ export function PremiosPanel() {
     void load();
   }, [load]);
 
-  if (error) {
+  if (notice === "signin") {
     return (
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-3xl space-y-6">
+        <h1 className="flex items-center gap-2.5 text-2xl font-semibold text-slate-50">
+          <Trophy className="h-6 w-6 text-amber-300" aria-hidden /> Premios
+        </h1>
         <Card>
-          <div className="px-6 py-5 text-sm text-slate-300">{error}</div>
+          <div className="space-y-3 px-6 py-5">
+            <p className="text-sm text-slate-300">Inicia sesión para ver tus premios.</p>
+            <Link href="/login" className={buttonClasses({ size: "sm" })}>
+              Iniciar sesión
+            </Link>
+          </div>
         </Card>
       </div>
     );
   }
+
+  if (notice === "offline") {
+    return (
+      <div className="mx-auto max-w-3xl">
+        <Card>
+          <div className="px-6 py-5 text-sm text-slate-300">
+            No se pudieron cargar los premios. Revisa tu conexión e inténtalo de nuevo.
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   if (!data) return <div className="text-sm text-slate-400">Cargando…</div>;
 
   if (!data.configured) {
