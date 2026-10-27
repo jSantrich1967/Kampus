@@ -12,7 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DiagnoseQuestion, PlanBlock } from "@/lib/schemas/cram";
 import { isDemoBrowser, markDemoBrowser } from "@/lib/demo/demo-session";
+import { MathText } from "@/components/study/math-text";
 import { reviewDiagnosis, scoreDiagnosis } from "@/lib/study/diagnose-review";
+import { honestPlanText } from "@/lib/study/plan-honesty";
 import { preferredProfileSubject } from "@/lib/study/preferred-subject";
 import { cn } from "@/lib/cn";
 
@@ -394,7 +396,9 @@ export function CramMode() {
             <CardDescription>Responde con calma: esto no es un examen, es para saber por dónde empezar.</CardDescription>
           </CardHeader>
           <div className="space-y-4 px-6 pb-6">
-            <p className="text-sm font-medium text-white">{current.question}</p>
+            <p className="text-sm font-medium text-white">
+              <MathText text={current.question} />
+            </p>
             <div className="space-y-2">
               {current.options.map((opt, i) => {
                 const isPicked = picked === i;
@@ -413,7 +417,7 @@ export function CramMode() {
                       picked !== null && !isPicked && !isCorrect && "border-white/10 bg-white/5 text-slate-400",
                     )}
                   >
-                    {opt}
+                    <MathText text={opt} />
                   </button>
                 );
               })}
@@ -443,7 +447,9 @@ export function CramMode() {
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Sparkles className="h-4 w-4 text-violet-300" aria-hidden /> Tu plan
                   </CardTitle>
-                  <CardDescription className="text-sm text-slate-200">{plan.headline}</CardDescription>
+                  <CardDescription className="text-sm text-slate-200">
+                    {honestPlanText(plan.headline, topicScores)}
+                  </CardDescription>
                 </CardHeader>
                 <div className="px-6 pb-6">
                   <div className="mb-1 flex items-center justify-between text-xs text-slate-300">
@@ -464,8 +470,12 @@ export function CramMode() {
                           <p className="font-medium text-white">
                             {item.index + 1}. {item.topic} · {excluded ? "fuera del conteo" : item.matched ? "coincide con la clave" : "no coincide con la clave"}
                           </p>
-                          <p className="mt-1">Elegiste: {item.selected ?? "sin respuesta"}</p>
-                          {!item.matched ? <p>Clave guardada: {item.key ?? "sin clave"}</p> : null}
+                          <p className="mt-1">
+                            Elegiste: {item.selected ? <MathText text={item.selected} /> : "sin respuesta"}
+                          </p>
+                          {!item.matched ? (
+                            <p>Clave guardada: {item.key ? <MathText text={item.key} /> : "sin clave"}</p>
+                          ) : null}
                           {!item.matched ? (
                             <button
                               type="button"
@@ -510,13 +520,15 @@ export function CramMode() {
                           <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", style.className)}>{style.label}</span>
                           <span className="text-xs text-slate-400">Día {b.day} · {b.minutes} min</span>
                         </div>
-                        <p className={cn("mt-1 text-sm font-semibold text-white", isDone && "line-through")}>{b.title}</p>
-                        <p className="mt-0.5 text-xs text-slate-400">{b.why}</p>
+                        <p className={cn("mt-1 text-sm font-semibold text-white", isDone && "line-through")}>
+                          {honestPlanText(b.title, topicScores)}
+                        </p>
+                        <p className="mt-0.5 text-xs text-slate-400">{honestPlanText(b.why, topicScores)}</p>
                         <ul className="mt-2 space-y-1">
                           {b.actions.map((a, j) => (
                             <li key={j} className="flex items-start gap-2 text-sm text-slate-300">
                               <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-300" aria-hidden />
-                              {a}
+                              {honestPlanText(a, topicScores)}
                             </li>
                           ))}
                         </ul>

@@ -10,6 +10,7 @@ import { getClientIpKey, tryConsumeRateToken } from "@/lib/rate-limit/ip-bucket"
 import { cramModeRateLimits } from "@/lib/rate-limit/openai-defaults";
 import { consumeDailyUserQuota } from "@/lib/rate-limit/user-quota";
 import { planRequestSchema, planResultSchema } from "@/lib/schemas/cram";
+import { honestPlanText } from "@/lib/study/plan-honesty";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -115,7 +116,9 @@ Arma el plan con estas reglas:
 - Los temas MÁS DÉBILES van primero y reciben más minutos. Los temas dominados solo llevan repaso ligero.
 - El ÚLTIMO día incluye un simulacro final (kind "mock") y repaso ligero, nada nuevo pesado.
 - Si solo queda 1 día, todo es hoy: primero lo débil, luego práctica, cierra con mini-simulacro.
-- Cada bloque: título claro, "why" de UNA frase que conecte con su diagnóstico ("fallaste 2/3 en…"), minutos realistas, y 2-4 acciones concretas y cortas (p. ej. "Pídele al tutor que te explique X con un ejemplo", "Juega un duelo de práctica de este tema", "Resume en voz alta los 3 puntos clave").
+- Cada bloque: título claro, "why" de UNA frase que conecte con su diagnóstico, minutos realistas, y 2-4 acciones concretas y cortas (p. ej. "Pídele al tutor que te explique X con un ejemplo", "Juega un duelo de práctica de este tema", "Resume en voz alta los 3 puntos clave").
+- Un tema está dominado cuando correctas es igual a total. Si todos están dominados, no hay punto débil: prohibido escribir "fallaste", "0/1" o "punto débil". El plan es repaso y un simulacro.
+- Solo puedes decir "fallaste N/M" si N es menor que M y esos números están en el diagnóstico.
 - kind: "study" (estudiar tema), "practice" (ejercicios/duelo), "mock" (simulacro), "review" (repaso ligero).
 - La suma de minutos debe acercarse al total disponible (${totalMinutes} min).
 Responde ÚNICAMENTE con un objeto JSON válido con esta forma exacta:
@@ -155,7 +158,18 @@ Sin texto antes ni después del JSON.`;
         );
       }
 
-      return NextResponse.json({ plan: result.data });
+      const scores = body.diagnostic;
+      const plan = {
+        headline: honestPlanText(result.data.headline, scores),
+        blocks: result.data.blocks.map((block) => ({
+          ...block,
+          title: honestPlanText(block.title, scores),
+          why: honestPlanText(block.why, scores),
+          actions: block.actions.map((action) => honestPlanText(action, scores)),
+        })),
+      };
+
+      return NextResponse.json({ plan });
     });
   } catch (e) {
     console.error("cram plan unexpected", e);

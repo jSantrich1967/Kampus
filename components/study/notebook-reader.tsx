@@ -20,7 +20,7 @@ import { EmptyState, EmptyStateIllustrationNotebook } from "@/components/ui/empt
 import { initialsFromSubject, notebookCoverGradient } from "@/lib/notebooks/cover-styles";
 import { generateNotebookBookPdf } from "@/lib/notebooks/book-pdf";
 import { buildNotebookIndexGroups } from "@/lib/notebooks/notebook-index";
-import { subjectToPathSegment } from "@/lib/notebooks/paths";
+import { displaySubjectForSlug, subjectToPathSegment } from "@/lib/notebooks/paths";
 import { formatNotebookCloudError } from "@/lib/notebooks/storage-errors";
 import { uploadNotebookDocuments } from "@/lib/notebooks/upload-documents";
 import type { NotebookDocumentRow } from "@/lib/notebooks/types";
@@ -62,7 +62,7 @@ function pageRangeLabel(index0List: number[]): string {
 }
 
 export function NotebookReader({ subjectSlug }: Props) {
-  const { authUserId } = useKampus();
+  const { authUserId, profile } = useKampus();
   const searchParams = useSearchParams();
   const docIdFromUrl = searchParams.get("doc")?.trim() || null;
   const openKitFromUrl = searchParams.get("kit") === "1" || searchParams.get("kit") === "true";
@@ -107,8 +107,17 @@ export function NotebookReader({ subjectSlug }: Props) {
     setShowCover(!skipCoverOnLoad);
   }, [subjectSlug, skipCoverOnLoad]);
 
-  const subjectLabel =
-    pages[0]?.subject ?? (subjectSlug && subjectSlug.length > 0 ? subjectSlug.replace(/_/g, " ") : "Cuaderno");
+  const subjectLabel = useMemo(() => {
+    const fromPages = (pages[0]?.subject ?? "").trim();
+    const fromLibrary = displaySubjectForSlug(subjectSlug, [
+      ...profile.subjects,
+      canonicalSubject ?? "",
+    ]);
+    if (fromPages && fromPages !== subjectSlug.trim()) return fromPages;
+    if (fromLibrary) return fromLibrary;
+    if (fromPages) return fromPages;
+    return subjectSlug.trim().length > 0 ? subjectSlug.replace(/_/g, " ") : "Cuaderno";
+  }, [pages, subjectSlug, profile.subjects, canonicalSubject]);
 
   const subjectStats = useMemo(() => buildNotebookSubjectStats(pages), [pages]);
   const classSummaries = useMemo(
@@ -118,15 +127,10 @@ export function NotebookReader({ subjectSlug }: Props) {
 
   const uploadSubject = useMemo(() => {
     const fromPages = (pages[0]?.subject ?? "").trim();
-    if (fromPages) return fromPages;
-    // Sin hojas todavía, usar el nombre real del cuaderno («Biología») y no
-    // la forma derivada del enlace («biologia»): así las subidas no crean
-    // una segunda variante de la misma materia.
-    if (canonicalSubject) return canonicalSubject;
-    const slug = (subjectSlug ?? "").trim();
-    if (!slug) return "General";
-    return slug.replace(/_/g, " ");
-  }, [pages, subjectSlug, canonicalSubject]);
+    if (fromPages && fromPages !== subjectSlug.trim()) return fromPages;
+    // Sin hojas, guardar con el nombre de la biblioteca («Cálculo»), no con el enlace («calculo»).
+    return subjectLabel;
+  }, [pages, subjectSlug, subjectLabel]);
 
   const { background, spine } = useMemo(() => notebookCoverGradient(subjectLabel), [subjectLabel]);
   const cover = useMemo(() => getNotebookSubjectCover(subjectLabel), [subjectLabel]);
